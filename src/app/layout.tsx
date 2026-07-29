@@ -47,10 +47,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/images/logo.png", type: "image/png" },
       { url: "/favicon.svg", type: "image/svg+xml" },
     ],
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    shortcut: "/images/logo.png",
+    apple: "/images/logo.png",
   },
   openGraph: {
     title: "CONECTA-LT | Guía Nocturna de Los Teques",

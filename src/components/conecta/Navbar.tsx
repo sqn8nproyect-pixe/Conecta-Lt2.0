@@ -30,8 +30,12 @@ export function Navbar() {
           className="flex items-center gap-3 group"
           aria-label="Ir al inicio"
         >
-          <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center transition-all duration-300 group-hover:scale-110 glow-gold">
-            <span className="text-obsidian font-bold text-xl tracking-tighter">C</span>
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-white border border-gold/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-gold shadow-md">
+            <img
+              src="/images/logo.png"
+              alt="Logo Conecta-LT"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="text-left">
             <div className="font-serif text-xl sm:text-2xl tracking-[-1.5px] text-gold font-bold leading-none">

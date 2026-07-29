@@ -318,3 +318,52 @@ Stage Summary:
 - Archivos modificados/creados: types.ts, data.ts, store.ts, layout.tsx, globals.css, MapPage.tsx, LeafletMap.tsx (new), HomePage.tsx, ProfilePage.tsx (new), Navbar.tsx, page.tsx, public/favicon.svg (new)
 - Fix crítico: infinite loop de Zustand en ProfilePage resuelto con useMemo
 - Verificación Agent Browser: 0 errores, todas las interacciones funcionales
+
+---
+Task ID: 13
+Agent: main
+Task: Integrar logo del usuario + AgeGate (verificación de edad obligatoria cada vez que se accede)
+
+Work Log:
+- Recibido logo del usuario (variable_6.png, 1254x1254, PNG con fondo blanco)
+- Análisis VLM del logo: "Conecta-Lt" wordmark, tagline "CONECTA CON LO NUESTRO", "LOS TEQUES, VENEZUELA", pin de mapa central con edificio colonial + montañas verdes, 4 íconos orbitales (tienda, bolsa, usuario, cubiertos), paleta multicolor (azul marino #0B2A4A, turquesa #0097CE, verde #3FA038, ámbar #F5A623, púrpura #5E35B1)
+- Copiado a /home/z/my-project/public/images/logo.png
+- Creado src/components/conecta/AgeGate.tsx:
+  * 'use client', estados 'verifying' | 'denied'
+  * Modal full-screen z-[100] con backdrop obsidian/95 + blur + bg-orbs
+  * Card glass-card con border gold + glow-gold
+  * Header band blanco (para que el logo de fondo blanco se integre limpio) con logo 96-112px en ring gold + wordmark "CONECTA-LT" + tagline "CONECTA CON LO NUESTRO"
+  * Badge "BEBIDAS ALCOHÓLICAS" + título "¿Eres mayor de 18 años?" + texto legal (legislación venezolana, prohibido menores)
+  * Warning box ámbar: "El consumo excesivo de alcohol es perjudicial. Si bebes, no conduzcas."
+  * 2 botones: "SOY MAYOR DE EDAD" (gold, llama onConfirm) + "SOY MENOR DE EDAD" (outline, state→denied)
+  * Small print legal: confirmación de edad + política privacidad + responsabilidad
+  * Estado 'denied': card con icono ShieldX rojo, "Acceso denegado", botón "SALIR DE CONECTA-LT" (redirect google.com) + "Volver a la verificación"
+  * Bloquea scroll del body con useEffect (overflow hidden) mientras está montado
+  * SIN persistencia (no localStorage/sessionStorage) — aparece en CADA carga de página, cumpliendo regulaciones de alcohol
+  * Animaciones framer-motion (fade + scale + y)
+  * Accesible: role="dialog", aria-modal, aria-labelledby, aria-describedby, autoFocus en botón principal
+- Actualizado src/app/page.tsx:
+  * Estado ageVerified (false inicial), muestra <AgeGate onConfirm> cuando !ageVerified
+  * Footer: reemplazado círculo "C" por logo 36px en contenedor blanco rounded-lg + border gold
+  * Añadida barra de disclaimer al final del footer: "⚠ BEBIDAS ALCOHÓLICAS · SOLO MAYORES DE 18 AÑOS · SI BEBES, NO CONDUZCAS · CONSUMO RESPONSABLE"
+- Actualizado src/components/conecta/Navbar.tsx:
+  * Reemplazado círculo dorado "C" por logo 48-56px en contenedor blanco rounded-xl + border gold + shadow + group-hover:scale-110
+- Actualizado src/app/layout.tsx: favicon ahora usa /images/logo.png (PNG) + fallback /favicon.svg (SVG), apple-touch-icon = logo.png
+- Lint: 0 errores, 0 warnings
+- Dev server: HTTP 200, sin errores en consola
+
+Verificación Agent Browser end-to-end:
+1. Carga página → AgeGate aparece con "¿Eres mayor de 18 años?" + logo visible ✓
+2. Click "SOY MENOR DE EDAD" → pantalla "Acceso denegado" con "SALIR DE CONECTA-LT" ✓
+3. Click "Volver a la verificación" → regresa al gate ✓
+4. Click "SOY MAYOR DE EDAD" → gate desaparece, app navegable ✓
+5. Recarga página → gate reaparece (cumple regulaciones: cada acceso requiere verificación) ✓
+6. Tras pasar gate: 2 instancias del logo (navbar + footer), disclaimer "SOLO MAYORES DE 18 AÑOS" en footer ✓
+7. Sin errores ni warnings en consola ✓
+
+Stage Summary:
+- Logo del usuario integrado en: navbar (48-56px), footer (36px), AgeGate (96-112px), favicon (PNG)
+- AgeGate cumple regulaciones de alcohol: muestra en CADA carga de página (sin persistencia), edad legal 18+ (Venezuela), dos caminos (mayor/menor), pantalla de denegación con salida, warning de consumo responsable, bloqueo de scroll, accesible
+- Disclaimer permanente en footer: "BEBIDAS ALCOHÓLICAS · SOLO MAYORES DE 18 AÑOS · SI BEBES, NO CONDUZCAS · CONSUMO RESPONSABLE"
+- 4 archivos modificados (page.tsx, Navbar.tsx, layout.tsx), 1 creado (AgeGate.tsx), 1 imagen añadida (logo.png)
+- Lint limpio, verificación browser exitosa
