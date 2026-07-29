@@ -570,3 +570,40 @@ Stage Summary:
 - ~17 burbujas por copa animándose continuamente (37 total)
 - Performance: SVG con CSS transforms, clipPath para clipping, filter glow solo en espuma/base (no en burbujas)
 - Accesibilidad: aria-hidden en SVGs decorativos, prefers-reduced-motion respetado
+
+---
+Task ID: 9-revert-cinematic-agegate
+Agent: main
+Task: Revertir AgeGate al diseño de tarjeta original (Opción A) — eliminar copas, partículas, splash, líneas, botón cinematográfico
+
+Work Log:
+- Reescrito AgeGate.tsx al diseño de tarjeta glassmorphism original (pre-cinematográfico):
+  * Backdrop bg-obsidian/95 + backdrop-blur-xl + bg-orbs opacity-60
+  * Card glass-card rounded-3xl border-gold/30 glow-gold max-w-lg
+  * Cabecera blanca con logo (ring-gold/40), badge VERIFICACIÓN esquina, nombre CONECTA-LT en obsidian + "-LT" en cyan #0097CE
+  * Body: badge BEBIDAS ALCOHÓLICAS, título "¿Eres mayor de 18 años?", texto legal, caja advertencia amber, 2 botones (SOY MAYOR/MENOR), footer términos
+  * Estado 'denied' con escudo rojo + botón SALIR + volver
+  * Eliminado: import useMemo/useRef (ya no se necesitan), componente ChampagneGlass, ChampagneGlassSVG, interfaz SvgBubble, makeBubbles, generadores de partículas/líneas/splash, parallax mousemove, refs de copas, fondo conecta-agegate-bg, botón conecta-cinema-btn, logo conecta-logo-glow
+- Eliminado bloque CSS cinematográfico de globals.css (líneas 623-872, ~250 líneas):
+  * .conecta-agegate-bg, .conecta-particle + keyframes float, .conecta-golden-line + keyframes drawLine
+  * .conecta-glass-wrap, .conecta-glass + keyframes toastBounce, .conecta-glass-cup, .conecta-liquid + keyframes liquidWave
+  * .conecta-bubble + keyframes bubbleRise, .conecta-glass-stem, .conecta-glass-base
+  * .conecta-splash-particle + keyframes splash, .conecta-cinema-btn + ::before shimmer
+  * .conecta-logo-glow, media queries responsive de copas, prefers-reduced-motion (versión cinematográfica)
+  * .conecta-glass-svg + .conecta-svg-bubble + keyframes conecta-svg-bubble-rise (SVG realista)
+  * globals.css reducido de 872 → 622 líneas
+- Conservado: @keyframes conecta-lightbox-in / .conecta-lightbox-img (del plan de fichas enriquecidas, no cinematográfico)
+- bun run lint: PASS (0 errores)
+- Verificación Agent Browser:
+  * Snapshot: tarjeta con logo, título "¿Eres mayor de 18 años?", botones SOY MAYOR/MENOR
+  * eval: svg=0, particles=0, splash=0, glassDiv=0 (todo cinematográfico eliminado)
+  * 0 errores de página/consola
+  * Click "SOY MAYOR DE EDAD" → entra al sitio (vista home visible)
+- Captura: age-gate-reverted.png
+
+Stage Summary:
+- AgeGate revertido por completo al diseño de tarjeta glassmorphism original
+- globals.css limpio: eliminadas ~250 líneas de CSS cinematográfico
+- Componente AgeGate.tsx reducido de ~612 líneas → ~204 líneas
+- Todo el contenido legal/regulatorio conservado (legislación venezolana, advertencia, términos)
+- Funcionalidad intacta: verificación + estado denegado + redirect + volver
