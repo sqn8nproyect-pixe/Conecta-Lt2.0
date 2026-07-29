@@ -7,6 +7,7 @@ import { useAppStore } from '@/lib/store';
 import { establishments } from '@/lib/data';
 import type { Category, Establishment, PriceRange } from '@/lib/types';
 import { Matchmaker } from './Matchmaker';
+import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
 import {
   Select,
   SelectContent,
@@ -307,6 +308,11 @@ export function HomePage() {
                         fill={favorites.includes(est.id) ? 'currentColor' : 'none'}
                       />
                     </button>
+
+                    {/* Active Promotion pulsing badge (only if activePromotion exists) */}
+                    {est.activePromotion && (
+                      <ActivePromotionsBadge promotion={est.activePromotion} />
+                    )}
                   </div>
                 </motion.div>
               );

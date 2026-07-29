@@ -552,3 +552,71 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .conecta-map .leaflet-control-zoom {
   margin-bottom: 12px !important;
 }
+
+/* ─── Fichas Enriquecidas — Active Promotion pulse & gallery utilities ─── */
+
+@keyframes promo-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7), 0 0 12px 0 rgba(245, 158, 11, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0), 0 0 18px 2px rgba(245, 158, 11, 0.6);
+    transform: scale(1.04);
+  }
+}
+
+.conecta-promo-badge {
+  animation: promo-pulse 1.8s ease-in-out infinite;
+}
+
+/* Decorative gradient border for the Value Proposition banner */
+.conecta-vp-banner {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(192, 38, 211, 0.08)),
+    rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  overflow: hidden;
+}
+.conecta-vp-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.6), rgba(192, 38, 211, 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* PhotoGallery: hide scrollbars on the mobile horizontal strip */
+.conecta-gallery-strip {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 55, 0.4) transparent;
+}
+.conecta-gallery-strip::-webkit-scrollbar {
+  height: 6px;
+}
+.conecta-gallery-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+.conecta-gallery-strip::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 3px;
+}
+.conecta-gallery-strip::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+/* Lightbox fade/scale entry */
+@keyframes conecta-lightbox-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.conecta-lightbox-img {
+  animation: conecta-lightbox-in 0.28s ease-out;
+}

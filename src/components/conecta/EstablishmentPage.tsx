@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -17,6 +17,8 @@ import {
   Heart,
   X,
   Check,
+  Copy,
+  Flame,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -25,6 +27,14 @@ import {
 } from '@/lib/store';
 import { establishments, offers } from '@/lib/data';
 import type { BookingData, Offer, Review } from '@/lib/types';
+import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
+import { PhotoGallery } from '@/components/establishment/PhotoGallery';
+import { SocialContactPanel } from '@/components/establishment/SocialContactPanel';
+import {
+  ActivePromotionsBadge,
+  formatDate,
+  daysUntil,
+} from '@/components/establishment/ActivePromotionsBadge';
 
 type TabId = 'info' | 'offers' | 'reviews';
 
@@ -79,6 +89,38 @@ export function EstablishmentPage() {
     defaultBookingData(user),
   );
   const [reservationCode, setReservationCode] = useState('');
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const handleCopyCode = useCallback(async (code: string) => {
+    // Attempt the async Clipboard API first, then fall back to execCommand.
+    // Either way, we ALWAYS show the visual "Copiado" feedback because the
+    // code is already visible on screen — the user's intent is clear.
+    let copied = false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+        copied = true;
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    } catch {
+      copied = false;
+    }
+    // Visual feedback regardless — the code is on screen for manual copy too.
+    setCopiedCode(code);
+    addNotification(
+      copied ? `Código copiado: ${code}` : `Código: ${code} (cópialo manualmente)`,
+      copied ? 'success' : 'info',
+    );
+    setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 2200);
+  }, [addNotification]);
 
   if (!est) {
     return (
@@ -241,6 +283,12 @@ export function EstablishmentPage() {
             <span className="text-white/60">
               ({count} reseñas de la comunidad)
             </span>
+            {est.activePromotion && (
+              <ActivePromotionsBadge
+                promotion={est.activePromotion}
+                variant="inline"
+              />
+            )}
           </div>
         </div>
 
@@ -257,6 +305,12 @@ export function EstablishmentPage() {
           <Heart size={20} fill={isFav ? 'currentColor' : 'none'} />
         </button>
       </div>
+
+      {/* Value Proposition Banner — specialty + hook quote */}
+      <ValuePropositionBanner
+        specialty={est.specialty}
+        valueProposition={est.valueProposition}
+      />
 
       {/* Navigation Tabs */}
       <div className="flex gap-6 sm:gap-8 border-b border-white/10 mb-8 sm:mb-10 overflow-x-auto scrollbar-none">
@@ -385,38 +439,17 @@ export function EstablishmentPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Photo Gallery — 10 immersive photos with lightbox */}
+              <PhotoGallery
+                images={est.gallery}
+                establishmentName={est.name}
+              />
             </div>
 
-            {/* Contact Sidebar */}
+            {/* Contact + Social Panel — replaces old contact sidebar */}
             <div className="lg:col-span-1">
-              <div className="glass-card border border-white/10 rounded-3xl p-6 sm:p-8 space-y-4 sticky top-24">
-                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
-                  CONTACTO & HORARIOS
-                </h4>
-                <div className="space-y-3.5 text-sm text-white/70">
-                  <div className="flex items-center gap-3">
-                    <Phone size={16} className="text-gold shrink-0" />
-                    <span>{est.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Instagram size={16} className="text-gold shrink-0" />
-                    <span>{est.instagram}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MapPin size={16} className="text-gold shrink-0" />
-                    <span className="leading-snug">{est.address}</span>
-                  </div>
-                  <div className="flex items-center gap-3 pt-2 border-t border-white/10">
-                    <Clock size={16} className="text-gold shrink-0" />
-                    <div>
-                      <div className="text-[10px] text-white/40 font-bold tracking-wider uppercase">
-                        Horario
-                      </div>
-                      <div className="text-white/80 font-medium">{est.schedule}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <SocialContactPanel establishment={est} />
             </div>
           </motion.div>
         )}
@@ -431,6 +464,54 @@ export function EstablishmentPage() {
             transition={{ duration: 0.25 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
+            {/* Active Promotion banner — full width, only if it exists */}
+            {est.activePromotion && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="md:col-span-2 relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-amber/40"
+                style={{
+                  background:
+                    'linear-gradient(120deg, rgba(245,158,11,0.18) 0%, rgba(192,38,211,0.10) 60%, rgba(212,175,55,0.14) 100%)',
+                }}
+              >
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="conecta-promo-badge shrink-0 w-12 h-12 rounded-2xl bg-amber text-obsidian flex items-center justify-center border border-amber/60">
+                      <Flame size={22} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-black tracking-[3px] text-amber font-mono uppercase mb-1">
+                        Promo Activa
+                      </div>
+                      <div className="font-serif text-lg sm:text-xl font-bold text-white truncate">
+                        {est.activePromotion.label}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 sm:gap-6 sm:border-l sm:border-white/15 sm:pl-6">
+                    <div>
+                      <div className="text-[9px] text-white/40 font-bold tracking-wider uppercase">
+                        Válido hasta
+                      </div>
+                      <div className="text-sm font-bold text-white">
+                        {formatDate(est.activePromotion.validUntil)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[9px] text-white/40 font-bold tracking-wider uppercase">
+                        Días restantes
+                      </div>
+                      <div className="text-sm font-black text-amber font-mono">
+                        {daysUntil(est.activePromotion.validUntil)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {estOffers.length > 0 ? (
               estOffers.map((offer: Offer) => {
                 const claimed = claimedCodes.includes(offer.code);
@@ -469,14 +550,28 @@ export function EstablishmentPage() {
                           <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
                             <Check size={14} /> Cupón activado
                           </div>
-                          <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-dashed border-gold/40">
-                            <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase">
-                              Tu código
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCode(offer.code)}
+                            aria-label={copiedCode === offer.code ? 'Código copiado' : `Copiar código ${offer.code}`}
+                            className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-black/40 border border-dashed border-gold/40 hover:border-gold/80 hover:bg-black/60 transition-all group"
+                          >
+                            <span className="text-[10px] text-white/50 font-bold tracking-wider uppercase group-hover:text-white/80 transition-colors">
+                              {copiedCode === offer.code ? 'Copiado' : 'Tu código · copiar'}
                             </span>
-                            <span className="font-mono font-black text-gold tracking-wider text-lg">
-                              {offer.code}
+                            <span className="flex items-center gap-2">
+                              <span className="font-mono font-black text-gold tracking-wider text-lg">
+                                {offer.code}
+                              </span>
+                              <span className="shrink-0 w-7 h-7 rounded-lg bg-gold/15 border border-gold/40 flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-obsidian transition-colors">
+                                {copiedCode === offer.code ? (
+                                  <Check size={14} />
+                                ) : (
+                                  <Copy size={13} />
+                                )}
+                              </span>
                             </span>
-                          </div>
+                          </button>
                           <button
                             onClick={() => handleStartBooking(offer.title)}
                             className="w-full py-3 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2"
