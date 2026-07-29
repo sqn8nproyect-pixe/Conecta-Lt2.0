@@ -61,9 +61,10 @@ server.log
 db/*.db
 db/*.db-journal
 
-# verification screenshots (root)
+# verification screenshots (root + public/screenshots verification artifacts)
 /age-gate-check.png
 /final-with-logo.png
 /preview-check.png
 /profile-final.png
 /verify-*.png
+public/screenshots/map-*-legend*.png

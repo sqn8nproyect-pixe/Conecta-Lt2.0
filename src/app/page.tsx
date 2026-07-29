@@ -36,7 +36,7 @@ export default function Home() {
       <Notifications />
       <Navbar />
 
-      <main className="pt-20 sm:pt-20 flex-1 relative z-10">
+      <main className="pt-28 sm:pt-20 flex-1 relative z-10">
         <AnimatePresence mode="wait">
           {view === 'home' && <HomePage key="home" />}
           {view === 'map' && <MapPage key="map" />}
