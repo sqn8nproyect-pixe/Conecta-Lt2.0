@@ -14,6 +14,7 @@ import {
   Navigation,
   LogIn,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { establishments } from '@/lib/data';
@@ -72,6 +73,7 @@ export function MapPage() {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   const selectedEst = useAppStore((s) => s.selectedMapEstablishment);
   const setSelectedEst = useAppStore((s) => s.setSelectedMapEstablishment);
@@ -143,7 +145,7 @@ export function MapPage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.4 }}
-      className="relative h-[calc(100vh-5rem-2rem)] sm:h-[calc(100vh-5rem)] overflow-hidden"
+      className="relative h-[calc(100vh-7rem)] sm:h-[calc(100vh-5rem)] overflow-hidden"
     >
       {/* Leaflet map fills its container */}
       <div className="absolute inset-0">
@@ -291,29 +293,79 @@ export function MapPage() {
       </div>
 
       {/* Legend */}
-      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 bg-elevated/90 backdrop-blur-md px-5 py-4 rounded-2xl border border-white/10 text-sm hidden md:block z-[1000]">
-        <div className="font-bold mb-3 tracking-[3px] text-[10px] text-gold font-mono">
-          LEYENDA
+      <>
+        {/* Desktop: always visible */}
+        <div className="absolute top-4 sm:top-6 right-4 sm:right-6 bg-elevated/90 backdrop-blur-md px-5 py-4 rounded-2xl border border-white/10 text-sm hidden md:block z-[1000]">
+          <div className="font-bold mb-3 tracking-[3px] text-[10px] text-gold font-mono">
+            LEYENDA
+          </div>
+          <div className="flex flex-col gap-y-2 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-3 h-3 rounded-full bg-gold glow-gold" />
+              <span className="text-white/80 font-medium">Licorerías</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-3 h-3 rounded-full bg-[#F59E0B] glow-amber" />
+              <span className="text-white/80 font-medium">Tascas</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-3 h-3 rounded-full bg-[#C026D3] glow-purple" />
+              <span className="text-white/80 font-medium">Discotecas</span>
+            </div>
+            <div className="flex items-center gap-2.5 pt-1 mt-1 border-t border-white/10">
+              <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-white/60" />
+              <span className="text-white/80 font-medium">Tu ubicación</span>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-y-2 text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-3 h-3 rounded-full bg-gold glow-gold" />
-            <span className="text-white/80 font-medium">Licorerías</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-3 h-3 rounded-full bg-[#F59E0B] glow-amber" />
-            <span className="text-white/80 font-medium">Tascas</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-3 h-3 rounded-full bg-[#C026D3] glow-purple" />
-            <span className="text-white/80 font-medium">Discotecas</span>
-          </div>
-          <div className="flex items-center gap-2.5 pt-1 mt-1 border-t border-white/10">
-            <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-white/60" />
-            <span className="text-white/80 font-medium">Tu ubicación</span>
-          </div>
+
+        {/* Mobile: collapsible toggle button (hidden while bottom sheet is open) */}
+        <div className={`absolute top-4 right-4 md:hidden z-[1000] ${selectedEst ? 'hidden' : ''}`}>
+          <button
+            type="button"
+            aria-label={legendOpen ? 'Cerrar leyenda' : 'Abrir leyenda'}
+            aria-expanded={legendOpen}
+            onClick={() => setLegendOpen((v) => !v)}
+            className="flex items-center gap-1.5 bg-elevated/95 backdrop-blur-md border border-white/15 rounded-full pl-2.5 pr-3 py-1.5 text-gold shadow-lg active:scale-95 transition"
+          >
+            <Info size={14} />
+            <span className="text-[10px] font-mono font-bold tracking-[1.5px]">
+              LEYENDA
+            </span>
+          </button>
+
+          <AnimatePresence>
+            {legendOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: -6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="absolute top-full right-0 mt-2 bg-elevated/95 backdrop-blur-md px-4 py-3 rounded-xl border border-white/15 shadow-2xl min-w-[160px]"
+              >
+                <div className="flex flex-col gap-y-2 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded-full bg-gold glow-gold" />
+                    <span className="text-white/85 font-medium">Licorerías</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded-full bg-[#F59E0B] glow-amber" />
+                    <span className="text-white/85 font-medium">Tascas</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded-full bg-[#C026D3] glow-purple" />
+                    <span className="text-white/85 font-medium">Discotecas</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 pt-1.5 mt-1 border-t border-white/10">
+                    <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-white/60" />
+                    <span className="text-white/85 font-medium">Tu ubicación</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
+      </>
 
       {/* Bottom Sheet */}
       <AnimatePresence>
