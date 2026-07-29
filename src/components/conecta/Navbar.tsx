@@ -47,6 +47,7 @@ export function Navbar() {
           <div className="hidden sm:flex items-center gap-6">
             {navItem('Directorio', 'home')}
             {navItem('Mapa', 'map')}
+            {user && navItem('Mi Perfil', 'profile')}
           </div>
 
           {user ? (
@@ -54,8 +55,10 @@ export function Navbar() {
               <div className="flex items-center gap-2 text-sm">
                 <img
                   src={user.avatar}
-                  className="w-8 h-8 rounded-full ring-2 ring-gold/50"
+                  onClick={() => setView('profile')}
+                  className="w-8 h-8 rounded-full ring-2 ring-gold/50 cursor-pointer hover:ring-gold transition-all"
                   alt={user.name}
+                  aria-label="Ir a mi perfil"
                 />
                 <span className="hidden md:inline font-medium text-white">
                   {user.name.split(' ')[0]}
@@ -84,6 +87,7 @@ export function Navbar() {
       <div className="sm:hidden flex items-center justify-center gap-6 pb-2 px-4">
         {navItem('Directorio', 'home')}
         {navItem('Mapa', 'map')}
+        {user && navItem('Mi Perfil', 'profile')}
       </div>
     </nav>
   );

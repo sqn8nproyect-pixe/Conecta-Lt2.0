@@ -134,3 +134,187 @@ Stage Summary:
 - Archivos modificados: types.ts, data.ts, store.ts, HomePage.tsx, EstablishmentPage.tsx (5 archivos)
 - Conservadas todas las fortalezas del proyecto actual: mapa arrastrable con zoom + radar pulse, reservas con ticket holográfico + QR, matchmaker con trago sugerido, 21 locales con imágenes propias, estilo obsidian/gold
 - Lint limpio, dev server HTTP 200, verificación browser end-to-end exitosa sin errores de consola
+
+---
+Task ID: 11
+Agent: main
+Task: Fase 1 (expandir datos), Fase 5 (SEO), fundación para fases 2/3/4
+
+Work Log:
+- Instalado leaflet@1.9.4 + react-leaflet@5.0.0 + @types/leaflet@1.9.21
+- Actualizado src/lib/types.ts: View ahora incluye 'profile' ('home' | 'map' | 'detail' | 'profile')
+- Reescrito src/lib/data.ts:
+  * 21 locales conservados intactos
+  * offers: 5 → 42 (exactamente 2 por establecimiento, códigos únicos GOLD18/DORADO6/CAVA2X1/.../ROYALANIV)
+  * initialReviews: 3 → 84 (exactamente 4 por establecimiento, generadas con pool de 16 usuarios venezolanos + 8 plantillas de comentarios por categoría + 15 fechas; rating bias around est.avgRating)
+- Actualizado src/lib/store.ts: añadido getUserReviews() que filtra reseñas por usuario actual y las ordena por fecha desc
+- Actualizado src/app/layout.tsx (SEO completo):
+  * Title: "CONECTA-LT | Guía Nocturna de Los Teques" con template %s
+  * Description expandida (160 chars) con keywords
+  * 10 keywords (Los Teques, vida nocturna, licorerías, tascas, discotecas, etc.)
+  * openGraph completo: title, description, siteName, url, type=website, locale=es_VE, images (hero 1344x768)
+  * twitter card summary_large_image
+  * robots index/follow con max-image-preview=large
+  * viewport themeColor=#090d1a
+  * lang="es"
+  * Import "leaflet/dist/leaflet.css" añadido al layout
+- Creado public/favicon.svg (logo "C" dorado sobre fondo obsidian #090d1a, 64x64)
+- Añadido a src/app/globals.css (~220 líneas de estilos Leaflet):
+  * .leaflet-container background dark
+  * .leaflet-bar (zoom controls) dark con hover gold
+  * .conecta-marker / .conecta-marker-pin (gold/amber/purple) con pin body + tail + radar pulse animation
+  * .leaflet-popup-content-wrapper dark glass con border gold + blur
+  * .conecta-popup inner classes (cat/name/meta/rating/addr/btn)
+  * .leaflet-control-attribution dark
+  * Animación @keyframes conecta-radar
+
+Stage Summary:
+- Fundación completa para las 3 tareas paralelas siguientes:
+  * Task 4 (MapPage con Leaflet): clases CSS ya definidas en globals.css, tiles CartoDB Dark Matter a usar
+  * Task 5 (HomePage stagger + filtros precio/orden): data.ts tiene 21 locales con priceRange
+  * Task 6 (ProfilePage): store.getUserReviews() disponible, view 'profile' en types
+- 5 archivos modificados, 1 creado (favicon.svg)
+- Próximo: despachar 3 subagentes en paralelo
+
+---
+Task ID: 6
+Agent: full-stack-developer
+Task: ProfilePage + Navbar profile link + page.tsx integration
+
+Work Log:
+- Leído worklog.md, store.ts, types.ts, Navbar.tsx, page.tsx, HomePage.tsx para contexto (fundación Task 11 ya añadió 'profile' al View type y getUserReviews() al store)
+- Verificado mockGoogleUser en data.ts (Ana Rodríguez, ana.rodriguez@gmail.com, avatar pravatar)
+- Creado src/components/conecta/ProfilePage.tsx ('use client'):
+  * Wrapper motion.div con initial/animate/exit (opacity + y=15)
+  * Estado sin sesión: glass-card centrada max-w-md con icono Sparkles, descripción y botón "ACCEDER CON GOOGLE" que llama loginWithGoogle()
+  * Header card (glass-card rounded-3xl p-6 sm:p-8 max-w-5xl): avatar 80px ring-4 ring-gold/30, badge "MIEMBRO CONECTA-LT" (gold tracking-widest), nombre (font-serif text-2xl sm:text-3xl), email (white/60), botón "CERRAR SESIÓN" (border white/15 hover gold) que llama logout() + setView('home')
+  * Stats row mt-6 pt-6 border-t: favoritos (favorites.length, Heart gold) + reseñas (userReviews.length, MessageSquare gold)
+  * Sección MIS FAVORITOS (max-w-5xl mx-auto py-10): título gold tracking-[3px] text-xs font-mono + count; estado vacío glass-card py-16 text-center; grid 1/2/3 cols gap-5 con cards compactos (h-40 image, badges categoría+priceRange, heart activo top-right, name font-serif text-lg group-hover:text-gold, rating star+avg, address con MapPin)
+  * Sección MIS RESEÑAS (max-w-5xl mx-auto pb-16): título + count; estado vacío; lista vertical flex-col gap-4; cada review en glass-card p-5 con nombre est (font-serif text-lg gold hover:underline como button → goToDetail), 5 estrellas (filled = review.rating), fecha font-mono text-xs white/40, comentario white/80 text-sm
+  * Uso de store: user, favorites, getUserReviews(), goToDetail, setView, toggleFavorite, logout, loginWithGoogle, getDynamicRating
+  * Accesibilidad: aria-labels en icon buttons (heart, avatar), alt text en imágenes, semantic HTML (section, h2, article)
+- Actualizado src/components/conecta/Navbar.tsx:
+  * Desktop nav: añadido `{user && navItem('Mi Perfil', 'profile')}` después de "Mapa"
+  * Mobile bottom nav: añadido mismo item después de "Mapa"
+  * Avatar img: añadido onClick={() => setView('profile')} + aria-label="Ir a mi perfil" + cursor-pointer hover:ring-gold
+  * Conservado botón "Salir" (logout)
+- Actualizado src/app/page.tsx:
+  * Import ProfilePage añadido
+  * Añadido `{view === 'profile' && <ProfilePage key="profile" />}` al AnimatePresence
+- Lint: `bun run lint` → 0 errores, 0 warnings
+
+Stage Summary:
+- 3 archivos: ProfilePage.tsx creado (226 líneas), Navbar.tsx editado (3 cambios), page.tsx editado (import + 1 línea)
+- Vista 'profile' completamente integrada en el SPA con animaciones AnimatePresence
+- Navegación: "Mi Perfil" aparece en navbar (desktop + mobile) solo cuando hay usuario logueado; avatar clickeable también navega a perfil
+- Componente maneja ambos estados: sin sesión (CTA login) y con sesión (header stats + favoritos + reseñas)
+- Reutiliza estilos del proyecto (glass-card, card-glow-hover, card-glow-hover-purple, glow-gold) y respeta paleta obsidian/gold/amber/purple
+- Cards de favoritos son versión compacta de las de HomePage (h-40 vs h-56, p-4 vs p-6) para densidad visual en perfil
+- Lint limpio, sin errores de consola esperados
+
+---
+Task ID: 5
+Agent: full-stack-developer
+Task: HomePage stagger animation + price filter + sort selector
+
+Work Log:
+- Leído worklog.md (contexto Task 0/4/5-9/10/11): confirmado que Task 11 dejó fundación lista — 21 locales con priceRange, getDynamicRating(estId) retorna {avg, count} desde Zustand, componente Select de shadcn disponible en src/components/ui/select.tsx
+- Leído HomePage.tsx actual (252 líneas), data.ts y store.ts para confirmar tipos y estabilidad de getDynamicRating
+- Leído select.tsx para verificar API de exports (Select, SelectContent, SelectItem, SelectTrigger, SelectValue)
+- Implementado (1) stagger animation: .map((est, index) => …) con transition delay = Math.min(index * 0.05, 0.5), initial y:30/scale:0.95, exit scale:0.9, duration 0.4
+- Implementado (2) price filter: estado PriceFilter = 'Todos' | PriceRange, pill buttons px-3 py-1.5 text-[10px] para ['Todos','$','$$','$$$'], gold al activar, aria-pressed para a11y
+- Implementado (3) sort selector: estado SortBy = 'rating' | 'reviews' | 'name', shadcn Select con 3 opciones (Mejor valorados / Más reseñas / Nombre A-Z), trigger dark theme bg-white/5 border-white/10 text-white text-xs h-9 w-[180px], content bg-obsidian, items con focus:bg-gold/20 focus:text-gold
+- Actualizada lógica de filtrado: .filter(matchesSearch && matchesCategory && matchesPrice).sort(...) con 3 modos usando getDynamicRating
+- Reestructurado toolbar: wrapper flex-col gap-2 con categoría arriba + (precio + sort) abajo, responsive (móvil stack / desktop alineado derecha)
+- Conservado intacto: hero, matchmaker button, card design, favorite heart, rating, schedule, empty-state, AnimatePresence mode="popLayout", 'use client'
+- TypeScript estricto, sin any, con aliases de unión literal (Filter, PriceFilter, SortBy)
+- Lint: 0 errores, 0 warnings
+- Dev server: compila limpio, GET / 200 en dev.log
+
+Stage Summary:
+- HomePage mejorada con 3 features: staggered card entrance (delay = min(index * 0.05, 0.5) capado a 0.5s), price filter row (Todos/$/$$/$$$), shadcn Select sort dropdown (Mejor valorados / Más reseñas / Nombre A-Z)
+- Filter logic: search + category + price, luego sort por rating/reviews/name usando getDynamicRating
+- Toolbar responsive 2 filas: categoría arriba + precio + sort abajo; móvil stack vertical, desktop alineado derecha
+- Lint limpio (0/0), dev server HTTP 200, todo lo demás conservado
+
+---
+Task ID: 4
+Agent: full-stack-developer
+Task: Rebuild MapPage with real Leaflet map
+
+Work Log:
+- Leído worklog.md (Task 11 instaló leaflet@1.9.4 + react-leaflet@5.0.0 + @types/leaflet, añadió CSS en globals.css para .conecta-marker, .conecta-marker-pin gold/amber/purple, .conecta-popup*, animación conecta-radar, e importó leaflet/dist/leaflet.css en layout.tsx)
+- Leído MapPage.tsx original (293 líneas, mapa CSS-simulado con useMotionValue drag, SVG grid, pines manuales)
+- Leído data.ts (21 locales con lat/lng), store.ts (selectedMapEstablishment, getDynamicRating, goToDetail), types.ts (Category = licorería|tasca|discoteca)
+- Primer intento: MapPage.tsx con imports top-level de react-leaflet + leaflet, patrón `useSyncExternalStore` para mounted. Lint OK, pero SSR falló con `ReferenceError: window is not defined` en import de react-leaflet (linea 5). Confirmado via dev.log: GET / 500.
+- Solución: dividir en 2 archivos. MapPage.tsx (SSR-safe, sin imports de leaflet) usa `next/dynamic` con `ssr: false` para cargar LeafletMap.tsx. LeafletMap.tsx contiene MapContainer/TileLayer/Marker/Popup/FlyTo.
+- Creado src/components/conecta/LeafletMap.tsx:
+  * 'use client', importa react-leaflet (MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap) y L de leaflet
+  * LOS_TEQUES_CENTER = [10.3444, -67.0428], zoom=14, scrollWheelZoom, className="conecta-map"
+  * TileLayer CartoDB Dark Matter: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+  * ZoomControl position="bottomright" (desviación deliberada del spec zoomControl={true}: la posición default top-left solaparía con el search overlay top-left, especialmente en móvil donde el search ocupa casi todo el ancho)
+  * makeIcon(color): L.divIcon con className='conecta-marker', html=<div class="conecta-marker-pin {color}"><div class="pin-body"></div><div class="pin-tail"></div></div>, iconSize=[34,44], iconAnchor=[17,44], popupAnchor=[0,-40]
+  * colorForCategory: licorería→gold, tasca→amber, discoteca→purple
+  * icons = useMemo de los 3 DivIcons (gold/amber/purple), estable
+  * filteredEst = useMemo filtrando por searchQuery (prop recibida de MapPage) en name/category
+  * FlyTo: child component dentro de MapContainer que usa useMap().flyTo([lat,lng], 16, {duration:0.8}) en useEffect cuando selectedEst cambia
+  * Marker eventHandlers={{ click: () => setSelectedEst(est) }} abre popup (default Leaflet) + dispara bottom sheet via store
+  * Popup con hijos JSX: .conecta-popup-cat (category), .conecta-popup-name (name), .conecta-popup-meta (star + rating.avg + count + "reseñas"), .conecta-popup-addr, button.conecta-popup-btn "Ver detalles" con onClick → setSelectedEst(null) + goToDetail(est.id)
+- Reescrito src/components/conecta/MapPage.tsx (284→169 líneas, SSR-safe):
+  * 'use client', sin imports de react-leaflet/leaflet
+  * dynamic(() => import('./LeafletMap').then(m => m.LeafletMap), { ssr: false, loading: () => <LoadingSkeleton /> })
+  * LoadingSkeleton: spinner dorado + "CARGANDO MAPA…" sobre bg obsidian
+  * searchQuery state local, pasado como prop a LeafletMap
+  * useEffect cleanup: () => setSelectedEst(null) en unmount (para que el bottom sheet no reaparezca al volver a la vista mapa)
+  * Conservados intactos los overlays del MapPage original: search overlay (top-left, glass-card, input con icono Search), legend (top-right, hidden md:block, dots gold/amber/purple con labels Licorerías/Tascas/Discotecas), bottom sheet (AnimatePresence, slide-up,WhatsApp + VER DETALLES COMPLETOS)
+  * motion.div wrapper con mismo initial/animate/exit (opacity+y, duration 0.4)
+  * Contenedor: relative h-[calc(100vh-5rem-2rem)] sm:h-[calc(100vh-5rem)] overflow-hidden, mapa en absolute inset-0
+- Removido del MapPage original: useMotionValue, drag, SVG grid, canvas 1000x620, botones manuales Plus/Minus/RefreshCw, cálculo manual left/top de pines
+- Lint: `bun run lint` → 0 errores, 0 warnings (resuelto react-hooks/set-state-in-effect al eliminar el useEffect+setMounted en favor de next/dynamic ssr:false)
+- Dev server: GET / 200 (sin errores de window), compila en ~130ms
+- Verificación Agent Browser (end-to-end):
+  * Click botón "Mapa" en navbar → vista mapa carga sin errores de consola ✓
+  * Mapa Leaflet renderiza con tiles CartoDB Dark Matter (atribución "© OpenStreetMap © CARTO" visible) ✓
+  * 21 markers visibles como botones clickables en el árbol de accesibilidad ✓
+  * Zoom in/out nativos de Leaflet en bottom-right (no solapan con search) ✓
+  * Click en marker (Licorería El Dorado) → popup abre con category/name/rating(4.7, 32 reseñas)/address/botón "Ver detalles" ✓ + bottom sheet slide-up con WhatsApp + VER DETALLES COMPLETOS ✓
+  * Search "eclipse" → markers filtran de 21 a 1 (solo Discoteca Eclipse) ✓
+  * Console: solo mensajes Fast Refresh/HMR/DevTools, CERO errores o warnings ✓
+  * errors: vacío ✓
+
+Stage Summary:
+- MapPage reemplazó el mapa CSS-simulado por un mapa Leaflet real con tiles CartoDB Dark Matter
+- 2 archivos: MapPage.tsx (SSR-safe orchestrator con search/legend/bottom sheet) + LeafletMap.tsx (mapa real cargado via next/dynamic ssr:false)
+- 21 markers con divIcon custom (clases .conecta-marker-pin gold/amber/purple ya definidas en globals.css Task 11), popup con JSX reactivo, FlyTo programático, ZoomControl bottom-right
+- Funcionalidad verificada end-to-end en browser: render, markers, popup, bottom sheet, search filter, zoom — sin errores de consola
+- Lint limpio (0 errores, 0 warnings), dev server HTTP 200, SSR sin window errors
+
+---
+Task ID: 12
+Agent: main
+Task: Verificación end-to-end final + fix ProfilePage infinite loop
+
+Work Log:
+- Lanzados 3 subagentes en paralelo (Task 4 MapPage Leaflet, Task 5 HomePage stagger+filtros, Task 6 ProfilePage+Navbar+page.tsx) — todos completaron con lint limpio
+- Verificación Agent Browser:
+  * Home: 21 cards renderizadas, filtros $/$$/$$$ funcionales ($$$ muestra 7 locales), sort "Nombre A-Z" ordena alfabéticamente (Discoteca Eclipse→Estelar→Glamour→La Luna→Noche Eterna), sort "Mejor valorados" ordena por rating
+  * Map: Leaflet real con 21 markers, tiles CartoDB Dark Matter cargados (18 tiles), popup muestra nombre+rating, bottom sheet con WhatsApp + Ver Detalles, sin errores
+  * Profile (primer intento): ERROR "getSnapshot should be cached to avoid an infinite loop" — causa: `useAppStore((s) => s.getUserReviews())` llamaba función dentro del selector devolviendo nuevo array cada render
+  * FIX aplicado en ProfilePage.tsx: reemplazado `s.getUserReviews()` por selectores `s.reviews` + `s.user`, computado `userReviews` con `useMemo(() => reviews.filter(...).sort(...), [user, reviews])`
+  * Profile (post-fix): carga sin errores, muestra avatar + nombre "Ana Rodríguez" + email + stats, empty states "Aún no tienes favoritos" / "Aún no has publicado reseñas"
+  * Flujo favoritos→perfil: clickeé Heart en Discoteca Eclipse + Discoteca Royal en home, navegué a perfil, ambas aparecen en MIS FAVORITOS ✓
+  * Detail: galería 3 fotos con flechas + bullets, tabs "Promociones (2)" + "Reseñas (4)" confirman 2 ofertas y 4 reseñas por local, RESERVAR MESA + WhatsApp + Instagram + CÓMO LLEGAR, RatingBar de ambiente, todo intacto
+- Lint: 0 errores, 0 warnings
+- Dev server: HTTP 200, sin errores en consola (sesión limpia post-clear)
+- Título SEO verificado: "CONECTA-LT | Guía Nocturna de Los Teques"
+
+Stage Summary:
+- TODAS las 5 fases implementadas y verificadas end-to-end:
+  1. Fase 1 (Contenido): 42 ofertas (2/local) + 84 reseñas (4/local) con 16 usuarios venezolanos y plantillas por categoría
+  2. Fase 2 (Mapa real): Leaflet + react-leaflet, CartoDB Dark Matter, markers dorados/amber/púrpura con radar pulse, popups interactivos, zoom nativo
+  3. Fase 3 (Perfil): ProfilePage con header + stats + Mis Favoritos + Mis Reseñas, enlace "Mi Perfil" en navbar (solo logueado), avatar clickable
+  4. Fase 4 (UI/UX): galería (ya existía), stagger animation (delay index*0.05s capped 0.5s), filtro precio $/$$/$$$, sort Mejor valorados/Más reseñas/Nombre A-Z
+  5. Fase 5 (SEO): title template, description, 10 keywords, OpenGraph completo, Twitter card, robots, favicon.svg, lang=es, themeColor
+- Archivos modificados/creados: types.ts, data.ts, store.ts, layout.tsx, globals.css, MapPage.tsx, LeafletMap.tsx (new), HomePage.tsx, ProfilePage.tsx (new), Navbar.tsx, page.tsx, public/favicon.svg (new)
+- Fix crítico: infinite loop de Zustand en ProfilePage resuelto con useMemo
+- Verificación Agent Browser: 0 errores, todas las interacciones funcionales

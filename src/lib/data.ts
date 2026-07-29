@@ -193,19 +193,169 @@ export const establishments: Establishment[] = [
   },
 ];
 
+// 42 Offers — 2 per establishment
 export const offers: Offer[] = [
+  // Licorería El Dorado (1)
   { id: 1, establishmentId: 1, title: 'Whisky Premium 18 años', description: 'Botella de 750ml. Reserva limitada de malta única.', price: '$89', discount: '20% OFF', image: '/images/offer2.png', code: 'GOLD18' },
-  { id: 2, establishmentId: 2, title: 'Cóctel Noche Dorada', description: 'Gin premium + tónica especial + infusión de cítricos.', price: '$12', discount: '2x1', image: '/images/offer1.png', code: 'CAVA2X1' },
-  { id: 3, establishmentId: 3, title: 'Botella de Champagne', description: 'Veuve Clicquot Brut 750ml helada con copa VIP.', price: '$75', discount: 'PROMO VIP', image: '/images/offer2.png', code: 'ECLIPSEVIP' },
-  { id: 4, establishmentId: 5, title: 'Ron Añejo + 2 Raciones', description: 'Combo especial con ración de tequeños y empanaditas.', price: '$28', discount: 'POPULAR', image: '/images/offer1.png', code: 'AMIGOSPACK' },
-  { id: 5, establishmentId: 15, title: 'Entrada VIP + 2 bebidas', description: 'Acceso preferente sin cola + 2 cócteles a elección.', price: '$35', discount: 'EXCLUSIVO', image: '/images/offer2.png', code: 'GLAMOURVIP' },
+  { id: 2, establishmentId: 1, title: 'Pack Cervezas Artesanales', description: '6 cervezas locales + vaso de regalo. Sabores exclusivos.', price: '$24', discount: '15% OFF', image: '/images/offer1.png', code: 'DORADO6' },
+  // Tasca La Cava (2)
+  { id: 3, establishmentId: 2, title: 'Cóctel Noche Dorada', description: 'Gin premium + tónica especial + infusión de cítricos.', price: '$12', discount: '2x1', image: '/images/offer1.png', code: 'CAVA2X1' },
+  { id: 4, establishmentId: 2, title: 'Tabla de Quesos + Vino', description: 'Selección de 5 quesos + botella de tinto reserva.', price: '$35', discount: 'COMBO', image: '/images/offer2.png', code: 'CAVAQ' },
+  // Discoteca Eclipse (3)
+  { id: 5, establishmentId: 3, title: 'Botella de Champagne', description: 'Veuve Clicquot Brut 750ml helada con copa VIP.', price: '$75', discount: 'PROMO VIP', image: '/images/offer2.png', code: 'ECLIPSEVIP' },
+  { id: 6, establishmentId: 3, title: 'Lista VIP Jueves', description: 'Entrada sin cola + 2 tragos de cortesía para mujeres.', price: '$0', discount: 'GRATIS', image: '/images/offer1.png', code: 'ECLIPSEJ' },
+  // Licorería Premium Select (4)
+  { id: 7, establishmentId: 4, title: 'Vino Español Reserva', description: 'Rioja Crianza 750ml. Cosecha seleccionada 2019.', price: '$42', discount: '25% OFF', image: '/images/offer2.png', code: 'RIOJA19' },
+  { id: 8, establishmentId: 4, title: 'Set de Cata', description: '3 mini botellas premium + guía de catas profesional.', price: '$28', discount: 'KIT', image: '/images/offer1.png', code: 'CATA3' },
+  // Tasca Los Amigos (5)
+  { id: 9, establishmentId: 5, title: 'Ron Añejo + 2 Raciones', description: 'Combo especial con ración de tequeños y empanaditas.', price: '$28', discount: 'POPULAR', image: '/images/offer1.png', code: 'AMIGOSPACK' },
+  { id: 10, establishmentId: 5, title: 'Cerveza Polar 2x1', description: 'Doble polar bien fría de 9 a 11pm todos los días.', price: '$4', discount: '2x1', image: '/images/offer2.png', code: 'POLAR2X1' },
+  // Discoteca Noche Eterna (6)
+  { id: 11, establishmentId: 6, title: 'Botella + 4 Entradas', description: 'Whisky + 4 accesos generales + mesa reservada.', price: '$120', discount: 'PACK', image: '/images/offer2.png', code: 'NOCHEDARK' },
+  { id: 12, establishmentId: 6, title: 'Cumpleañeros Free', description: 'Entrada gratis en tu cumpleaños + botella de champagne.', price: '$0', discount: 'CUMPLE', image: '/images/offer1.png', code: 'ETERNABC' },
+  // Licorería Vinos del Valle (7)
+  { id: 13, establishmentId: 7, title: 'Cata de Vinos', description: 'Experiencia de cata guiada de 5 vinos premium sábados.', price: '$18', discount: 'EVENTO', image: '/images/offer2.png', code: 'CATAVALLE' },
+  { id: 14, establishmentId: 7, title: '6 Vinos Mix-and-Match', description: 'Arma tu pack de 6 vinos con descuento por volumen.', price: '$65', discount: 'BULK', image: '/images/offer1.png', code: 'MIX6VINOS' },
+  // Tasca El Rincón (8)
+  { id: 15, establishmentId: 8, title: 'Tapas 3x2', description: 'Paga 2 tapas y llévate 3. Incluye sangría de la casa.', price: '$22', discount: '3x2', image: '/images/offer1.png', code: 'TAPAS32' },
+  { id: 16, establishmentId: 8, title: 'Paella Domingo', description: 'Paella valenciana para 2 + jarra de sangría.', price: '$38', discount: 'DOMINGO', image: '/images/offer2.png', code: 'PAELLAD' },
+  // Discoteca La Luna (9)
+  { id: 17, establishmentId: 9, title: 'Mesa VIP Terraza', description: 'Reserva de mesa en terraza + botella + 4 entradas.', price: '$140', discount: 'TERRAZA', image: '/images/offer2.png', code: 'LUNATERR' },
+  { id: 18, establishmentId: 9, title: 'Ladies Night Miércoles', description: 'Mujeres entran gratis hasta 11pm + cóctel de bienvenida.', price: '$0', discount: 'LADIES', image: '/images/offer1.png', code: 'LUNALADIES' },
+  // Licorería Central (10)
+  { id: 19, establishmentId: 10, title: 'Combo Pre-Fiesta', description: 'Hielo + 2 mixers + botella de ron nacional.', price: '$25', discount: 'PRE', image: '/images/offer2.png', code: 'PREFIESTA' },
+  { id: 20, establishmentId: 10, title: 'Cervezas 12-Pack', description: '12 cervezas nacionales surtidas a precio mayorista.', price: '$15', discount: 'MAYOR', image: '/images/offer1.png', code: 'PACK12' },
+  // Tasca El Sabor (11)
+  { id: 21, establishmentId: 11, title: 'Karaoke + Trago', description: 'Participa del karaoke y llévate un trago cortesía.', price: '$8', discount: 'KARAOKE', image: '/images/offer1.png', code: 'SABORK' },
+  { id: 22, establishmentId: 11, title: 'Almuerzo Ejecutivo', description: 'Plato del día + bebida + postre de lunes a viernes.', price: '$12', discount: 'EJEC', image: '/images/offer2.png', code: 'SABOREJEC' },
+  // Discoteca Estelar (12)
+  { id: 23, establishmentId: 12, title: 'Palco VIP 8 personas', description: 'Palco privado + 2 botellas + accesos VIP para 8.', price: '$280', discount: 'PALCO', image: '/images/offer2.png', code: 'ESTELARP' },
+  { id: 24, establishmentId: 12, title: 'Estudiante 2x1', description: '2 entradas por 1 con carnet estudiantil vigente.', price: '$10', discount: '2x1', image: '/images/offer1.png', code: 'ESTELEST' },
+  // Licorería Oro Negro (13)
+  { id: 25, establishmentId: 13, title: 'Ron Venezolano 7 años', description: 'Santa Teresa 1796 + 2 copas de cristal.', price: '$45', discount: 'CRIOLLO', image: '/images/offer2.png', code: 'ORO7' },
+  { id: 26, establishmentId: 13, title: 'Tour de Ron', description: 'Degustación de 4 rones venezolanos con guía experto.', price: '$22', discount: 'TOUR', image: '/images/offer1.png', code: 'RONTOUR' },
+  // Tasca La Parrilla (14)
+  { id: 27, establishmentId: 14, title: 'Parrilla para 2', description: 'Chorizo, chuleta, pollo + 2 acompañantes + 2 cervezas.', price: '$40', discount: 'PARRILLA', image: '/images/offer1.png', code: 'PARRI2' },
+  { id: 28, establishmentId: 14, title: 'Happy Hour Llanero', description: '2x1 en cócteles tropicales de 5 a 8pm los viernes.', price: '$7', discount: '2x1', image: '/images/offer2.png', code: 'LLANERO2' },
+  // Discoteca Glamour (15)
+  { id: 29, establishmentId: 15, title: 'Entrada VIP + 2 bebidas', description: 'Acceso preferente sin cola + 2 cócteles a elección.', price: '$35', discount: 'EXCLUSIVO', image: '/images/offer2.png', code: 'GLAMOURVIP' },
+  { id: 30, establishmentId: 15, title: 'Mesa Glow 4 personas', description: 'Mesa con iluminación LED + 1 botella premium.', price: '$160', discount: 'GLOW', image: '/images/offer1.png', code: 'GLAMGLOW' },
+  // Licorería La Botella (16)
+  { id: 31, establishmentId: 16, title: 'Cervezas 3x2 Nacional', description: 'Lleva 3 paga 2 en cervezas nacionales de 330ml.', price: '$6', discount: '3x2', image: '/images/offer1.png', code: 'BOT32' },
+  { id: 32, establishmentId: 16, title: 'Whisky Barato', description: 'Old Parr 12 años al mejor precio de Los Teques.', price: '$55', discount: 'OFERTÓN', image: '/images/offer2.png', code: 'BOTOPARR' },
+  // Tasca El Patio (17)
+  { id: 33, establishmentId: 17, title: 'Pizza a la Leña 2x1', description: '2 pizzas medianas artesanales al horno de leña.', price: '$22', discount: '2x1', image: '/images/offer1.png', code: 'PATIO2X1' },
+  { id: 34, establishmentId: 17, title: 'Acústico Viernes', description: 'Música en vivo + cóctel de bienvenida de cortesía.', price: '$15', discount: 'ACÚSTICO', image: '/images/offer2.png', code: 'PATIOV' },
+  // Discoteca Vibra (18)
+  { id: 35, establishmentId: 18, title: 'Reggaetón Night Pack', description: 'Entrada + chupa de regalo + 1 trago de la casa.', price: '$20', discount: 'PERREO', image: '/images/offer1.png', code: 'VIBRARREG' },
+  { id: 36, establishmentId: 18, title: 'Mesa Temática', description: 'Mesa con decoración temática + 1 botella + 6 entradas.', price: '$130', discount: 'TEMA', image: '/images/offer2.png', code: 'VIBRATEMA' },
+  // Licorería Selecta (19)
+  { id: 37, establishmentId: 19, title: 'Tequila Reserva', description: 'Don Julio 1942 + 2 caballitos de cristal soplado.', price: '$120', discount: 'PREMIUM', image: '/images/offer2.png', code: 'TEQUILA42' },
+  { id: 38, establishmentId: 19, title: 'Asesoría Personalizada', description: 'Sommelier privado 1 hora + descuento en tu compra.', price: '$15', discount: 'EXPERTO', image: '/images/offer1.png', code: 'SELECTAEXP' },
+  // Tasca La Esquina (20)
+  { id: 39, establishmentId: 20, title: 'Sangría 1L + Picada', description: 'Jarra de sangría casera + tabla de embutidos.', price: '$20', discount: 'Tarde', image: '/images/offer1.png', code: 'ESQUINASANG' },
+  { id: 40, establishmentId: 20, title: 'After Office 2x1', description: '2x1 en cervezas de 5 a 8pm de lunes a jueves.', price: '$3', discount: '2x1', image: '/images/offer2.png', code: 'ESQUINAOFF' },
+  // Discoteca Royal (21)
+  { id: 41, establishmentId: 21, title: 'VIP Royal Suite', description: 'Suite privada con bartender + 2 botellas + 10 entradas.', price: '$450', discount: 'ROYAL', image: '/images/offer2.png', code: 'ROYALSUITE' },
+  { id: 42, establishmentId: 21, title: 'Aniversario Royal', description: 'Celebra tu aniversario: mesa VIP + champagne de cortesía.', price: '$80', discount: 'ANIV', image: '/images/offer1.png', code: 'ROYALANIV' },
 ];
 
-export const initialReviews: Review[] = [
-  { id: 1, establishmentId: 1, userId: 'u1', userName: 'Carlos Mendoza', userAvatar: 'https://i.pravatar.cc/40?img=12', rating: 5, comment: 'Excelente selección de whiskies. La atención de su personal es de primera, te asesoran muy bien.', date: '2026-07-20' },
-  { id: 2, establishmentId: 2, userId: 'u2', userName: 'María López', userAvatar: 'https://i.pravatar.cc/40?img=28', rating: 5, comment: 'La mejor música acústica en vivo de Los Teques. El ambiente es super íntimo, ideal para parejas.', date: '2026-07-25' },
-  { id: 3, establishmentId: 3, userId: 'u3', userName: 'Jean Gómez', userAvatar: 'https://i.pravatar.cc/40?img=33', rating: 5, comment: 'El juego de luces y el sonido en este local son de otro planeta. Definitivamente volveré.', date: '2026-07-28' },
+// Pool of review authors (varied Venezuelan names)
+const reviewUsers = [
+  { id: 'u1', name: 'Carlos Mendoza', avatar: 'https://i.pravatar.cc/40?img=12' },
+  { id: 'u2', name: 'María López', avatar: 'https://i.pravatar.cc/40?img=28' },
+  { id: 'u3', name: 'Jean Gómez', avatar: 'https://i.pravatar.cc/40?img=33' },
+  { id: 'u4', name: 'Andrea Fernández', avatar: 'https://i.pravatar.cc/40?img=5' },
+  { id: 'u5', name: 'José Pereira', avatar: 'https://i.pravatar.cc/40?img=15' },
+  { id: 'u6', name: 'Luisana Ramírez', avatar: 'https://i.pravatar.cc/40?img=44' },
+  { id: 'u7', name: 'Roberto Silva', avatar: 'https://i.pravatar.cc/40?img=51' },
+  { id: 'u8', name: 'Daniela Torres', avatar: 'https://i.pravatar.cc/40?img=9' },
+  { id: 'u9', name: 'Francisco Herrera', avatar: 'https://i.pravatar.cc/40?img=60' },
+  { id: 'u10', name: 'Carolina Vargas', avatar: 'https://i.pravatar.cc/40?img=20' },
+  { id: 'u11', name: 'Eduardo Marín', avatar: 'https://i.pravatar.cc/40?img=68' },
+  { id: 'u12', name: 'Sofía Castro', avatar: 'https://i.pravatar.cc/40?img=30' },
+  { id: 'u13', name: 'Manuel Rojas', avatar: 'https://i.pravatar.cc/40?img=14' },
+  { id: 'u14', name: 'Valentina Díaz', avatar: 'https://i.pravatar.cc/40?img=23' },
+  { id: 'u15', name: 'Ricardo Blanco', avatar: 'https://i.pravatar.cc/40?img=58' },
+  { id: 'u16', name: 'Gabriela Mora', avatar: 'https://i.pravatar.cc/40?img=49' },
 ];
+
+// Comments pool, varied by category tone
+const commentTemplates = {
+  licorería: [
+    'Excelente selección de whiskies. La atención de su personal es de primera, te asesoran muy bien.',
+    'Precios justos y variedad increíble. Encontré vinos que no había visto en otros lados.',
+    'El local es pequeño pero surtido. Los enviadores son rápidos y amables.',
+    'Buena opción para comprar antes de una fiesta. Tienen de todo y a buen precio.',
+    'Me encanta que tienen catas los fines de semana. Aprendí muchísimo sobre rones venezolanos.',
+    'Atención personalizada de otro nivel. El sommelier me recomendó un tinto espectacular.',
+    'Podrían mejorar el estacionamiento pero la calidad de los licores es indiscutible.',
+    'Mi licorería de cabecera desde hace años. Nunca me defrauda.',
+  ],
+  tasca: [
+    'La mejor música acústica en vivo de Los Teques. El ambiente es super íntimo, ideal para parejas.',
+    'Las tapas son generosas y deliciosas. La sangría de la casa es única.',
+    'Ambiente relajado para compartir con panas. Las cervezas siempre bien frías.',
+    'La comida tardó un poco pero valió la pena. Platos bien presentados y sabrosos.',
+    'El karaoke de los viernes es lo mejor. Súper recomendado para grupos.',
+    'Sitio perfecto para after office. Buen precio y porciones abundantes.',
+    'La parrilla es espectacular, cares jugosas y bien sazonadas. Volveré seguro.',
+    'Un rinconcito español en Los Teques. La tortilla me recordó a la de mi abuela.',
+  ],
+  discoteca: [
+    'El juego de luces y el sonido en este local son de otro planeta. Definitivamente volveré.',
+    'Ambiente increíble, DJs que saben lo que hacen. La pista LED es brutal.',
+    'Caro pero vale cada centavo. El servicio VIP es de primera categoría.',
+    'La terraza al aire libre es un plus enorme. Cócteles premium y buena música.',
+    'Noche temática de reggaetón vieja escuela estuvo brutal. Pura energía.',
+    'Staff atento y profesional. Las botellas llegaron rápido y bien servidas.',
+    'El código de vestimenta le da un toque elegante. Gente bien vestida y ambiente top.',
+    'Mejor discoteca de Los Teques sin duda. Ya he ido 3 veces este mes.',
+  ],
+};
+
+const dates = [
+  '2026-07-20', '2026-07-25', '2026-07-28', '2026-08-02', '2026-08-09',
+  '2026-08-15', '2026-08-22', '2026-08-30', '2026-09-05', '2026-09-12',
+  '2026-09-19', '2026-09-26', '2026-10-03', '2026-10-10', '2026-10-17',
+];
+
+function buildReviews(): Review[] {
+  const reviews: Review[] = [];
+  let reviewId = 1;
+  establishments.forEach((est) => {
+    const pool = commentTemplates[est.category];
+    // pick 4 distinct comments; ratings biased to est.avgRating ± small variance
+    const usedComments = new Set<number>();
+    for (let i = 0; i < 4; i++) {
+      let cIdx = (est.id * 3 + i * 5) % pool.length;
+      while (usedComments.has(cIdx)) {
+        cIdx = (cIdx + 1) % pool.length;
+      }
+      usedComments.add(cIdx);
+      const uIdx = (est.id * 2 + i * 3) % reviewUsers.length;
+      const user = reviewUsers[uIdx];
+      // Rating: most around avgRating, some lower/higher
+      const variance = ((est.id + i) % 3) - 1; // -1, 0, or 1
+      let rating = Math.round(est.avgRating + variance);
+      rating = Math.max(3, Math.min(5, rating));
+      const dateIdx = (est.id + i * 2) % dates.length;
+      reviews.push({
+        id: reviewId++,
+        establishmentId: est.id,
+        userId: user.id,
+        userName: user.name,
+        userAvatar: user.avatar,
+        rating,
+        comment: pool[cIdx],
+        date: dates[dateIdx],
+      });
+    }
+  });
+  return reviews;
+}
+
+export const initialReviews: Review[] = buildReviews();
 
 // Simulated Google user
 export const mockGoogleUser: User = {

@@ -326,3 +326,229 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8) sepia(1) saturate(5) hue-rotate(15deg);
   cursor: pointer;
 }
+
+/* ============================================
+   Leaflet map — dark theme integration
+   ============================================ */
+
+/* Make map container background match obsidian theme */
+.leaflet-container {
+  background: #0b0f19 !important;
+  font-family: var(--font-geist-sans), system-ui, sans-serif !important;
+  outline: none;
+}
+
+.leaflet-container a {
+  color: #d4af37;
+}
+
+/* Hide default zoom control branding clash */
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.leaflet-bar a {
+  background: rgba(12, 16, 29, 0.92) !important;
+  color: #fff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  width: 38px !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  transition: background 0.2s ease;
+}
+.leaflet-bar a:hover {
+  background: rgba(212, 175, 55, 0.18) !important;
+  color: #d4af37 !important;
+}
+.leaflet-bar a:first-child {
+  border-top-left-radius: 12px !important;
+  border-top-right-radius: 12px !important;
+}
+.leaflet-bar a:last-child {
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Custom marker pin (gold teardrop with category icon) */
+.conecta-marker {
+  background: transparent !important;
+  border: none !important;
+}
+.conecta-marker-pin {
+  width: 34px;
+  height: 44px;
+  position: relative;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  transition: transform 0.2s ease;
+}
+.conecta-marker-pin:hover {
+  transform: scale(1.15);
+  z-index: 1000;
+}
+.conecta-marker-pin .pin-body {
+  position: absolute;
+  inset: 0 0 8px 0;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.conecta-marker-pin .pin-tail {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.conecta-marker-pin.gold .pin-body { background: #d4af37; box-shadow: 0 0 16px rgba(212,175,55,0.6); }
+.conecta-marker-pin.gold .pin-tail { border-top: 10px solid #d4af37; }
+.conecta-marker-pin.amber .pin-body { background: #f59e0b; box-shadow: 0 0 16px rgba(245,158,11,0.6); }
+.conecta-marker-pin.amber .pin-tail { border-top: 10px solid #f59e0b; }
+.conecta-marker-pin.purple .pin-body { background: #c026d3; box-shadow: 0 0 16px rgba(192,38,211,0.6); }
+.conecta-marker-pin.purple .pin-tail { border-top: 10px solid #c026d3; }
+
+/* Radar pulse ring on markers */
+.conecta-marker-pin::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: conecta-radar 2.4s ease-out infinite;
+  pointer-events: none;
+}
+.conecta-marker-pin.gold::before { color: #d4af37; }
+.conecta-marker-pin.amber::before { color: #f59e0b; }
+.conecta-marker-pin.purple::before { color: #c026d3; }
+
+@keyframes conecta-radar {
+  0% { transform: translateX(-50%) scale(0.6); opacity: 0.9; }
+  100% { transform: translateX(-50%) scale(2.2); opacity: 0; }
+}
+
+/* Popups — dark glass theme matching the app */
+.leaflet-popup-content-wrapper {
+  background: rgba(12, 16, 29, 0.95) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #fff !important;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 24px rgba(212, 175, 55, 0.15) !important;
+  padding: 0 !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 240px !important;
+}
+.leaflet-popup-tip {
+  background: rgba(12, 16, 29, 0.95) !important;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+}
+.leaflet-popup-close-button {
+  color: #fff !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  padding: 8px 10px 0 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+.leaflet-popup-close-button:hover {
+  opacity: 1;
+  color: #d4af37 !important;
+}
+
+/* Popup inner layout */
+.conecta-popup {
+  padding: 16px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+.conecta-popup-cat {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #d4af37;
+  font-family: var(--font-geist-mono), monospace;
+}
+.conecta-popup-name {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 2px 0 8px;
+  line-height: 1.2;
+}
+.conecta-popup-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 12px;
+}
+.conecta-popup-rating {
+  color: #d4af37;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+}
+.conecta-popup-addr {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.conecta-popup-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  background: #d4af37;
+  color: #090d1a;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.conecta-popup-btn:hover {
+  background: #e5bf4a;
+}
+.conecta-popup-btn:active {
+  transform: scale(0.97);
+}
+
+/* Attribution styling */
+.leaflet-control-attribution {
+  background: rgba(9, 13, 26, 0.7) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 10px !important;
+  border-radius: 6px 0 0 0;
+}
+.leaflet-control-attribution a {
+  color: rgba(212, 175, 55, 0.6) !important;
+}
+
+/* Zoom control position override to avoid covering search box */
+.conecta-map .leaflet-control-zoom {
+  margin-bottom: 12px !important;
+}

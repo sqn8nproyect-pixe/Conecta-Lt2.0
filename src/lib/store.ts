@@ -47,6 +47,7 @@ interface AppState {
   // Actions: reviews
   addReview: (estId: number, rating: number, comment: string) => boolean;
   getDynamicRating: (estId: number) => DynamicRating;
+  getUserReviews: () => Review[];
 
   // Actions: favorites
   toggleFavorite: (id: number) => void;
@@ -121,6 +122,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       avg: parseFloat(weightedAvg.toFixed(1)),
       count: est.reviewCount + estReviews.length,
     };
+  },
+
+  getUserReviews: () => {
+    const { user, reviews } = get();
+    if (!user) return [];
+    return reviews
+      .filter((r) => r.userId === user.id)
+      .sort((a, b) => b.date.localeCompare(a.date));
   },
 
   addNotification: (message, type = 'success') => {

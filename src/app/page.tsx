@@ -8,6 +8,7 @@ import { Notifications } from '@/components/conecta/Notifications';
 import { HomePage } from '@/components/conecta/HomePage';
 import { MapPage } from '@/components/conecta/MapPage';
 import { EstablishmentPage } from '@/components/conecta/EstablishmentPage';
+import { ProfilePage } from '@/components/conecta/ProfilePage';
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
@@ -33,6 +34,7 @@ export default function Home() {
           {view === 'home' && <HomePage key="home" />}
           {view === 'map' && <MapPage key="map" />}
           {view === 'detail' && <EstablishmentPage key="detail" />}
+          {view === 'profile' && <ProfilePage key="profile" />}
         </AnimatePresence>
       </main>
 

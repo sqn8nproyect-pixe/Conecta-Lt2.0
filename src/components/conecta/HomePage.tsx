@@ -5,14 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Star, Heart, Clock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { establishments } from '@/lib/data';
-import type { Category, Establishment } from '@/lib/types';
+import type { Category, Establishment, PriceRange } from '@/lib/types';
 import { Matchmaker } from './Matchmaker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type Filter = 'Todas' | Category;
+type PriceFilter = 'Todos' | PriceRange;
+type SortBy = 'rating' | 'reviews' | 'name';
 
 export function HomePage() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<Filter>('Todas');
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>('Todos');
+  const [sortBy, setSortBy] = useState<SortBy>('rating');
   const [matchmakerOpen, setMatchmakerOpen] = useState(false);
 
   const goToDetail = useAppStore((s) => s.goToDetail);
@@ -20,16 +31,28 @@ export function HomePage() {
   const favorites = useAppStore((s) => s.favorites);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
 
-  const filtered = establishments.filter((est) => {
-    const matchesSearch =
-      est.name.toLowerCase().includes(search.toLowerCase()) ||
-      est.description.toLowerCase().includes(search.toLowerCase()) ||
-      est.address.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = activeFilter === 'Todas' || est.category === activeFilter;
-    return matchesSearch && matchesFilter;
-  });
+  const filtered = establishments
+    .filter((est) => {
+      const matchesSearch =
+        est.name.toLowerCase().includes(search.toLowerCase()) ||
+        est.description.toLowerCase().includes(search.toLowerCase()) ||
+        est.address.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = activeFilter === 'Todas' || est.category === activeFilter;
+      const matchesPrice = priceFilter === 'Todos' || est.priceRange === priceFilter;
+      return matchesSearch && matchesCategory && matchesPrice;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'rating') {
+        return getDynamicRating(b.id).avg - getDynamicRating(a.id).avg;
+      }
+      if (sortBy === 'reviews') {
+        return getDynamicRating(b.id).count - getDynamicRating(a.id).count;
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   const filters: Filter[] = ['Todas', 'licorería', 'tasca', 'discoteca'];
+  const priceFilters: PriceFilter[] = ['Todos', '$', '$$', '$$$'];
 
   return (
     <motion.div
@@ -41,7 +64,7 @@ export function HomePage() {
       {/* Hero */}
       <section className="relative min-h-[88vh] sm:h-[660px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black">
-          { }
+          {}
           <img
             src="/images/hero.png"
             alt="Vida nocturna en Los Teques"
@@ -122,28 +145,80 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {filters.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase border border-white/10 transition-all whitespace-nowrap ${
-                  activeFilter === f
-                    ? 'bg-gold text-obsidian border-gold font-black glow-gold'
-                    : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                {f === 'Todas' ? 'Todos' : f + 's'}
-              </button>
-            ))}
+          {/* Toolbar: category filters (row 1) + price filters & sort (row 2) */}
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            {/* Category filters */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+              {filters.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase border border-white/10 transition-all whitespace-nowrap ${
+                    activeFilter === f
+                      ? 'bg-gold text-obsidian border-gold font-black glow-gold'
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {f === 'Todas' ? 'Todos' : f + 's'}
+                </button>
+              ))}
+            </div>
+
+            {/* Price filters + Sort selector */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex gap-1.5">
+                {priceFilters.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPriceFilter(p)}
+                    aria-pressed={priceFilter === p}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider uppercase border transition-all whitespace-nowrap ${
+                      priceFilter === p
+                        ? 'bg-gold text-obsidian border-gold font-black'
+                        : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+                <SelectTrigger
+                  className="bg-white/5 border border-white/10 text-white text-xs h-9 w-[180px] hover:bg-white/10 focus-visible:ring-0 focus-visible:border-gold/50 data-[placeholder]:text-white/60"
+                  aria-label="Ordenar locales"
+                >
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent className="bg-obsidian border-white/10 text-white">
+                  <SelectItem
+                    value="rating"
+                    className="text-xs focus:bg-gold/20 focus:text-gold"
+                  >
+                    Mejor valorados
+                  </SelectItem>
+                  <SelectItem
+                    value="reviews"
+                    className="text-xs focus:bg-gold/20 focus:text-gold"
+                  >
+                    Más reseñas
+                  </SelectItem>
+                  <SelectItem
+                    value="name"
+                    className="text-xs focus:bg-gold/20 focus:text-gold"
+                  >
+                    Nombre A-Z
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           <AnimatePresence mode="popLayout">
-            {filtered.map((est: Establishment) => {
+            {filtered.map((est: Establishment, index: number) => {
               const { avg, count } = getDynamicRating(est.id);
               const cardClass =
                 est.category === 'discoteca'
@@ -154,10 +229,10 @@ export function HomePage() {
                 <motion.div
                   layout
                   key={est.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.5) }}
                 >
                   <div
                     className={`glass-card rounded-3xl overflow-hidden ${cardClass} group relative`}

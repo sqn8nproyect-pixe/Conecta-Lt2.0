@@ -58,7 +58,7 @@ export interface User {
   avatar: string;
 }
 
-export type View = 'home' | 'map' | 'detail';
+export type View = 'home' | 'map' | 'detail' | 'profile';
 
 export type NotificationType = 'success' | 'info';
 
