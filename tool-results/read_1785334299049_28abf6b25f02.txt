@@ -1,0 +1,956 @@
+     1→import React, { useState } from 'react';
+     2→import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+     3→import { 
+     4→  MapPin, Star, Phone, Instagram, ArrowLeft, User, LogOut, 
+     5→  Search, Sliders, ChevronRight, Check, X, Sparkles, Clock, 
+     6→  Ticket, Heart, Share2, Compass, MessageSquare, ExternalLink, ShieldCheck, Filter
+     7→} from 'lucide-react';
+     8→import { motion, AnimatePresence } from 'framer-motion';
+     9→
+    10→// ==========================================
+    11→// TYPES & INTERFACES
+    12→// ==========================================
+    13→export interface Establishment {
+    14→  id: number;
+    15→  name: string;
+    16→  category: 'licorería' | 'tasca' | 'discoteca';
+    17→  description: string;
+    18→  lat: number;
+    19→  lng: number;
+    20→  address: string;
+    21→  phone: string;
+    22→  instagram: string;
+    23→  coverImage: string;
+    24→  images: string[];
+    25→  avgRating: number;
+    26→  reviewCount: number;
+    27→  priceRange: '$' | '$$' | '$$$';
+    28→  schedule: string;
+    29→  subRatings: {
+    30→    ambiente: number;
+    31→    servicio: number;
+    32→    precioCalidad: number;
+    33→  };
+    34→}
+    35→
+    36→export interface Offer {
+    37→  id: number;
+    38→  establishmentId: number;
+    39→  title: string;
+    40→  description: string;
+    41→  price: string;
+    42→  discount: string;
+    43→  image: string;
+    44→  code: string;
+    45→}
+    46→
+    47→export interface Review {
+    48→  id: number;
+    49→  establishmentId: number;
+    50→  userId: string;
+    51→  userName: string;
+    52→  userAvatar: string;
+    53→  rating: number;
+    54→  comment: string;
+    55→  date: string;
+    56→}
+    57→
+    58→export interface UserProfile {
+    59→  id: string;
+    60→  name: string;
+    61→  email: string;
+    62→  avatar: string;
+    63→}
+    64→
+    65→// ==========================================
+    66→// MOCK DATA (21 Locales de Los Teques)
+    67→// ==========================================
+    68→const establishments: Establishment[] = [
+    69→  { 
+    70→    id: 1, name: "Licorería El Dorado", category: "licorería", 
+    71→    description: "La más amplia selección de licores premium de Los Teques. Contamos con bodegas exclusivas y envíos exprés.", 
+    72→    lat: 10.3445, lng: -67.0431, address: "Calle Miranda, Los Teques", phone: "+584145551234", instagram: "@eldoradolt", 
+    73→    coverImage: "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=1200&q=80", 
+    74→    images: [
+    75→      "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=1200&q=80",
+    76→      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80"
+    77→    ],
+    78→    avgRating: 4.7, reviewCount: 28, priceRange: "$$", schedule: "10:00 AM - 09:00 PM",
+    79→    subRatings: { ambiente: 4.2, servicio: 4.9, precioCalidad: 4.8 }
+    80→  },
+    81→  { 
+    82→    id: 2, name: "Tasca La Cava", category: "tasca", 
+    83→    description: "Ambiente cálido, música acústica en vivo y los cócteles de autor más famosos de la ciudad. Gastronomía gallega y criolla.", 
+    84→    lat: 10.3482, lng: -67.0389, address: "Av. Bolívar, Los Teques", phone: "+584145552345", instagram: "@lacavalt", 
+    85→    coverImage: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80", 
+    86→    images: [
+    87→      "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80",
+    88→      "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=1200&q=80"
+    89→    ],
+    90→    avgRating: 4.5, reviewCount: 34, priceRange: "$$", schedule: "12:00 PM - 02:00 AM",
+    91→    subRatings: { ambiente: 4.8, servicio: 4.4, precioCalidad: 4.3 }
+    92→  },
+    93→  { 
+    94→    id: 3, name: "Discoteca Eclipse", category: "discoteca", 
+    95→    description: "La mejor pista de baile, espectáculos de luces robóticas y alineación semanal de DJs internacionales de renombre.", 
+    96→    lat: 10.3411, lng: -67.0456, address: "Calle Sucre, Los Teques", phone: "+584145553456", instagram: "@eclipselt", 
+    97→    coverImage: "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=1200&q=80", 
+    98→    images: [
+    99→      "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=1200&q=80",
+   100→      "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80"
+   101→    ],
+   102→    avgRating: 4.8, reviewCount: 41, priceRange: "$$$", schedule: "09:00 PM - 05:00 AM",
+   103→    subRatings: { ambiente: 4.9, servicio: 4.7, precioCalidad: 4.6 }
+   104→  },
+   105→  { 
+   106→    id: 4, name: "Licorería Premium Select", category: "licorería", 
+   107→    description: "Importación directa y exclusiva de vinos europeos, whiskies añejos y destilados artesanales raros.", 
+   108→    lat: 10.3501, lng: -67.0402, address: "Plaza Bolívar, Los Teques", phone: "+584145554567", instagram: "@premiumselectlt", 
+   109→    coverImage: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80", 
+   110→    images: ["https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80"],
+   111→    avgRating: 4.3, reviewCount: 19, priceRange: "$$$", schedule: "11:00 AM - 10:00 PM",
+   112→    subRatings: { ambiente: 3.9, servicio: 4.6, precioCalidad: 4.2 }
+   113→  },
+   114→  { 
+   115→    id: 5, name: "Tasca Los Amigos", category: "tasca", 
+   116→    description: "Clásica tasca con deliciosos platos tradicionales venezolanos, cerveza bien fría y un ambiente ideal para compartir con panas.", 
+   117→    lat: 10.3459, lng: -67.0367, address: "Av. Miranda, Los Teques", phone: "+584145555678", instagram: "@losamigoslt", 
+   118→    coverImage: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80", 
+   119→    images: ["https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"],
+   120→    avgRating: 4.6, reviewCount: 52, priceRange: "$", schedule: "11:30 AM - 01:00 AM",
+   121→    subRatings: { ambiente: 4.5, servicio: 4.7, precioCalidad: 4.8 }
+   122→  },
+   123→  { 
+   124→    id: 6, name: "Discoteca Noche Eterna", category: "discoteca", 
+   125→    description: "Luces de neón intensas, sistemas de sonido Funktion-One y el mejor ambiente urbano de Los Teques.", 
+   126→    lat: 10.3398, lng: -67.0491, address: "Zona Industrial, Los Teques", phone: "+584145556789", instagram: "@nocheeternalt", 
+   127→    coverImage: "https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=1200&q=80", 
+   128→    images: ["https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=1200&q=80"],
+   129→    avgRating: 4.4, reviewCount: 37, priceRange: "$$", schedule: "10:00 PM - 06:00 AM",
+   130→    subRatings: { ambiente: 4.6, servicio: 4.1, precioCalidad: 4.3 }
+   131→  }
+   132→];
+   133→
+   134→const offers: Offer[] = [
+   135→  { id: 1, establishmentId: 1, title: "Whisky Premium 18 años", description: "Botella de 750ml. Reserva limitada de malta única.", price: "$89", discount: "20% OFF", image: "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=600&q=80", code: "GOLD18" },
+   136→  { id: 2, establishmentId: 2, title: "Cóctel Noche Dorada", description: "Gin premium + tónica especial + infusión de cítricos.", price: "$12", discount: "2x1", image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=600&q=80", code: "CAVA2X1" },
+   137→  { id: 3, establishmentId: 3, title: "Servicio Champagne VIP", description: "Veuve Clicquot Brut 750ml helada con copa VIP.", price: "$75", discount: "PROMO", image: "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=600&q=80", code: "ECLIPSEVIP" },
+   138→  { id: 4, establishmentId: 5, title: "Combo Tobo + Tequeños", description: "10 Cervezas bien frías + ración de 12 tequeños artesanos.", price: "$22", discount: "POPULAR", image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80", code: "AMIGOSPACK" }
+   139→];
+   140→
+   141→const mockReviews: Review[] = [
+   142→  { id: 1, establishmentId: 1, userId: "u1", userName: "Carlos Mendoza", userAvatar: "https://i.pravatar.cc/150?img=12", rating: 5, comment: "Excelente selección de whiskies. La atención de su personal es de primera, te asesoran muy bien.", date: "2026-07-20" },
+   143→  { id: 2, establishmentId: 2, userId: "u2", userName: "María López", userAvatar: "https://i.pravatar.cc/150?img=28", rating: 5, comment: "La mejor música acústica en vivo de Los Teques. El ambiente es super íntimo, ideal para parejas.", date: "2026-07-25" },
+   144→  { id: 3, establishmentId: 3, userId: "u3", userName: "Jean Gómez", userAvatar: "https://i.pravatar.cc/150?img=33", rating: 5, comment: "El juego de luces y el sonido en este local son de otro planeta. Definitivamente volveré.", date: "2026-07-28" }
+   145→];
+   146→
+   147→const mockGoogleUser: UserProfile = {
+   148→  id: "currentUser",
+   149→  name: "Ana Rodríguez",
+   150→  email: "ana.rodriguez@gmail.com",
+   151→  avatar: "https://i.pravatar.cc/150?img=47"
+   152→};
+   153→
+   154→// ==========================================
+   155→// MAIN APP COMPONENT
+   156→// ==========================================
+   157→export default function App() {
+   158→  const [user, setUser] = useState<UserProfile | null>(null);
+   159→  const [reviews, setReviews] = useState<Review[]>(mockReviews);
+   160→  const [favorites, setFavorites] = useState<number[]>([]);
+   161→  const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'info' }[]>([]);
+   162→
+   163→  const location = useLocation();
+   164→
+   165→  const addNotification = (message: string, type: 'success' | 'info' = 'success') => {
+   166→    const id = Date.now();
+   167→    setNotifications(prev => [...prev, { id, message, type }]);
+   168→    setTimeout(() => {
+   169→      setNotifications(prev => prev.filter(n => n.id !== id));
+   170→    }, 4000);
+   171→  };
+   172→
+   173→  const toggleFavorite = (id: number) => {
+   174→    setFavorites(prev => 
+   175→      prev.includes(id) ? prev.filter(fav => fav !== id) : [...prev, id]
+   176→    );
+   177→    const est = establishments.find(e => e.id === id);
+   178→    addNotification(
+   179→      favorites.includes(id) ? `Eliminado de favoritos: ${est?.name}` : `¡Añadido a favoritos!: ${est?.name}`
+   180→    );
+   181→  };
+   182→
+   183→  const loginWithGoogle = () => {
+   184→    setUser(mockGoogleUser);
+   185→    addNotification("¡Sesión iniciada con éxito vía Google!");
+   186→  };
+   187→
+   188→  const logout = () => {
+   189→    setUser(null);
+   190→    addNotification("Sesión cerrada correctamente.", "info");
+   191→  };
+   192→
+   193→  const getDynamicRating = (estId: number) => {
+   194→    const estReviews = reviews.filter(r => r.establishmentId === estId);
+   195→    const est = establishments.find(e => e.id === estId)!;
+   196→    if (!est) return { avg: 4.5, count: 10 };
+   197→    if (estReviews.length === 0) return { avg: est.avgRating, count: est.reviewCount };
+   198→    
+   199→    const totalRating = estReviews.reduce((sum, r) => sum + r.rating, 0);
+   200→    const weightedAvg = ((est.avgRating * est.reviewCount) + totalRating) / (est.reviewCount + estReviews.length);
+   201→    return { 
+   202→      avg: parseFloat(weightedAvg.toFixed(1)), 
+   203→      count: est.reviewCount + estReviews.length 
+   204→    };
+   205→  };
+   206→
+   207→  const addReview = (estId: number, rating: number, comment: string) => {
+   208→    if (!user) return false;
+   209→    const newReview: Review = {
+   210→      id: Date.now(),
+   211→      establishmentId: estId,
+   212→      userId: user.id,
+   213→      userName: user.name,
+   214→      userAvatar: user.avatar,
+   215→      rating,
+   216→      comment,
+   217→      date: new Date().toISOString().split('T')[0]
+   218→    };
+   219→    setReviews([newReview, ...reviews]);
+   220→    addNotification("¡Reseña publicada! Gracias por tu opinión.");
+   221→    return true;
+   222→  };
+   223→
+   224→  return (
+   225→    <div className="min-h-screen bg-[#0A0A0C] text-white font-sans relative selection:bg-amber-500 selection:text-black">
+   226→      {/* Visual Ambient Orbs */}
+   227→      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+   228→        <div className="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[120px]" />
+   229→        <div className="absolute top-1/2 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-[140px]" />
+   230→      </div>
+   231→
+   232→      {/* Toast Notifications */}
+   233→      <div className="fixed top-24 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+   234→        <AnimatePresence>
+   235→          {notifications.map(n => (
+   236→            <motion.div
+   237→              key={n.id}
+   238→              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+   239→              animate={{ opacity: 1, y: 0, scale: 1 }}
+   240→              exit={{ opacity: 0, x: 50, scale: 0.9 }}
+   241→              className={`pointer-events-auto px-5 py-3.5 rounded-2xl bg-white/10 backdrop-blur-xl border flex items-center gap-3 shadow-2xl ${
+   242→                n.type === 'success' ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/40 text-amber-300'
+   243→              }`}
+   244→            >
+   245→              <div className={`p-1 rounded-full ${n.type === 'success' ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`}>
+   246→                {n.type === 'success' ? <Check size={16} /> : <Sparkles size={16} />}
+   247→              </div>
+   248→              <span className="text-sm font-medium text-white">{n.message}</span>
+   249→            </motion.div>
+   250→          ))}
+   251→        </AnimatePresence>
+   252→      </div>
+   253→
+   254→      {/* Glass Navigation Bar */}
+   255→      <nav className="fixed top-0 left-0 right-0 z-40 bg-[#0A0A0C]/80 backdrop-blur-md border-b border-white/10">
+   256→        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+   257→          <Link to="/" className="flex items-center gap-3 group">
+   258→            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center font-black text-black text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+   259→              C
+   260→            </div>
+   261→            <div>
+   262→              <div className="text-xl font-bold tracking-tight text-white font-serif">
+   263→                CONECTA<span className="text-amber-400">-LT</span>
+   264→              </div>
+   265→              <div className="text-[9px] text-white/40 tracking-[2px] font-mono -mt-1">LOS TEQUES</div>
+   266→            </div>
+   267→          </Link>
+   268→
+   269→          <div className="flex items-center gap-6 text-sm font-medium">
+   270→            <Link to="/" className={`transition-colors ${location.pathname === '/' ? 'text-amber-400 font-semibold' : 'text-white/70 hover:text-white'}`}>Directorio</Link>
+   271→            <Link to="/mapa" className={`transition-colors ${location.pathname === '/mapa' ? 'text-amber-400 font-semibold' : 'text-white/70 hover:text-white'}`}>Mapa Interactivo</Link>
+   272→            
+   273→            {user ? (
+   274→              <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+   275→                <img src={user.avatar} className="w-8 h-8 rounded-full ring-2 ring-amber-500/50" alt="" />
+   276→                <span className="hidden md:inline text-sm font-semibold">{user.name.split(" ")[0]}</span>
+   277→                <button onClick={logout} className="p-2 text-white/50 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+   278→                  <LogOut size={16} />
+   279→                </button>
+   280→              </div>
+   281→            ) : (
+   282→              <button 
+   283→                onClick={loginWithGoogle}
+   284→                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-black font-semibold text-xs tracking-wider hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/10"
+   285→              >
+   286→                <User size={14} /> ACCEDER CON GOOGLE
+   287→              </button>
+   288→            )}
+   289→          </div>
+   290→        </div>
+   291→      </nav>
+   292→
+   293→      {/* Main Content View Container */}
+   294→      <div className="pt-20 relative z-10">
+   295→        <AnimatePresence mode="wait">
+   296→          <Routes location={location} key={location.pathname}>
+   297→            <Route path="/" element={
+   298→              <HomePage 
+   299→                establishments={establishments} 
+   300→                getDynamicRating={getDynamicRating}
+   301→                favorites={favorites}
+   302→                toggleFavorite={toggleFavorite}
+   303→              />
+   304→            } />
+   305→            <Route path="/mapa" element={
+   306→              <MapPage 
+   307→                establishments={establishments} 
+   308→                getDynamicRating={getDynamicRating} 
+   309→              />
+   310→            } />
+   311→            <Route path="/establecimiento/:id" element={
+   312→              <EstablishmentPage 
+   313→                user={user} 
+   314→                establishments={establishments} 
+   315→                offers={offers} 
+   316→                reviews={reviews} 
+   317→                addReview={addReview} 
+   318→                getDynamicRating={getDynamicRating}
+   319→                addNotification={addNotification}
+   320→                favorites={favorites}
+   321→                toggleFavorite={toggleFavorite}
+   322→              />
+   323→            } />
+   324→          </Routes>
+   325→        </AnimatePresence>
+   326→      </div>
+   327→    </div>
+   328→  );
+   329→}
+   330→
+   331→// ==========================================
+   332→// HOME PAGE - Showcase & Interactive Matchmaker
+   333→// ==========================================
+   334→function HomePage({ establishments, getDynamicRating, favorites, toggleFavorite }: any) {
+   335→  const [search, setSearch] = useState("");
+   336→  const [activeCategory, setActiveCategory] = useState<string>("Todas");
+   337→  const [matchmakerOpen, setMatchmakerOpen] = useState(false);
+   338→
+   339→  const filtered = establishments.filter((est: Establishment) => {
+   340→    const matchesSearch = est.name.toLowerCase().includes(search.toLowerCase()) || 
+   341→                          est.description.toLowerCase().includes(search.toLowerCase()) ||
+   342→                          est.address.toLowerCase().includes(search.toLowerCase());
+   343→    const matchesCategory = activeCategory === "Todas" || est.category === activeCategory;
+   344→    return matchesSearch && matchesCategory;
+   345→  });
+   346→
+   347→  return (
+   348→    <motion.div 
+   349→      initial={{ opacity: 0 }}
+   350→      animate={{ opacity: 1 }}
+   351→      exit={{ opacity: 0 }}
+   352→      className="pb-24"
+   353→    >
+   354→      {/* Hero Header */}
+   355→      <div className="relative min-h-[580px] flex items-center justify-center overflow-hidden border-b border-white/10 px-6">
+   356→        <div className="absolute inset-0 z-0">
+   357→          <img src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1800&q=80" alt="Hero Nightlife" className="w-full h-full object-cover opacity-20 scale-105" />
+   358→          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-[#0A0A0C]/70 to-transparent" />
+   359→        </div>
+   360→
+   361→        <div className="relative z-10 max-w-3xl text-center">
+   362→          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold tracking-widest mb-6">
+   363→            <Sparkles size={14} /> GUÍA NOCTURNA EXCLUSIVA DE LOS TEQUES
+   364→          </span>
+   365→          <h1 className="text-5xl md:text-7xl font-serif font-bold tracking-tight leading-tight mb-6 text-white">
+   366→            La vida nocturna,<br /><span className="text-amber-400">redescubierta.</span>
+   367→          </h1>
+   368→          <p className="text-lg text-white/70 max-w-xl mx-auto mb-8 leading-relaxed">
+   369→            Explora los mejores locales de la capital mirandina. Ofertas exclusivas, ubicaciones exactas y reseñas de la comunidad en tiempo real.
+   370→          </p>
+   371→
+   372→          {/* Search & Planner Bar */}
+   373→          <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
+   374→            <div className="relative flex-1">
+   375→              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+   376→              <input 
+   377→                type="text" 
+   378→                value={search} 
+   379→                onChange={(e) => setSearch(e.target.value)}
+   380→                placeholder="Buscar licorerías, tascas, discotecas..." 
+   381→                className="w-full bg-white/5 border border-white/15 focus:border-amber-400 focus:bg-white/10 px-12 h-14 rounded-2xl text-sm placeholder:text-white/40 outline-none transition-all" 
+   382→              />
+   383→            </div>
+   384→            <button 
+   385→              onClick={() => setMatchmakerOpen(true)}
+   386→              className="px-6 h-14 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm tracking-wide flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-amber-500/20 whitespace-nowrap"
+   387→            >
+   388→              <Sparkles size={16} /> PLANIFICAR NOCHE
+   389→            </button>
+   390→          </div>
+   391→        </div>
+   392→      </div>
+   393→
+   394→      {/* Directory Section */}
+   395→      <div className="max-w-7xl mx-auto px-6 pt-12">
+   396→        {/* Category Filters */}
+   397→        <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
+   398→          <div className="flex gap-2">
+   399→            {["Todas", "licorería", "tasca", "discoteca"].map((cat) => (
+   400→              <button
+   401→                key={cat}
+   402→                onClick={() => setActiveCategory(cat)}
+   403→                className={`px-5 py-2.5 rounded-xl font-medium text-xs tracking-wider capitalize transition-all ${
+   404→                  activeCategory === cat 
+   405→                    ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' 
+   406→                    : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/5'
+   407→                }`}
+   408→              >
+   409→                {cat === 'Todas' ? '🔥 Todos los Locales' : cat}
+   410→              </button>
+   411→            ))}
+   412→          </div>
+   413→          <span className="text-xs text-white/40 font-mono hidden md:block">
+   414→            Mostrando {filtered.length} locales
+   415→          </span>
+   416→        </div>
+   417→
+   418→        {/* Establishments Grid */}
+   419→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+   420→          {filtered.map((est: Establishment) => {
+   421→            const { avg, count } = getDynamicRating(est.id);
+   422→            const isFav = favorites.includes(est.id);
+   423→
+   424→            return (
+   425→              <motion.div
+   426→                key={est.id}
+   427→                layout
+   428→                initial={{ opacity: 0, scale: 0.95 }}
+   429→                animate={{ opacity: 1, scale: 1 }}
+   430→                whileHover={{ y: -6 }}
+   431→                className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group hover:border-amber-500/40 transition-all flex flex-col justify-between"
+   432→              >
+   433→                <div>
+   434→                  <div className="relative h-48 overflow-hidden">
+   435→                    <img 
+   436→                      src={est.coverImage} 
+   437→                      alt={est.name} 
+   438→                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+   439→                    />
+   440→                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-transparent to-transparent" />
+   441→                    
+   442→                    {/* Category Tag */}
+   443→                    <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+   444→                      {est.category}
+   445→                    </span>
+   446→
+   447→                    {/* Favorite Button */}
+   448→                    <button 
+   449→                      onClick={() => toggleFavorite(est.id)}
+   450→                      className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-md transition-colors ${
+   451→                        isFav ? 'bg-amber-500 text-black' : 'bg-black/50 text-white hover:bg-black/80'
+   452→                      }`}
+   453→                    >
+   454→                      <Heart size={16} fill={isFav ? "currentColor" : "none"} />
+   455→                    </button>
+   456→                  </div>
+   457→
+   458→                  <div className="p-6">
+   459→                    <div className="flex items-center justify-between mb-2">
+   460→                      <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors font-serif">
+   461→                        {est.name}
+   462→                      </h3>
+   463→                      <div className="flex items-center gap-1 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 text-amber-400 text-xs font-bold">
+   464→                        <Star size={12} fill="currentColor" /> {avg}
+   465→                        <span className="text-white/40 font-normal">({count})</span>
+   466→                      </div>
+   467→                    </div>
+   468→
+   469→                    <p className="text-white/60 text-xs line-clamp-2 mb-4 leading-relaxed">
+   470→                      {est.description}
+   471→                    </p>
+   472→
+   473→                    <div className="space-y-2 text-xs text-white/50 border-t border-white/5 pt-4">
+   474→                      <div className="flex items-center gap-2">
+   475→                        <MapPin size={14} className="text-amber-400 shrink-0" />
+   476→                        <span className="truncate">{est.address}</span>
+   477→                      </div>
+   478→                      <div className="flex items-center gap-2">
+   479→                        <Clock size={14} className="text-amber-400 shrink-0" />
+   480→                        <span>{est.schedule}</span>
+   481→                      </div>
+   482→                    </div>
+   483→                  </div>
+   484→                </div>
+   485→
+   486→                <div className="px-6 pb-6 pt-2">
+   487→                  <Link 
+   488→                    to={`/establecimiento/${est.id}`}
+   489→                    className="w-full py-3 rounded-xl bg-white/10 hover:bg-amber-500 hover:text-black font-semibold text-xs tracking-wider flex items-center justify-center gap-2 transition-all group-hover:shadow-lg"
+   490→                  >
+   491→                    VER DETALLES & OFERTAS <ChevronRight size={14} />
+   492→                  </Link>
+   493→                </div>
+   494→              </motion.div>
+   495→            );
+   496→          })}
+   497→        </div>
+   498→      </div>
+   499→
+   500→      {/* Matchmaker Interactive Modal */}
+   501→      <AnimatePresence>
+   502→        {matchmakerOpen && (
+   503→          <MatchmakerModal 
+   504→            establishments={establishments} 
+   505→            onClose={() => setMatchmakerOpen(false)} 
+   506→          />
+   507→        )}
+   508→      </AnimatePresence>
+   509→    </motion.div>
+   510→  );
+   511→}
+   512→
+   513→// ==========================================
+   514→// MATCHMAKER MODAL COMPONENT
+   515→// ==========================================
+   516→function MatchmakerModal({ establishments, onClose }: { establishments: Establishment[]; onClose: () => void }) {
+   517→  const navigate = useNavigate();
+   518→  const [step, setStep] = useState(1);
+   519→  const [answers, setAnswers] = useState({ mood: '', company: '', budget: '' });
+   520→
+   521→  const handleSelect = (key: string, val: string) => {
+   522→    const updated = { ...answers, [key]: val };
+   523→    setAnswers(updated);
+   524→    if (step < 3) {
+   525→      setStep(step + 1);
+   526→    } else {
+   527→      setStep(4); // Show Recommendation
+   528→    }
+   529→  };
+   530→
+   531→  const getMatchedEstablishment = () => {
+   532→    if (answers.mood === 'party') {
+   533→      return establishments.find(e => e.category === 'discoteca') || establishments[2];
+   534→    } else if (answers.company === 'pareja') {
+   535→      return establishments.find(e => e.category === 'tasca') || establishments[1];
+   536→    } else {
+   537→      return establishments.find(e => e.category === 'licorería') || establishments[0];
+   538→    }
+   539→  };
+   540→
+   541→  const matched = getMatchedEstablishment();
+   542→
+   543→  return (
+   544→    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-md">
+   545→      <motion.div 
+   546→        initial={{ opacity: 0, scale: 0.9 }}
+   547→        animate={{ opacity: 1, scale: 1 }}
+   548→        exit={{ opacity: 0, scale: 0.9 }}
+   549→        className="relative w-full max-w-lg bg-[#121216] border border-white/15 rounded-3xl p-8 overflow-hidden shadow-2xl"
+   550→      >
+   551→        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white">
+   552→          <X size={18} />
+   553→        </button>
+   554→
+   555→        <div className="text-center mb-8">
+   556→          <span className="text-[10px] tracking-[3px] font-mono text-amber-400 font-bold uppercase">PLANIFICADOR VIRTUAL 2.0</span>
+   557→          <h3 className="text-2xl font-serif font-bold mt-1">¿Qué plan tienes para hoy?</h3>
+   558→        </div>
+   559→
+   560→        {step === 1 && (
+   561→          <div className="space-y-4">
+   562→            <p className="text-center text-xs text-white/60 mb-4">Paso 1/3: Selecciona el tipo de ambiente</p>
+   563→            <div className="grid grid-cols-2 gap-3">
+   564→              <button onClick={() => handleSelect('mood', 'chill')} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 text-center transition-all">
+   565→                <div className="text-3xl mb-2">🍷</div>
+   566→                <div className="font-bold text-sm">Tranquilo & Casual</div>
+   567→                <div className="text-[10px] text-white/40">Conversar y relajar</div>
+   568→              </button>
+   569→              <button onClick={() => handleSelect('mood', 'party')} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 text-center transition-all">
+   570→                <div className="text-3xl mb-2">🔥</div>
+   571→                <div className="font-bold text-sm">Rumba & Fiesta</div>
+   572→                <div className="text-[10px] text-white/40">Música y pista de baile</div>
+   573→              </button>
+   574→            </div>
+   575→          </div>
+   576→        )}
+   577→
+   578→        {step === 2 && (
+   579→          <div className="space-y-4">
+   580→            <p className="text-center text-xs text-white/60 mb-4">Paso 2/3: ¿Con quién vas a salir?</p>
+   581→            <div className="grid grid-cols-2 gap-3">
+   582→              <button onClick={() => handleSelect('company', 'pareja')} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 text-center transition-all">
+   583→                <div className="text-3xl mb-2">👩‍❤️‍👨</div>
+   584→                <div className="font-bold text-sm">En Pareja</div>
+   585→                <div className="text-[10px] text-white/40">Ambiente íntimo</div>
+   586→              </button>
+   587→              <button onClick={() => handleSelect('company', 'panas')} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 text-center transition-all">
+   588→                <div className="text-3xl mb-2">🍻</div>
+   589→                <div className="font-bold text-sm">Grupo de Panas</div>
+   590→                <div className="text-[10px] text-white/40">Risas y compartir</div>
+   591→              </button>
+   592→            </div>
+   593→          </div>
+   594→        )}
+   595→
+   596→        {step === 3 && (
+   597→          <div className="space-y-4">
+   598→            <p className="text-center text-xs text-white/60 mb-4">Paso 3/3: ¿Cuál es el rango de presupuesto?</p>
+   599→            <div className="grid grid-cols-2 gap-3">
+   600→              <button onClick={() => handleSelect('budget', 'low')} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 text-center transition-all">
+   601→                <div className="text-3xl mb-2">💵</div>
+   602→                <div className="font-bold text-sm">Económico ($)</div>
+   603→                <div className="text-[10px] text-white/40">Precios accesibles</div>
+   604→              </button>
+   605→              <button onClick={() => handleSelect('budget', 'high')} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 text-center transition-all">
+   606→                <div className="text-3xl mb-2">🍾</div>
+   607→                <div className="font-bold text-sm">VIP / Premium ($$$)</div>
+   608→                <div className="text-[10px] text-white/40">Experiencia exclusiva</div>
+   609→              </button>
+   610→            </div>
+   611→          </div>
+   612→        )}
+   613→
+   614→        {step === 4 && matched && (
+   615→          <div className="text-center space-y-6">
+   616→            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+   617→              <Sparkles className="mx-auto text-amber-400 mb-2" size={28} />
+   618→              <div className="text-xs text-amber-400 font-bold uppercase tracking-widest">TU RECOMENDACIÓN IDEAL</div>
+   619→              <h4 className="text-2xl font-bold font-serif text-white mt-1">{matched.name}</h4>
+   620→              <p className="text-xs text-white/60 mt-2">{matched.description}</p>
+   621→            </div>
+   622→
+   623→            <button 
+   624→              onClick={() => {
+   625→                onClose();
+   626→                navigate(`/establecimiento/${matched.id}`);
+   627→              }}
+   628→              className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm tracking-wider transition-all shadow-lg shadow-amber-500/20"
+   629→            >
+   630→              IR AL LOCAL RECOMENDADO
+   631→            </button>
+   632→          </div>
+   633→        )}
+   634→      </motion.div>
+   635→    </div>
+   636→  );
+   637→}
+   638→
+   639→// ==========================================
+   640→// MAP PAGE - Interactive Map Simulation
+   641→// ==========================================
+   642→function MapPage({ establishments, getDynamicRating }: any) {
+   643→  const [selectedEst, setSelectedEst] = useState<Establishment>(establishments[0]);
+   644→
+   645→  return (
+   646→    <motion.div 
+   647→      initial={{ opacity: 0 }}
+   648→      animate={{ opacity: 1 }}
+   649→      exit={{ opacity: 0 }}
+   650→      className="h-[calc(100vh-80px)] flex flex-col md:flex-row relative overflow-hidden"
+   651→    >
+   652→      {/* Map Interactive Canvas Container */}
+   653→      <div className="flex-1 bg-[#12141C] relative p-6 flex items-center justify-center overflow-hidden">
+   654→        {/* Radar Map Grid Background */}
+   655→        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]" />
+   656→
+   657→        <div className="relative w-full max-w-3xl h-[450px] bg-white/5 border border-white/10 rounded-3xl overflow-hidden flex items-center justify-center shadow-2xl">
+   658→          <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/5 via-transparent to-purple-500/5" />
+   659→          
+   660→          <span className="absolute top-4 left-4 text-[10px] font-mono text-white/40 tracking-widest">
+   661→            SIMULADOR GPS • LOS TEQUES
+   662→          </span>
+   663→
+   664→          {/* Interactive Pins */}
+   665→          {establishments.map((est: Establishment, idx: number) => {
+   666→            const isSelected = selectedEst.id === est.id;
+   667→            return (
+   668→              <button
+   669→                key={est.id}
+   670→                onClick={() => setSelectedEst(est)}
+   671→                style={{
+   672→                  top: `${20 + (idx * 13) % 65}%`,
+   673→                  left: `${15 + (idx * 18) % 70}%`
+   674→                }}
+   675→                className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all p-3 rounded-full flex items-center justify-center ${
+   676→                  isSelected 
+   677→                    ? 'bg-amber-500 text-black scale-125 z-20 shadow-lg shadow-amber-500/50 ring-4 ring-amber-500/30' 
+   678→                    : 'bg-black/80 text-amber-400 border border-amber-500/40 hover:scale-110 z-10'
+   679→                }`}
+   680→              >
+   681→                <MapPin size={18} fill={isSelected ? "currentColor" : "none"} />
+   682→              </button>
+   683→            );
+   684→          })}
+   685→        </div>
+   686→      </div>
+   687→
+   688→      {/* Selected Location Drawer */}
+   689→      <div className="w-full md:w-96 bg-[#0A0A0C] border-t md:border-t-0 md:border-l border-white/10 p-6 flex flex-col justify-between">
+   690→        <div>
+   691→          <div className="relative h-44 rounded-2xl overflow-hidden mb-5">
+   692→            <img src={selectedEst.coverImage} alt="" className="w-full h-full object-cover" />
+   693→            <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/60 text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+   694→              {selectedEst.category}
+   695→            </span>
+   696→          </div>
+   697→
+   698→          <h3 className="text-2xl font-serif font-bold text-white mb-2">{selectedEst.name}</h3>
+   699→          <p className="text-xs text-white/60 mb-4 leading-relaxed">{selectedEst.description}</p>
+   700→
+   701→          <div className="space-y-2 text-xs text-white/50 mb-6">
+   702→            <div className="flex items-center gap-2">
+   703→              <MapPin size={14} className="text-amber-400" />
+   704→              <span>{selectedEst.address}</span>
+   705→            </div>
+   706→            <div className="flex items-center gap-2">
+   707→              <Clock size={14} className="text-amber-400" />
+   708→              <span>{selectedEst.schedule}</span>
+   709→            </div>
+   710→          </div>
+   711→        </div>
+   712→
+   713→        <Link 
+   714→          to={`/establecimiento/${selectedEst.id}`}
+   715→          className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all"
+   716→        >
+   717→          VER DETALLES DE ESTE LOCAL <ChevronRight size={14} />
+   718→        </Link>
+   719→      </div>
+   720→    </motion.div>
+   721→  );
+   722→}
+   723→
+   724→// ==========================================
+   725→// ESTABLISHMENT DETAIL PAGE
+   726→// ==========================================
+   727→function EstablishmentPage({ 
+   728→  user, establishments, offers, reviews, addReview, getDynamicRating, addNotification, favorites, toggleFavorite 
+   729→}: any) {
+   730→  const { id } = useParams();
+   731→  const navigate = useNavigate();
+   732→  const estId = parseInt(id || "1");
+   733→  const est = establishments.find((e: Establishment) => e.id === estId) || establishments[0];
+   734→  const estOffers = offers.filter((o: Offer) => o.establishmentId === estId);
+   735→  const estReviews = reviews.filter((r: Review) => r.establishmentId === estId);
+   736→  const { avg, count } = getDynamicRating(estId);
+   737→
+   738→  const [activeTab, setActiveTab] = useState<'info' | 'offers' | 'reviews'>('info');
+   739→  const [newRating, setNewRating] = useState(5);
+   740→  const [newComment, setNewComment] = useState("");
+   741→  const [claimedCode, setClaimedCode] = useState<string | null>(null);
+   742→
+   743→  const isFav = favorites.includes(est.id);
+   744→
+   745→  const handleSubmitReview = (e: React.FormEvent) => {
+   746→    e.preventDefault();
+   747→    if (!newComment.trim()) return;
+   748→    const ok = addReview(estId, newRating, newComment);
+   749→    if (ok) setNewComment("");
+   750→  };
+   751→
+   752→  return (
+   753→    <motion.div 
+   754→      initial={{ opacity: 0 }}
+   755→      animate={{ opacity: 1 }}
+   756→      exit={{ opacity: 0 }}
+   757→      className="pb-24 max-w-6xl mx-auto px-6 pt-6"
+   758→    >
+   759→      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-semibold text-white/50 hover:text-white mb-6 transition-colors">
+   760→        <ArrowLeft size={16} /> VOLVER AL DIRECTORIO
+   761→      </button>
+   762→
+   763→      {/* Header Banner */}
+   764→      <div className="relative h-80 rounded-3xl overflow-hidden border border-white/10 mb-8">
+   765→        <img src={est.coverImage} alt={est.name} className="w-full h-full object-cover" />
+   766→        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-[#0A0A0C]/50 to-transparent" />
+   767→
+   768→        <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+   769→          <div>
+   770→            <span className="px-3 py-1 rounded-full bg-amber-500 text-black text-[10px] font-bold uppercase tracking-widest mb-3 inline-block">
+   771→              {est.category}
+   772→            </span>
+   773→            <h1 className="text-3xl md:text-5xl font-serif font-bold text-white">{est.name}</h1>
+   774→            <p className="text-sm text-white/70 mt-1 flex items-center gap-2">
+   775→              <MapPin size={14} className="text-amber-400" /> {est.address}
+   776→            </p>
+   777→          </div>
+   778→
+   779→          <div className="flex items-center gap-3">
+   780→            <button 
+   781→              onClick={() => toggleFavorite(est.id)}
+   782→              className={`p-3 rounded-2xl backdrop-blur-md border border-white/20 transition-all ${
+   783→                isFav ? 'bg-amber-500 text-black' : 'bg-black/50 text-white'
+   784→              }`}
+   785→            >
+   786→              <Heart size={18} fill={isFav ? "currentColor" : "none"} />
+   787→            </button>
+   788→            <div className="bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 flex items-center gap-2 text-amber-400 font-bold text-lg">
+   789→              <Star size={18} fill="currentColor" /> {avg}
+   790→              <span className="text-xs font-normal text-white/40">({count} opiniones)</span>
+   791→            </div>
+   792→          </div>
+   793→        </div>
+   794→      </div>
+   795→
+   796→      {/* Navigation Tabs */}
+   797→      <div className="flex gap-4 border-b border-white/10 mb-8">
+   798→        {[
+   799→          { id: 'info', label: 'Información General' },
+   800→          { id: 'offers', label: `Promociones (${estOffers.length})` },
+   801→          { id: 'reviews', label: `Reseñas (${estReviews.length})` }
+   802→        ].map(tab => (
+   803→          <button
+   804→            key={tab.id}
+   805→            onClick={() => setActiveTab(tab.id as any)}
+   806→            className={`pb-4 text-sm font-semibold transition-all relative ${
+   807→              activeTab === tab.id ? 'text-amber-400' : 'text-white/50 hover:text-white'
+   808→            }`}
+   809→          >
+   810→            {tab.label}
+   811→            {activeTab === tab.id && (
+   812→              <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400" />
+   813→            )}
+   814→          </button>
+   815→        ))}
+   816→      </div>
+   817→
+   818→      {/* Tab Content */}
+   819→      {activeTab === 'info' && (
+   820→        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+   821→          <div className="md:col-span-2 space-y-6">
+   822→            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl">
+   823→              <h3 className="text-lg font-bold font-serif mb-3">Sobre este local</h3>
+   824→              <p className="text-sm text-white/70 leading-relaxed">{est.description}</p>
+   825→            </div>
+   826→
+   827→            {/* Sub-Ratings Breakdown */}
+   828→            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-4">
+   829→              <h3 className="text-lg font-bold font-serif mb-2">Evaluación del Ambiente</h3>
+   830→              <RatingBar label="Ambiente & Decoración" score={est.subRatings.ambiente} />
+   831→              <RatingBar label="Calidad del Servicio" score={est.subRatings.servicio} />
+   832→              <RatingBar label="Relación Precio / Calidad" score={est.subRatings.precioCalidad} />
+   833→            </div>
+   834→          </div>
+   835→
+   836→          {/* Contact Details Card */}
+   837→          <div className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-4 h-fit">
+   838→            <h3 className="text-lg font-bold font-serif mb-4">Contacto & Horarios</h3>
+   839→            <div className="flex items-center gap-3 text-xs text-white/70">
+   840→              <Phone size={16} className="text-amber-400" />
+   841→              <span>{est.phone}</span>
+   842→            </div>
+   843→            <div className="flex items-center gap-3 text-xs text-white/70">
+   844→              <Instagram size={16} className="text-amber-400" />
+   845→              <span>{est.instagram}</span>
+   846→            </div>
+   847→            <div className="flex items-center gap-3 text-xs text-white/70">
+   848→              <Clock size={16} className="text-amber-400" />
+   849→              <span>{est.schedule}</span>
+   850→            </div>
+   851→          </div>
+   852→        </div>
+   853→      )}
+   854→
+   855→      {activeTab === 'offers' && (
+   856→        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+   857→          {estOffers.length > 0 ? estOffers.map((off: Offer) => (
+   858→            <div key={off.id} className="bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col justify-between">
+   859→              <div>
+   860→                <div className="flex items-center justify-between mb-3">
+   861→                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-bold">
+   862→                    {off.discount}
+   863→                  </span>
+   864→                  <span className="text-2xl font-bold font-serif text-white">{off.price}</span>
+   865→                </div>
+   866→                <h4 className="text-lg font-bold mb-1">{off.title}</h4>
+   867→                <p className="text-xs text-white/60 mb-4">{off.description}</p>
+   868→              </div>
+   869→
+   870→              <button 
+   871→                onClick={() => {
+   872→                  setClaimedCode(off.code);
+   873→                  addNotification(`¡Cupón activado!: ${off.code}`);
+   874→                }}
+   875→                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all"
+   876→              >
+   877→                <Ticket size={16} /> RECLAMAR CÓDIGO {off.code}
+   878→              </button>
+   879→            </div>
+   880→          )) : (
+   881→            <p className="text-xs text-white/40 col-span-2 text-center py-12">No hay ofertas activas en este momento.</p>
+   882→          )}
+   883→        </div>
+   884→      )}
+   885→
+   886→      {activeTab === 'reviews' && (
+   887→        <div className="space-y-8 max-w-2xl">
+   888→          {/* Add Review Form */}
+   889→          {user ? (
+   890→            <form onSubmit={handleSubmitReview} className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-4">
+   891→              <h4 className="text-sm font-bold tracking-wider uppercase text-amber-400">Escribir una Reseña</h4>
+   892→              <div className="flex items-center gap-2">
+   893→                {[1, 2, 3, 4, 5].map((star) => (
+   894→                  <button
+   895→                    key={star}
+   896→                    type="button"
+   897→                    onClick={() => setNewRating(star)}
+   898→                    className="text-amber-400 p-1 hover:scale-110 transition-transform"
+   899→                  >
+   900→                    <Star size={20} fill={star <= newRating ? "currentColor" : "none"} />
+   901→                  </button>
+   902→                ))}
+   903→              </div>
+   904→              <textarea
+   905→                value={newComment}
+   906→                onChange={(e) => setNewComment(e.target.value)}
+   907→                placeholder="¿Qué tal fue tu experiencia en este lugar?"
+   908→                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs text-white placeholder:text-white/30 outline-none focus:border-amber-400 transition-all h-24 resize-none"
+   909→              />
+   910→              <button type="submit" className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all">
+   911→                PUBLICAR RESEÑA
+   912→              </button>
+   913→            </form>
+   914→          ) : (
+   915→            <p className="text-xs text-white/40 italic">Inicia sesión con Google para dejar tu opinión.</p>
+   916→          )}
+   917→
+   918→          {/* Reviews List */}
+   919→          <div className="space-y-4">
+   920→            {estReviews.map((rev: Review) => (
+   921→              <div key={rev.id} className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-2">
+   922→                <div className="flex items-center justify-between">
+   923→                  <div className="flex items-center gap-3">
+   924→                    <img src={rev.userAvatar} className="w-8 h-8 rounded-full" alt="" />
+   925→                    <span className="text-xs font-bold text-white">{rev.userName}</span>
+   926→                  </div>
+   927→                  <div className="flex text-amber-400">
+   928→                    {[...Array(rev.rating)].map((_, i) => (
+   929→                      <Star key={i} size={12} fill="currentColor" />
+   930→                    ))}
+   931→                  </div>
+   932→                </div>
+   933→                <p className="text-xs text-white/70 leading-relaxed">{rev.comment}</p>
+   934→              </div>
+   935→            ))}
+   936→          </div>
+   937→        </div>
+   938→      )}
+   939→    </motion.div>
+   940→  );
+   941→}
+   942→
+   943→// Sub-Rating Progress Bar Helper Component
+   944→function RatingBar({ label, score }: { label: string; score: number }) {
+   945→  return (
+   946→    <div className="space-y-1">
+   947→      <div className="flex justify-between text-xs font-medium">
+   948→        <span className="text-white/70">{label}</span>
+   949→        <span className="text-amber-400 font-bold">{score} / 5.0</span>
+   950→      </div>
+   951→      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+   952→        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(score / 5) * 100}%` }} />
+   953→      </div>
+   954→    </div>
+   955→  );
+   956→}

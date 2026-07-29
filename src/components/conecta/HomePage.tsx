@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Star } from 'lucide-react';
+import { Search, Sparkles, Star, Heart, Clock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { establishments } from '@/lib/data';
 import type { Category, Establishment } from '@/lib/types';
@@ -17,6 +17,8 @@ export function HomePage() {
 
   const goToDetail = useAppStore((s) => s.goToDetail);
   const getDynamicRating = useAppStore((s) => s.getDynamicRating);
+  const favorites = useAppStore((s) => s.favorites);
+  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
 
   const filtered = establishments.filter((est) => {
     const matchesSearch =
@@ -157,44 +159,80 @@ export function HomePage() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <button
-                    onClick={() => goToDetail(est.id)}
-                    className={`block w-full text-left glass-card rounded-3xl overflow-hidden ${cardClass}`}
+                  <div
+                    className={`glass-card rounded-3xl overflow-hidden ${cardClass} group relative`}
                   >
-                    <div className="relative h-56 sm:h-64 overflow-hidden">
-                      { }
-                      <img
-                        src={est.coverImage}
-                        alt={est.name}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                      />
-                      <div className="absolute top-4 right-4 px-4 py-1.5 bg-black/80 backdrop-blur-md text-[10px] font-bold tracking-widest rounded-full border border-white/20 text-white">
-                        {est.category.toUpperCase()}
-                      </div>
-                    </div>
-                    <div className="p-5 sm:p-6">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h4 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white line-clamp-1">
-                          {est.name}
-                        </h4>
-                        <div className="flex items-center gap-1 text-gold mt-1 flex-shrink-0">
-                          <Star size={15} fill="#d4af37" />
-                          <span className="font-mono text-base font-bold tabular-nums">
-                            {avg}
+                    <button
+                      onClick={() => goToDetail(est.id)}
+                      className="block w-full text-left"
+                      aria-label={`Ver detalles de ${est.name}`}
+                    >
+                      <div className="relative h-56 sm:h-64 overflow-hidden">
+                        <img
+                          src={est.coverImage}
+                          alt={est.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
+                        {/* Category + Price badges */}
+                        <div className="absolute top-4 left-4 flex items-center gap-2">
+                          <span className="px-3 py-1.5 bg-black/80 backdrop-blur-md text-[10px] font-bold tracking-widest rounded-full border border-white/20 text-white">
+                            {est.category.toUpperCase()}
+                          </span>
+                          <span className="px-2.5 py-1.5 bg-gold/20 backdrop-blur-md text-[10px] font-black tracking-wide rounded-full border border-gold/40 text-gold">
+                            {est.priceRange}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-white/50 mb-4 font-medium">
-                        <span>{count} reseñas</span>
-                        <span>•</span>
-                        <span className="line-clamp-1">{est.address.split(',')[0]}</span>
+                      <div className="p-5 sm:p-6">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h4 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white line-clamp-1 group-hover:text-gold transition-colors">
+                            {est.name}
+                          </h4>
+                          <div className="flex items-center gap-1 text-gold mt-1 flex-shrink-0">
+                            <Star size={15} fill="#d4af37" />
+                            <span className="font-mono text-base font-bold tabular-nums">
+                              {avg}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-white/50 mb-3 font-medium">
+                          <span>{count} reseñas</span>
+                          <span>•</span>
+                          <span className="line-clamp-1">{est.address.split(',')[0]}</span>
+                        </div>
+                        <p className="text-white/70 text-sm line-clamp-2 leading-relaxed font-light mb-4">
+                          {est.description}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-xs text-white/60 border-t border-white/5 pt-3">
+                          <Clock size={13} className="text-gold shrink-0" />
+                          <span className="truncate">{est.schedule}</span>
+                        </div>
                       </div>
-                      <p className="text-white/70 text-sm line-clamp-2 leading-relaxed font-light">
-                        {est.description}
-                      </p>
-                    </div>
-                  </button>
+                    </button>
+
+                    {/* Favorite button */}
+                    <button
+                      onClick={() => toggleFavorite(est.id)}
+                      aria-label={
+                        favorites.includes(est.id)
+                          ? `Quitar ${est.name} de favoritos`
+                          : `Añadir ${est.name} a favoritos`
+                      }
+                      className={`absolute top-4 right-4 w-10 h-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 ${
+                        favorites.includes(est.id)
+                          ? 'bg-gold text-obsidian border-gold glow-gold'
+                          : 'bg-black/60 text-white border-white/20 hover:bg-black/90 hover:text-gold'
+                      }`}
+                    >
+                      <Heart
+                        size={16}
+                        fill={favorites.includes(est.id) ? 'currentColor' : 'none'}
+                      />
+                    </button>
+                  </div>
                 </motion.div>
               );
             })}

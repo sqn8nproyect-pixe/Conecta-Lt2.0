@@ -8,7 +8,7 @@ export const establishments: Establishment[] = [
     lat: 10.3445, lng: -67.0431, address: 'Calle Miranda, Los Teques', phone: '+584145551234', instagram: '@eldoradolt',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png', '/images/offer2.png'],
-    avgRating: 4.7, reviewCount: 28,
+    avgRating: 4.7, reviewCount: 28, priceRange: '$$', schedule: '10:00 AM - 09:00 PM',
     subRatings: { ambiente: 4.2, servicio: 4.9, precioCalidad: 4.8 },
   },
   {
@@ -17,7 +17,7 @@ export const establishments: Establishment[] = [
     lat: 10.3482, lng: -67.0389, address: 'Av. Bolívar, Los Teques', phone: '+584145552345', instagram: '@lacavalt',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png', '/images/offer1.png'],
-    avgRating: 4.5, reviewCount: 34,
+    avgRating: 4.5, reviewCount: 34, priceRange: '$$', schedule: '12:00 PM - 02:00 AM',
     subRatings: { ambiente: 4.8, servicio: 4.4, precioCalidad: 4.3 },
   },
   {
@@ -26,7 +26,7 @@ export const establishments: Establishment[] = [
     lat: 10.3411, lng: -67.0456, address: 'Calle Sucre, Los Teques', phone: '+584145553456', instagram: '@eclipselt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png', '/images/hero.png'],
-    avgRating: 4.8, reviewCount: 41,
+    avgRating: 4.8, reviewCount: 41, priceRange: '$$$', schedule: '09:00 PM - 05:00 AM',
     subRatings: { ambiente: 4.9, servicio: 4.7, precioCalidad: 4.6 },
   },
   {
@@ -35,7 +35,7 @@ export const establishments: Establishment[] = [
     lat: 10.3501, lng: -67.0402, address: 'Plaza Bolívar, Los Teques', phone: '+584145554567', instagram: '@premiumselectlt',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png', '/images/offer2.png'],
-    avgRating: 4.3, reviewCount: 19,
+    avgRating: 4.3, reviewCount: 19, priceRange: '$$$', schedule: '11:00 AM - 10:00 PM',
     subRatings: { ambiente: 3.9, servicio: 4.6, precioCalidad: 4.2 },
   },
   {
@@ -44,7 +44,7 @@ export const establishments: Establishment[] = [
     lat: 10.3459, lng: -67.0367, address: 'Av. Miranda, Los Teques', phone: '+584145555678', instagram: '@losamigoslt',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png', '/images/offer1.png'],
-    avgRating: 4.6, reviewCount: 52,
+    avgRating: 4.6, reviewCount: 52, priceRange: '$', schedule: '11:30 AM - 01:00 AM',
     subRatings: { ambiente: 4.5, servicio: 4.7, precioCalidad: 4.8 },
   },
   {
@@ -53,7 +53,7 @@ export const establishments: Establishment[] = [
     lat: 10.3398, lng: -67.0491, address: 'Zona Industrial, Los Teques', phone: '+584145556789', instagram: '@nocheeternalt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png', '/images/hero.png'],
-    avgRating: 4.4, reviewCount: 37,
+    avgRating: 4.4, reviewCount: 37, priceRange: '$$', schedule: '10:00 PM - 06:00 AM',
     subRatings: { ambiente: 4.6, servicio: 4.1, precioCalidad: 4.3 },
   },
   {
@@ -62,7 +62,7 @@ export const establishments: Establishment[] = [
     lat: 10.3524, lng: -67.0428, address: 'Calle 5, Los Teques', phone: '+584145557890', instagram: '@vinosdelvalle',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png'],
-    avgRating: 4.9, reviewCount: 23,
+    avgRating: 4.9, reviewCount: 23, priceRange: '$$', schedule: '10:00 AM - 08:00 PM',
     subRatings: { ambiente: 4.8, servicio: 5.0, precioCalidad: 4.8 },
   },
   {
@@ -71,7 +71,7 @@ export const establishments: Establishment[] = [
     lat: 10.3473, lng: -67.0445, address: 'Barrio El Carmen, Los Teques', phone: '+584145558901', instagram: '@elrinconlt',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png'],
-    avgRating: 4.2, reviewCount: 29,
+    avgRating: 4.2, reviewCount: 29, priceRange: '$$', schedule: '12:00 PM - 12:00 AM',
     subRatings: { ambiente: 4.0, servicio: 4.3, precioCalidad: 4.3 },
   },
   {
@@ -80,7 +80,7 @@ export const establishments: Establishment[] = [
     lat: 10.3433, lng: -67.0321, address: 'Av. Principal, Los Teques', phone: '+584145559012', instagram: '@lalunalt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png'],
-    avgRating: 4.7, reviewCount: 44,
+    avgRating: 4.7, reviewCount: 44, priceRange: '$$$', schedule: '09:00 PM - 04:00 AM',
     subRatings: { ambiente: 4.8, servicio: 4.6, precioCalidad: 4.5 },
   },
   {
@@ -89,7 +89,7 @@ export const establishments: Establishment[] = [
     lat: 10.3468, lng: -67.0472, address: 'Centro Comercial Plaza, Los Teques', phone: '+584145550123', instagram: '@centrallicor',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png'],
-    avgRating: 4.1, reviewCount: 16,
+    avgRating: 4.1, reviewCount: 16, priceRange: '$', schedule: '09:00 AM - 11:00 PM',
     subRatings: { ambiente: 3.5, servicio: 4.3, precioCalidad: 4.5 },
   },
   {
@@ -98,7 +98,7 @@ export const establishments: Establishment[] = [
     lat: 10.3495, lng: -67.0394, address: 'Calle Real, Los Teques', phone: '+584145551122', instagram: '@elsaborlt',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png'],
-    avgRating: 4.8, reviewCount: 31,
+    avgRating: 4.8, reviewCount: 31, priceRange: '$', schedule: '11:00 AM - 02:00 AM',
     subRatings: { ambiente: 4.7, servicio: 4.9, precioCalidad: 4.8 },
   },
   {
@@ -107,7 +107,7 @@ export const establishments: Establishment[] = [
     lat: 10.3402, lng: -67.0513, address: 'Sector La Morita, Los Teques', phone: '+584145552233', instagram: '@estelarlt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png'],
-    avgRating: 4.6, reviewCount: 38,
+    avgRating: 4.6, reviewCount: 38, priceRange: '$$$', schedule: '10:00 PM - 05:00 AM',
     subRatings: { ambiente: 4.9, servicio: 4.4, precioCalidad: 4.3 },
   },
   {
@@ -116,7 +116,7 @@ export const establishments: Establishment[] = [
     lat: 10.3517, lng: -67.0419, address: 'Calle 9, Los Teques', phone: '+584145553344', instagram: '@oronegro',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png'],
-    avgRating: 4.5, reviewCount: 25,
+    avgRating: 4.5, reviewCount: 25, priceRange: '$$', schedule: '10:00 AM - 09:00 PM',
     subRatings: { ambiente: 4.0, servicio: 4.6, precioCalidad: 4.7 },
   },
   {
@@ -125,7 +125,7 @@ export const establishments: Establishment[] = [
     lat: 10.3448, lng: -67.0378, address: 'Av. Los Teques, Los Teques', phone: '+584145554455', instagram: '@laparrillalt',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png'],
-    avgRating: 4.3, reviewCount: 27,
+    avgRating: 4.3, reviewCount: 27, priceRange: '$$', schedule: '12:00 PM - 12:00 AM',
     subRatings: { ambiente: 4.3, servicio: 4.2, precioCalidad: 4.4 },
   },
   {
@@ -134,7 +134,7 @@ export const establishments: Establishment[] = [
     lat: 10.3421, lng: -67.0487, address: 'Zona Rosa, Los Teques', phone: '+584145555566', instagram: '@glamourlt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png', '/images/offer2.png'],
-    avgRating: 4.9, reviewCount: 49,
+    avgRating: 4.9, reviewCount: 49, priceRange: '$$$', schedule: '10:00 PM - 06:00 AM',
     subRatings: { ambiente: 5.0, servicio: 4.8, precioCalidad: 4.7 },
   },
   {
@@ -143,7 +143,7 @@ export const establishments: Establishment[] = [
     lat: 10.3489, lng: -67.0435, address: 'Calle Libertador, Los Teques', phone: '+584145556677', instagram: '@labotellalt',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png'],
-    avgRating: 4.0, reviewCount: 14,
+    avgRating: 4.0, reviewCount: 14, priceRange: '$', schedule: '09:00 AM - 10:00 PM',
     subRatings: { ambiente: 3.3, servicio: 4.2, precioCalidad: 4.6 },
   },
   {
@@ -152,7 +152,7 @@ export const establishments: Establishment[] = [
     lat: 10.3452, lng: -67.0354, address: 'Plaza Sucre, Los Teques', phone: '+584145557788', instagram: '@elpatio',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png'],
-    avgRating: 4.7, reviewCount: 33,
+    avgRating: 4.7, reviewCount: 33, priceRange: '$$', schedule: '06:00 PM - 01:00 AM',
     subRatings: { ambiente: 4.9, servicio: 4.6, precioCalidad: 4.5 },
   },
   {
@@ -161,7 +161,7 @@ export const establishments: Establishment[] = [
     lat: 10.3419, lng: -67.0463, address: 'Av. Miranda Este, Los Teques', phone: '+584145558899', instagram: '@vibralt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png'],
-    avgRating: 4.4, reviewCount: 22,
+    avgRating: 4.4, reviewCount: 22, priceRange: '$$', schedule: '09:00 PM - 05:00 AM',
     subRatings: { ambiente: 4.5, servicio: 4.2, precioCalidad: 4.4 },
   },
   {
@@ -170,7 +170,7 @@ export const establishments: Establishment[] = [
     lat: 10.3531, lng: -67.0398, address: 'Calle 12, Los Teques', phone: '+584145559900', instagram: '@selectalt',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png'],
-    avgRating: 4.6, reviewCount: 18,
+    avgRating: 4.6, reviewCount: 18, priceRange: '$$$', schedule: '10:00 AM - 09:00 PM',
     subRatings: { ambiente: 4.3, servicio: 4.8, precioCalidad: 4.4 },
   },
   {
@@ -179,7 +179,7 @@ export const establishments: Establishment[] = [
     lat: 10.3479, lng: -67.0411, address: 'Esquina El Carmen, Los Teques', phone: '+584145550099', instagram: '@laesquinalt',
     coverImage: '/images/tasca.png',
     images: ['/images/tasca.png', '/images/gallery1.png'],
-    avgRating: 4.2, reviewCount: 21,
+    avgRating: 4.2, reviewCount: 21, priceRange: '$', schedule: '04:00 PM - 12:00 AM',
     subRatings: { ambiente: 4.1, servicio: 4.1, precioCalidad: 4.3 },
   },
   {
@@ -188,17 +188,17 @@ export const establishments: Establishment[] = [
     lat: 10.3395, lng: -67.0505, address: 'Sector Los Rosales, Los Teques', phone: '+584145551188', instagram: '@royallt',
     coverImage: '/images/discoteca.png',
     images: ['/images/discoteca.png', '/images/gallery1.png', '/images/hero.png'],
-    avgRating: 4.8, reviewCount: 36,
+    avgRating: 4.8, reviewCount: 36, priceRange: '$$$', schedule: '10:00 PM - 06:00 AM',
     subRatings: { ambiente: 5.0, servicio: 4.7, precioCalidad: 4.6 },
   },
 ];
 
 export const offers: Offer[] = [
-  { id: 1, establishmentId: 1, title: 'Whisky Premium 18 años', description: 'Botella de 750ml. Reserva limitada de malta única.', price: '$89', image: '/images/offer2.png' },
-  { id: 2, establishmentId: 2, title: 'Cóctel Noche Dorada', description: 'Gin premium + tónica especial + infusión de cítricos.', price: '$12', image: '/images/offer1.png' },
-  { id: 3, establishmentId: 3, title: 'Botella de Champagne', description: 'Veuve Clicquot Brut 750ml helada con copa VIP.', price: '$75', image: '/images/offer2.png' },
-  { id: 4, establishmentId: 5, title: 'Ron Añejo + 2 Raciones', description: 'Combo especial con ración de tequeños y empanaditas.', price: '$28', image: '/images/offer1.png' },
-  { id: 5, establishmentId: 15, title: 'Entrada VIP + 2 bebidas', description: 'Acceso preferente sin cola + 2 cócteles a elección.', price: '$35', image: '/images/offer2.png' },
+  { id: 1, establishmentId: 1, title: 'Whisky Premium 18 años', description: 'Botella de 750ml. Reserva limitada de malta única.', price: '$89', discount: '20% OFF', image: '/images/offer2.png', code: 'GOLD18' },
+  { id: 2, establishmentId: 2, title: 'Cóctel Noche Dorada', description: 'Gin premium + tónica especial + infusión de cítricos.', price: '$12', discount: '2x1', image: '/images/offer1.png', code: 'CAVA2X1' },
+  { id: 3, establishmentId: 3, title: 'Botella de Champagne', description: 'Veuve Clicquot Brut 750ml helada con copa VIP.', price: '$75', discount: 'PROMO VIP', image: '/images/offer2.png', code: 'ECLIPSEVIP' },
+  { id: 4, establishmentId: 5, title: 'Ron Añejo + 2 Raciones', description: 'Combo especial con ración de tequeños y empanaditas.', price: '$28', discount: 'POPULAR', image: '/images/offer1.png', code: 'AMIGOSPACK' },
+  { id: 5, establishmentId: 15, title: 'Entrada VIP + 2 bebidas', description: 'Acceso preferente sin cola + 2 cócteles a elección.', price: '$35', discount: 'EXCLUSIVO', image: '/images/offer2.png', code: 'GLAMOURVIP' },
 ];
 
 export const initialReviews: Review[] = [

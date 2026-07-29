@@ -29,6 +29,9 @@ interface AppState {
   // Reviews
   reviews: Review[];
 
+  // Favorites
+  favorites: number[];
+
   // Notifications
   notifications: AppNotification[];
 
@@ -45,6 +48,10 @@ interface AppState {
   addReview: (estId: number, rating: number, comment: string) => boolean;
   getDynamicRating: (estId: number) => DynamicRating;
 
+  // Actions: favorites
+  toggleFavorite: (id: number) => void;
+  isFavorite: (id: number) => boolean;
+
   // Actions: notifications
   addNotification: (message: string, type?: 'success' | 'info') => void;
   dismissNotification: (id: number) => void;
@@ -56,6 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedMapEstablishment: null,
   user: null,
   reviews: initialReviews,
+  favorites: [],
   notifications: [],
 
   setView: (view) => set({ view }),
@@ -126,6 +134,27 @@ export const useAppStore = create<AppState>((set, get) => ({
       }, 4000);
     }
   },
+
+  toggleFavorite: (id) => {
+    const { favorites, addNotification } = get();
+    const est = establishments.find((e) => e.id === id);
+    const isFav = favorites.includes(id);
+    set({
+      favorites: isFav
+        ? favorites.filter((f) => f !== id)
+        : [...favorites, id],
+    });
+    if (est) {
+      addNotification(
+        isFav
+          ? `Eliminado de favoritos: ${est.name}`
+          : `¡Añadido a favoritos!: ${est.name}`,
+        isFav ? 'info' : 'success',
+      );
+    }
+  },
+
+  isFavorite: (id) => get().favorites.includes(id),
 
   dismissNotification: (id) =>
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),

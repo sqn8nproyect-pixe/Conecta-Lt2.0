@@ -9,11 +9,14 @@ import {
   Phone,
   Instagram,
   MapPin,
+  Clock,
   ChevronLeft,
   ChevronRight,
   Sliders,
   Ticket,
+  Heart,
   X,
+  Check,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -23,6 +26,31 @@ import {
 import { establishments, offers } from '@/lib/data';
 import type { BookingData, Offer, Review } from '@/lib/types';
 
+type TabId = 'info' | 'offers' | 'reviews';
+
+// Sub-Rating progress bar helper
+function RatingBar({ label, score }: { label: string; score: number }) {
+  const pct = (score / 5) * 100;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs font-medium">
+        <span className="text-white/70">{label}</span>
+        <span className="text-gold font-bold font-mono">
+          {score.toFixed(1)} / 5.0
+        </span>
+      </div>
+      <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="h-full bg-gradient-to-r from-gold to-amber rounded-full"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function EstablishmentPage() {
   const id = useAppStore((s) => s.selectedEstablishmentId);
   const setView = useAppStore((s) => s.setView);
@@ -31,6 +59,8 @@ export function EstablishmentPage() {
   const addReview = useAppStore((s) => s.addReview);
   const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const addNotification = useAppStore((s) => s.addNotification);
+  const favorites = useAppStore((s) => s.favorites);
+  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
 
   const est = establishments.find((e) => e.id === id);
 
@@ -40,6 +70,8 @@ export function EstablishmentPage() {
   const [reviewOrder, setReviewOrder] = useState<'recientes' | 'valoracion'>(
     'recientes',
   );
+  const [activeTab, setActiveTab] = useState<TabId>('info');
+  const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
 
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
@@ -65,6 +97,7 @@ export function EstablishmentPage() {
   const estOffers = offers.filter((o) => o.establishmentId === est.id);
   const estReviews = reviews.filter((r) => r.establishmentId === est.id);
   const { avg, count } = getDynamicRating(est.id);
+  const isFav = favorites.includes(est.id);
 
   const handleNextPhoto = () =>
     setActivePhotoIndex((p) => (p + 1) % est.images.length);
@@ -77,6 +110,7 @@ export function EstablishmentPage() {
     const success = addReview(est.id, rating, comment.trim());
     if (success) {
       setComment('');
+      setActiveTab('reviews');
     } else {
       addNotification('Ya has dejado una reseña para este local.', 'info');
     }
@@ -101,6 +135,15 @@ export function EstablishmentPage() {
     }, 1800);
   };
 
+  const handleClaimCode = (offer: Offer) => {
+    if (claimedCodes.includes(offer.code)) {
+      addNotification(`Cupón ya activado: ${offer.code}`, 'info');
+      return;
+    }
+    setClaimedCodes((prev) => [...prev, offer.code]);
+    addNotification(`¡Cupón activado!: ${offer.code}`);
+  };
+
   const getRatingCount = (stars: number) =>
     estReviews.filter((r) => r.rating === stars).length;
 
@@ -108,6 +151,12 @@ export function EstablishmentPage() {
     if (reviewOrder === 'valoracion') return b.rating - a.rating;
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'info', label: 'Información General' },
+    { id: 'offers', label: `Promociones (${estOffers.length})` },
+    { id: 'reviews', label: `Reseñas (${estReviews.length})` },
+  ];
 
   return (
     <motion.div
@@ -125,7 +174,7 @@ export function EstablishmentPage() {
       </button>
 
       {/* Hero Media Slider */}
-      <div className="relative h-[360px] sm:h-[440px] md:h-[480px] rounded-3xl sm:rounded-[40px] overflow-hidden mb-10 sm:mb-12 border border-white/10 group">
+      <div className="relative h-[360px] sm:h-[440px] md:h-[480px] rounded-3xl sm:rounded-[40px] overflow-hidden mb-8 sm:mb-10 border border-white/10 group">
         <AnimatePresence mode="wait">
           <motion.img
             key={activePhotoIndex}
@@ -174,13 +223,18 @@ export function EstablishmentPage() {
         )}
 
         <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 md:p-10">
-          <span className="uppercase tracking-[4px] text-[10px] text-gold font-bold font-mono bg-gold/10 border border-gold/30 px-3 py-1 rounded-full inline-block mb-3">
-            {est.category}
-          </span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="uppercase tracking-[4px] text-[10px] text-gold font-bold font-mono bg-gold/10 border border-gold/30 px-3 py-1 rounded-full">
+              {est.category}
+            </span>
+            <span className="px-2.5 py-1 bg-gold/20 border border-gold/40 text-gold text-[10px] font-black tracking-wide rounded-full">
+              {est.priceRange}
+            </span>
+          </div>
           <h2 className="font-serif text-3xl sm:text-4xl md:text-6xl font-black tracking-[-1px] sm:tracking-[-2px] leading-tight text-white mb-2">
             {est.name}
           </h2>
-          <div className="flex items-center gap-3 sm:gap-4 text-sm sm:text-base md:text-lg">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base md:text-lg">
             <div className="flex items-center gap-1.5 text-gold font-bold">
               <Star fill="#D4AF37" size={18} /> {avg}
             </div>
@@ -189,290 +243,436 @@ export function EstablishmentPage() {
             </span>
           </div>
         </div>
+
+        {/* Favorite button */}
+        <button
+          onClick={() => toggleFavorite(est.id)}
+          aria-label={isFav ? `Quitar ${est.name} de favoritos` : `Añadir ${est.name} a favoritos`}
+          className={`absolute top-5 right-5 w-12 h-12 rounded-2xl backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 ${
+            isFav
+              ? 'bg-gold text-obsidian border-gold glow-gold'
+              : 'bg-black/60 text-white border-white/20 hover:bg-black/90 hover:text-gold'
+          }`}
+        >
+          <Heart size={20} fill={isFav ? 'currentColor' : 'none'} />
+        </button>
       </div>
 
-      {/* Grid Content */}
-      <div className="grid lg:grid-cols-12 gap-x-12 gap-y-12">
-        {/* Info & Booking */}
-        <div className="lg:col-span-7 space-y-10">
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
-              SOBRE EL LOCAL
-            </h4>
-            <p className="text-base md:text-[17px] leading-relaxed text-white/80 font-light">
-              {est.description}
-            </p>
-          </div>
+      {/* Navigation Tabs */}
+      <div className="flex gap-6 sm:gap-8 border-b border-white/10 mb-8 sm:mb-10 overflow-x-auto scrollbar-none">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`relative pb-4 text-sm font-semibold transition-all whitespace-nowrap ${
+              activeTab === tab.id ? 'text-gold' : 'text-white/50 hover:text-white'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.id && (
+              <motion.div
+                layoutId="tab-underline"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold rounded-full"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 sm:gap-4">
-            <button
-              onClick={() => handleStartBooking()}
-              className="px-6 sm:px-8 h-14 rounded-2xl bg-gold text-obsidian font-bold hover:bg-[#E5BF4A] active:scale-95 transition-all text-sm tracking-wider flex items-center gap-2 shadow-lg glow-gold"
-            >
-              <Calendar size={16} /> RESERVAR MESA
-            </button>
-            <a
-              href={`https://wa.me/${est.phone.replace('+', '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
-            >
-              <Phone size={16} /> WHATSAPP
-            </a>
-            <a
-              href={`https://instagram.com/${est.instagram.slice(1)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
-            >
-              <Instagram size={16} /> INSTAGRAM
-            </a>
-            <a
-              href={`https://maps.google.com/?q=${est.lat},${est.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
-            >
-              <MapPin size={16} /> CÓMO LLEGAR
-            </a>
-          </div>
+      {/* Tab Content */}
+      <AnimatePresence mode="wait">
+        {/* INFO TAB */}
+        {activeTab === 'info' && (
+          <motion.div
+            key="tab-info"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+            className="grid lg:grid-cols-3 gap-8 sm:gap-10"
+          >
+            <div className="lg:col-span-2 space-y-8">
+              {/* About */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                  SOBRE EL LOCAL
+                </h4>
+                <p className="text-base md:text-[17px] leading-relaxed text-white/80 font-light">
+                  {est.description}
+                </p>
+              </div>
 
-          {/* Special Offers */}
-          {estOffers.length > 0 && (
-            <div className="space-y-6 pt-4">
-              <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
-                OFERTAS EXCLUSIVAS
-              </h4>
-              <div className="flex gap-5 overflow-x-auto pb-4 conecta-scroll">
-                {estOffers.map((offer: Offer) => (
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 sm:gap-4">
+                <button
+                  onClick={() => handleStartBooking()}
+                  className="px-6 sm:px-8 h-14 rounded-2xl bg-gold text-obsidian font-bold hover:bg-[#E5BF4A] active:scale-95 transition-all text-sm tracking-wider flex items-center gap-2 shadow-lg glow-gold"
+                >
+                  <Calendar size={16} /> RESERVAR MESA
+                </button>
+                <a
+                  href={`https://wa.me/${est.phone.replace('+', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
+                >
+                  <Phone size={16} /> WHATSAPP
+                </a>
+                <a
+                  href={`https://instagram.com/${est.instagram.slice(1)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
+                >
+                  <Instagram size={16} /> INSTAGRAM
+                </a>
+                <a
+                  href={`https://maps.google.com/?q=${est.lat},${est.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
+                >
+                  <MapPin size={16} /> CÓMO LLEGAR
+                </a>
+              </div>
+
+              {/* Sub-Ratings with RatingBar */}
+              <div className="glass-card border border-white/10 rounded-3xl p-6 sm:p-8 space-y-5">
+                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                  EVALUACIÓN DEL AMBIENTE
+                </h4>
+                <RatingBar label="Ambiente & Decoración" score={est.subRatings.ambiente} />
+                <RatingBar label="Calidad del Servicio" score={est.subRatings.servicio} />
+                <RatingBar label="Relación Precio / Calidad" score={est.subRatings.precioCalidad} />
+              </div>
+
+              {/* Ratings Distribution */}
+              <div className="glass-card border border-white/10 rounded-3xl p-6 sm:p-8 space-y-5">
+                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                  VALORACIÓN GENERAL
+                </h4>
+                <div className="grid md:grid-cols-12 gap-6 items-center">
+                  <div className="md:col-span-4 text-center">
+                    <div className="text-6xl font-serif text-white font-black">{avg}</div>
+                    <div className="flex justify-center text-gold my-1.5 text-lg">
+                      {'★'.repeat(Math.round(avg))}
+                      {'☆'.repeat(5 - Math.round(avg))}
+                    </div>
+                    <div className="text-xs text-white/50">{count} valoraciones</div>
+                  </div>
+
+                  <div className="md:col-span-8 space-y-2">
+                    {[5, 4, 3, 2, 1].map((stars) => {
+                      const ratingVal = getRatingCount(stars);
+                      const pct = count > 0 ? (ratingVal / count) * 100 : 0;
+                      return (
+                        <div key={stars} className="flex items-center gap-3 text-xs">
+                          <span className="w-3 text-white/70 font-mono">{stars}</span>
+                          <Star size={10} fill="#D4AF37" className="text-gold" />
+                          <div className="flex-1 h-2 rounded-full bg-black/40 overflow-hidden">
+                            <div
+                              className="h-full bg-gold rounded-full"
+                              style={{ width: `${Math.max(4, pct)}%` }}
+                            />
+                          </div>
+                          <span className="w-8 text-right text-white/50 font-mono">
+                            {Math.round(pct)}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="glass-card border border-white/10 rounded-3xl p-6 sm:p-8 space-y-4 sticky top-24">
+                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                  CONTACTO & HORARIOS
+                </h4>
+                <div className="space-y-3.5 text-sm text-white/70">
+                  <div className="flex items-center gap-3">
+                    <Phone size={16} className="text-gold shrink-0" />
+                    <span>{est.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Instagram size={16} className="text-gold shrink-0" />
+                    <span>{est.instagram}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <MapPin size={16} className="text-gold shrink-0" />
+                    <span className="leading-snug">{est.address}</span>
+                  </div>
+                  <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                    <Clock size={16} className="text-gold shrink-0" />
+                    <div>
+                      <div className="text-[10px] text-white/40 font-bold tracking-wider uppercase">
+                        Horario
+                      </div>
+                      <div className="text-white/80 font-medium">{est.schedule}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* OFFERS TAB */}
+        {activeTab === 'offers' && (
+          <motion.div
+            key="tab-offers"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {estOffers.length > 0 ? (
+              estOffers.map((offer: Offer) => {
+                const claimed = claimedCodes.includes(offer.code);
+                return (
                   <div
                     key={offer.id}
-                    className="min-w-[260px] sm:min-w-[280px] max-w-[300px] glass-card rounded-3xl overflow-hidden border border-white/10 flex flex-col justify-between flex-shrink-0"
+                    className="glass-card border border-white/10 rounded-3xl overflow-hidden flex flex-col"
                   >
-                    <div>
-                      <div className="relative h-40 sm:h-44 overflow-hidden">
-                        { }
-                        <img
-                          src={offer.image}
-                          alt={offer.title}
-                          loading="lazy"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="p-5 space-y-1">
+                    <div className="relative h-44 sm:h-48 overflow-hidden">
+                      <img
+                        src={offer.image}
+                        alt={offer.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-gold/20 border border-gold/40 text-gold text-[10px] font-black tracking-wider">
+                        {offer.discount}
+                      </span>
+                    </div>
+                    <div className="p-5 sm:p-6 flex flex-col flex-1">
+                      <div className="flex items-start justify-between gap-3 mb-2">
                         <h5 className="font-bold text-lg text-white leading-snug">
                           {offer.title}
                         </h5>
-                        <p className="text-xs text-white/60 leading-relaxed font-light">
-                          {offer.description}
-                        </p>
+                        <span className="text-2xl font-mono text-gold font-black tracking-tight flex-shrink-0">
+                          {offer.price}
+                        </span>
                       </div>
-                    </div>
-                    <div className="p-5 pt-0 flex items-center justify-between mt-auto">
-                      <span className="text-2xl font-mono text-gold font-black tracking-tight">
-                        {offer.price}
-                      </span>
-                      <button
-                        onClick={() => handleStartBooking(offer.title)}
-                        className="px-4 py-2 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-[10px] tracking-widest transition-all"
-                      >
-                        ADQUIRIR
-                      </button>
+                      <p className="text-xs text-white/60 leading-relaxed font-light mb-5">
+                        {offer.description}
+                      </p>
+
+                      {claimed ? (
+                        <div className="mt-auto space-y-2">
+                          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+                            <Check size={14} /> Cupón activado
+                          </div>
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-dashed border-gold/40">
+                            <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase">
+                              Tu código
+                            </span>
+                            <span className="font-mono font-black text-gold tracking-wider text-lg">
+                              {offer.code}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleStartBooking(offer.title)}
+                            className="w-full py-3 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2"
+                          >
+                            <Calendar size={14} /> RESERVAR CON ESTA OFERTA
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleClaimCode(offer)}
+                          className="mt-auto w-full py-3 rounded-xl bg-gold hover:bg-[#E5BF4A] text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 glow-gold"
+                        >
+                          <Ticket size={16} /> RECLAMAR CÓDIGO {offer.code}
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Ratings Distribution */}
-          <div className="space-y-6 pt-4 border-t border-white/5">
-            <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
-              VALORACIÓN GENERAL
-            </h4>
-            <div className="grid md:grid-cols-12 gap-8 items-center bg-white/5 border border-white/10 rounded-3xl p-6">
-              <div className="md:col-span-4 text-center">
-                <div className="text-6xl font-serif text-white font-black">{avg}</div>
-                <div className="flex justify-center text-gold my-1.5 text-lg">
-                  {'★'.repeat(Math.round(avg))}
-                  {'☆'.repeat(5 - Math.round(avg))}
-                </div>
-                <div className="text-xs text-white/50">{count} valoraciones</div>
-              </div>
-
-              <div className="md:col-span-8 space-y-2">
-                {[5, 4, 3, 2, 1].map((stars) => {
-                  const ratingVal = getRatingCount(stars);
-                  const pct = count > 0 ? (ratingVal / count) * 100 : 0;
-                  return (
-                    <div key={stars} className="flex items-center gap-3 text-xs">
-                      <span className="w-3 text-white/70 font-mono">{stars}</span>
-                      <Star size={10} fill="#D4AF37" className="text-gold" />
-                      <div className="flex-1 h-2 rounded-full bg-black/40 overflow-hidden">
-                        <div
-                          className="h-full bg-gold rounded-full"
-                          style={{ width: `${Math.max(4, pct)}%` }}
-                        />
-                      </div>
-                      <span className="w-8 text-right text-white/50 font-mono">
-                        {Math.round(pct)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Sub-ratings */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              {[
-                { label: 'Ambiente', val: est.subRatings.ambiente, color: 'bg-purple' },
-                { label: 'Servicio', val: est.subRatings.servicio, color: 'bg-gold' },
-                {
-                  label: 'Precio/Calidad',
-                  val: est.subRatings.precioCalidad,
-                  color: 'bg-amber',
-                },
-              ].map((sr) => (
-                <div
-                  key={sr.label}
-                  className="bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4 text-center"
-                >
-                  <div className="text-xs text-white/40 mb-1">{sr.label}</div>
-                  <div className="text-lg sm:text-xl font-bold font-mono text-white">
-                    {sr.val}
-                  </div>
-                  <div
-                    className={`w-16 h-1 ${sr.color} mx-auto mt-2 rounded-full`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Reviews */}
-        <div className="lg:col-span-5 space-y-8">
-          <div className="sticky top-24 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-                Comunidad
-              </h3>
-
-              <div className="flex items-center gap-1.5 text-xs text-white/60">
-                <Sliders size={12} />
-                <select
-                  value={reviewOrder}
-                  onChange={(e) =>
-                    setReviewOrder(e.target.value as 'recientes' | 'valoracion')
-                  }
-                  className="bg-transparent text-white border-none focus:ring-0 outline-none font-bold cursor-pointer"
-                >
-                  <option value="recientes" className="bg-[#111827]">
-                    Recientes
-                  </option>
-                  <option value="valoracion" className="bg-[#111827]">
-                    Mejor nota
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            {/* Review Form */}
-            {user ? (
-              <form
-                onSubmit={handleSubmitReview}
-                className="glass-card p-5 sm:p-6 rounded-3xl border border-white/10 space-y-4"
-              >
-                <div className="text-xs font-bold tracking-widest text-white/50 uppercase">
-                  TU VALORACIÓN
-                </div>
-
-                <div className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      type="button"
-                      key={n}
-                      onClick={() => setRating(n)}
-                      aria-label={`${n} estrellas`}
-                      className="text-3xl transition-transform hover:scale-110 active:scale-95"
-                      style={{ color: n <= rating ? '#D4AF37' : '#475569' }}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  required
-                  placeholder="Escribe tu opinión honesta..."
-                  className="bg-black/40 border border-white/10 w-full p-4 rounded-xl text-white text-sm placeholder:text-white/30 h-24 focus:border-gold outline-none transition-colors resize-none"
-                />
-
-                <button
-                  type="submit"
-                  disabled={!comment.trim()}
-                  className="disabled:opacity-40 w-full bg-gold hover:bg-[#C5A13A] active:scale-95 text-obsidian font-bold h-12 rounded-xl text-xs tracking-wider transition-all glow-gold"
-                >
-                  ENVIAR VALORACIÓN
-                </button>
-              </form>
+                );
+              })
             ) : (
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center text-sm">
-                <span className="text-white/50 block mb-3">
-                  Inicia sesión con Google para comentar y valorar.
-                </span>
-                <span className="text-gold font-bold text-xs">
-                  Acceder en la esquina superior derecha.
-                </span>
+              <div className="md:col-span-2 text-center py-20 text-white/40">
+                <Ticket size={40} className="mx-auto mb-4 opacity-40" />
+                <p className="text-sm">No hay ofertas activas en este momento.</p>
               </div>
             )}
+          </motion.div>
+        )}
 
-            {/* Reviews List */}
-            <div className="space-y-4 max-h-[460px] overflow-y-auto pr-1 conecta-scroll">
-              {sortedReviews.length > 0 ? (
-                sortedReviews.map((rev: Review) => (
-                  <div
-                    key={rev.id}
-                    className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-3"
+        {/* REVIEWS TAB */}
+        {activeTab === 'reviews' && (
+          <motion.div
+            key="tab-reviews"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+            className="grid lg:grid-cols-12 gap-x-12 gap-y-8"
+          >
+            <div className="lg:col-span-7 space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                  COMUNIDAD
+                </h4>
+                <div className="flex items-center gap-1.5 text-xs text-white/60">
+                  <Sliders size={12} />
+                  <select
+                    value={reviewOrder}
+                    onChange={(e) =>
+                      setReviewOrder(e.target.value as 'recientes' | 'valoracion')
+                    }
+                    className="bg-transparent text-white border-none focus:ring-0 outline-none font-bold cursor-pointer"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        { }
-                        <img
-                          src={rev.userAvatar}
-                          alt={rev.userName}
-                          className="rounded-full w-8 h-8 ring-1 ring-white/10 flex-shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <div className="font-semibold text-sm text-white truncate">
-                            {rev.userName}
-                          </div>
-                          <div className="text-[10px] text-white/40">{rev.date}</div>
-                        </div>
-                      </div>
-                      <div className="flex text-gold text-sm font-semibold flex-shrink-0">
-                        {'★'.repeat(rev.rating)}
-                        {'☆'.repeat(5 - rev.rating)}
-                      </div>
-                    </div>
-                    <p className="text-xs md:text-sm text-white/80 leading-relaxed font-light">
-                      {rev.comment}
-                    </p>
+                    <option value="recientes" className="bg-[#111827]">
+                      Recientes
+                    </option>
+                    <option value="valoracion" className="bg-[#111827]">
+                      Mejor nota
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Review Form */}
+              {user ? (
+                <form
+                  onSubmit={handleSubmitReview}
+                  className="glass-card p-5 sm:p-6 rounded-3xl border border-white/10 space-y-4"
+                >
+                  <div className="text-xs font-bold tracking-widest text-white/50 uppercase">
+                    TU VALORACIÓN
                   </div>
-                ))
+
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        type="button"
+                        key={n}
+                        onClick={() => setRating(n)}
+                        aria-label={`${n} estrellas`}
+                        className="text-3xl transition-transform hover:scale-110 active:scale-95"
+                        style={{ color: n <= rating ? '#D4AF37' : '#475569' }}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    required
+                    placeholder="Escribe tu opinión honesta..."
+                    className="bg-black/40 border border-white/10 w-full p-4 rounded-xl text-white text-sm placeholder:text-white/30 h-24 focus:border-gold outline-none transition-colors resize-none"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!comment.trim()}
+                    className="disabled:opacity-40 w-full bg-gold hover:bg-[#C5A13A] active:scale-95 text-obsidian font-bold h-12 rounded-xl text-xs tracking-wider transition-all glow-gold"
+                  >
+                    ENVIAR VALORACIÓN
+                  </button>
+                </form>
               ) : (
-                <div className="text-white/30 text-center py-6 text-sm">
-                  Sé el primero en valorar este establecimiento.
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center text-sm">
+                  <span className="text-white/50 block mb-3">
+                    Inicia sesión con Google para comentar y valorar.
+                  </span>
+                  <span className="text-gold font-bold text-xs">
+                    Acceder en la esquina superior derecha.
+                  </span>
                 </div>
               )}
+
+              {/* Reviews List */}
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1 conecta-scroll">
+                {sortedReviews.length > 0 ? (
+                  sortedReviews.map((rev: Review) => (
+                    <div
+                      key={rev.id}
+                      className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={rev.userAvatar}
+                            alt={rev.userName}
+                            className="rounded-full w-8 h-8 ring-1 ring-white/10 flex-shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-white truncate">
+                              {rev.userName}
+                            </div>
+                            <div className="text-[10px] text-white/40">{rev.date}</div>
+                          </div>
+                        </div>
+                        <div className="flex text-gold text-sm font-semibold flex-shrink-0">
+                          {'★'.repeat(rev.rating)}
+                          {'☆'.repeat(5 - rev.rating)}
+                        </div>
+                      </div>
+                      <p className="text-xs md:text-sm text-white/80 leading-relaxed font-light">
+                        {rev.comment}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-white/30 text-center py-6 text-sm">
+                    Sé el primero en valorar este establecimiento.
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+
+            {/* Summary sidebar */}
+            <div className="lg:col-span-5">
+              <div className="glass-card border border-white/10 rounded-3xl p-6 sm:p-8 sticky top-24 space-y-5">
+                <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                  RESUMEN DE VALORACIONES
+                </h4>
+                <div className="text-center py-2">
+                  <div className="text-6xl font-serif text-white font-black">{avg}</div>
+                  <div className="flex justify-center text-gold my-2 text-2xl">
+                    {'★'.repeat(Math.round(avg))}
+                    {'☆'.repeat(5 - Math.round(avg))}
+                  </div>
+                  <div className="text-xs text-white/50">
+                    Basado en {count} valoraciones
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-white/10">
+                  {[5, 4, 3, 2, 1].map((stars) => {
+                    const ratingVal = getRatingCount(stars);
+                    const pct = count > 0 ? (ratingVal / count) * 100 : 0;
+                    return (
+                      <div key={stars} className="flex items-center gap-3 text-xs">
+                        <span className="w-3 text-white/70 font-mono">{stars}</span>
+                        <Star size={10} fill="#D4AF37" className="text-gold" />
+                        <div className="flex-1 h-2 rounded-full bg-black/40 overflow-hidden">
+                          <div
+                            className="h-full bg-gold rounded-full"
+                            style={{ width: `${Math.max(4, pct)}%` }}
+                          />
+                        </div>
+                        <span className="w-8 text-right text-white/50 font-mono">
+                          {Math.round(pct)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Reservation Modal */}
       <AnimatePresence>

@@ -2,6 +2,8 @@
 
 export type Category = 'licorería' | 'tasca' | 'discoteca';
 
+export type PriceRange = '$' | '$$' | '$$$';
+
 export interface SubRatings {
   ambiente: number;
   servicio: number;
@@ -22,6 +24,8 @@ export interface Establishment {
   images: string[];
   avgRating: number;
   reviewCount: number;
+  priceRange: PriceRange;
+  schedule: string;
   subRatings: SubRatings;
 }
 
@@ -31,7 +35,9 @@ export interface Offer {
   title: string;
   description: string;
   price: string;
+  discount: string;
   image: string;
+  code: string;
 }
 
 export interface Review {
