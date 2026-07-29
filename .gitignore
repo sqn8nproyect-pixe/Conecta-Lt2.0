@@ -52,3 +52,18 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# runtime / sandbox artifacts
+/tool-results/
+/upload/
+/agent-ctx/
+*.pid
+db/*.db
+db/*.db-journal
+
+# verification screenshots (root)
+/age-gate-check.png
+/final-with-logo.png
+/preview-check.png
+/profile-final.png
+/verify-*.png
