@@ -823,9 +823,50 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   .conecta-glass,
   .conecta-liquid,
   .conecta-bubble,
-  .conecta-splash-particle {
+  .conecta-splash-particle,
+  .conecta-svg-bubble {
     animation: none !important;
   }
   .conecta-glass { transform: rotate(-3deg); }
   .conecta-glass.is-right { transform: rotate(3deg); }
+}
+
+/* ===================================================================
+   Copa de champán SVG realista
+   =================================================================== */
+.conecta-glass-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 6px 18px rgba(255, 215, 0, 0.3));
+}
+
+/* Burbujas que suben dentro del líquido (SVG circles con CSS transform) */
+.conecta-svg-bubble {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: conecta-svg-bubble-rise 2.4s ease-in infinite;
+}
+@keyframes conecta-svg-bubble-rise {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+    transform: translateY(-8px) scale(0.8);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateY(-32px) scale(1);
+  }
+  85% {
+    opacity: 0.5;
+    transform: translateY(-56px) scale(1.15);
+  }
+  100% {
+    transform: translateY(-66px) scale(1.2);
+    opacity: 0;
+  }
 }

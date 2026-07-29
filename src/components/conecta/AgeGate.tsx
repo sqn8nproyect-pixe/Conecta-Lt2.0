@@ -10,9 +10,240 @@ interface AgeGateProps {
 
 type GateState = 'verifying' | 'denied';
 
+interface SvgBubble {
+  id: number;
+  cx: number;
+  cy: number;
+  r: number;
+  delay: number;
+  duration: number;
+}
+
 /**
- * Una sola copa de champán animada (vidrio + líquido + burbujas + tallo + base).
- * `parallaxRef` permite que el mouse mueva ligeramente la copa (efecto profundidad).
+ * Copa de champán SVG realista: flauta tulip con vidrio translúcido, reflejos
+ * cilíndricos, líquido dorado con gradiente, corona de espuma (mousse),
+ * burbujas que suben en cadenas desde puntos de nucleación, tallo elegante
+ * y base con reflejo. `side` genera IDs únicos para evitar colisiones SVG.
+ */
+function ChampagneGlassSVG({
+  side,
+  bubbles,
+}: {
+  side: 'left' | 'right';
+  bubbles: SvgBubble[];
+}) {
+  const uid = side;
+  // Forma del bowl (flauta tulip): ancho arriba, se estrecha hacia el tallo
+  const bowlPath =
+    'M 30 15 C 26 35, 34 75, 44 98 C 48 106, 51 110, 54 113 L 66 113 C 69 110, 72 106, 76 98 C 86 75, 94 35, 90 15 Z';
+  // Líquido dentro del bowl (desde y=45 hasta el fondo)
+  const liquidPath =
+    'M 32 45 C 34 58, 37 75, 41 90 C 44 100, 49 108, 54 112 L 66 112 C 71 108, 76 100, 79 90 C 83 75, 86 58, 88 45 Z';
+
+  return (
+    <svg
+      viewBox="0 0 120 205"
+      className="conecta-glass-svg"
+      aria-hidden="true"
+    >
+      <defs>
+        {/* Vidrio: degradado horizontal que simula curvatura cilíndrica */}
+        <linearGradient id={`glass-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.04)" />
+          <stop offset="10%" stopColor="rgba(255,255,255,0.35)" />
+          <stop offset="30%" stopColor="rgba(255,255,255,0.06)" />
+          <stop offset="70%" stopColor="rgba(255,255,255,0.06)" />
+          <stop offset="90%" stopColor="rgba(255,255,255,0.3)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
+        </linearGradient>
+
+        {/* Champán: degradado vertical dorado (pálido arriba → profundo abajo) */}
+        <linearGradient id={`liquid-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#FFF3B0" />
+          <stop offset="25%" stopColor="#FFD700" />
+          <stop offset="60%" stopColor="#F0B020" />
+          <stop offset="100%" stopColor="#D88800" />
+        </linearGradient>
+
+        {/* Espuma (mousse): radial blanco → dorado pálido */}
+        <radialGradient id={`foam-${uid}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
+          <stop offset="60%" stopColor="rgba(255,245,190,0.8)" />
+          <stop offset="100%" stopColor="rgba(255,215,0,0.3)" />
+        </radialGradient>
+
+        {/* Superficie del líquido: brillo superior */}
+        <linearGradient id={`surface-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+
+        {/* Clip para que las burbujas solo se vean dentro del líquido */}
+        <clipPath id={`liquidClip-${uid}`}>
+          <path d={liquidPath} />
+        </clipPath>
+
+        {/* Glow suave para elementos dorados */}
+        <filter id={`glow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* === Bowl (cuerpo de la copa) === */}
+      <path
+        d={bowlPath}
+        fill={`url(#glass-${uid})`}
+        stroke="rgba(255,215,0,0.55)"
+        strokeWidth="1.4"
+      />
+
+      {/* Borde superior (la boca de la copa) — da profundidad 3D */}
+      <ellipse
+        cx="60"
+        cy="15"
+        rx="30"
+        ry="5"
+        fill="rgba(255,240,180,0.06)"
+        stroke="rgba(255,215,0,0.65)"
+        strokeWidth="1.4"
+      />
+      <ellipse cx="60" cy="15" rx="28" ry="3.5" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.7" />
+
+      {/* === Líquido (champán) === */}
+      <path d={liquidPath} fill={`url(#liquid-${uid})`} opacity="0.92" />
+
+      {/* Superficie del líquido (menisco + brillo) */}
+      <ellipse cx="60" cy="45" rx="28" ry="3.2" fill={`url(#surface-${uid})`} opacity="0.8" />
+      <ellipse
+        cx="60"
+        cy="45"
+        rx="28"
+        ry="2.2"
+        fill="none"
+        stroke="rgba(255,255,255,0.45)"
+        strokeWidth="0.8"
+      />
+
+      {/* === Corona de espuma (mousse) en la superficie === */}
+      <g filter={`url(#glow-${uid})`}>
+        <circle cx="40" cy="44" r="2.6" fill={`url(#foam-${uid})`} />
+        <circle cx="46" cy="42" r="2" fill={`url(#foam-${uid})`} />
+        <circle cx="52" cy="43" r="2.8" fill={`url(#foam-${uid})`} />
+        <circle cx="59" cy="42" r="2.3" fill={`url(#foam-${uid})`} />
+        <circle cx="66" cy="43" r="2.6" fill={`url(#foam-${uid})`} />
+        <circle cx="72" cy="42" r="2" fill={`url(#foam-${uid})`} />
+        <circle cx="78" cy="44" r="2.4" fill={`url(#foam-${uid})`} />
+        <circle cx="83" cy="45" r="1.6" fill={`url(#foam-${uid})`} />
+        <circle cx="36" cy="45" r="1.5" fill={`url(#foam-${uid})`} />
+      </g>
+
+      {/* === Burbujas subiendo en cadenas (clip al líquido) === */}
+      <g clipPath={`url(#liquidClip-${uid})`}>
+        {bubbles.map((b) => (
+          <circle
+            key={b.id}
+            cx={b.cx}
+            cy={b.cy}
+            r={b.r}
+            fill="rgba(255,255,255,0.8)"
+            stroke="rgba(255,255,255,0.35)"
+            strokeWidth="0.3"
+            className="conecta-svg-bubble"
+            style={{
+              animationDelay: `${b.delay}s`,
+              animationDuration: `${b.duration}s`,
+            }}
+          />
+        ))}
+      </g>
+
+      {/* Puntos de nucleación en el fondo (origen de las burbujas) */}
+      <circle cx="47" cy="108" r="0.7" fill="rgba(255,255,255,0.6)" />
+      <circle cx="60" cy="109" r="0.7" fill="rgba(255,255,255,0.6)" />
+      <circle cx="73" cy="108" r="0.7" fill="rgba(255,255,255,0.6)" />
+
+      {/* === Reflejos del vidrio (brillos verticales cilíndricos) === */}
+      <path
+        d="M 37 22 C 35 50, 39 85, 43 105"
+        stroke="rgba(255,255,255,0.55)"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 40 26 C 38 48, 41 72, 44 92"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth="1"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 82 28 C 84 50, 82 76, 78 96"
+        stroke="rgba(255,255,255,0.28)"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      {/* Brillo del borde superior */}
+      <path
+        d="M 38 13.5 Q 60 9.5, 82 13.5"
+        stroke="rgba(255,255,255,0.5)"
+        strokeWidth="1"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* === Tallo elegante (ligeramente cónico) === */}
+      <path
+        d="M 57 113 L 56.5 183 L 63.5 183 L 63 113 Z"
+        fill={`url(#glass-${uid})`}
+        stroke="rgba(255,215,0,0.4)"
+        strokeWidth="0.8"
+      />
+      {/* Brillo del tallo */}
+      <line
+        x1="59"
+        y1="116"
+        x2="58.5"
+        y2="181"
+        stroke="rgba(255,255,255,0.4)"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+      />
+
+      {/* === Base === */}
+      <ellipse
+        cx="60"
+        cy="190"
+        rx="26"
+        ry="5"
+        fill={`url(#glass-${uid})`}
+        stroke="rgba(255,215,0,0.55)"
+        strokeWidth="1.2"
+      />
+      {/* Reflejo superior de la base */}
+      <ellipse cx="60" cy="188.5" rx="23" ry="3" fill="rgba(255,215,0,0.14)" />
+      {/* Brillo en la base */}
+      <ellipse cx="54" cy="187.5" rx="8" ry="1.2" fill="rgba(255,255,255,0.38)" />
+      {/* Resplandor dorado bajo la base */}
+      <ellipse
+        cx="60"
+        cy="195"
+        rx="22"
+        ry="2"
+        fill="rgba(255,215,0,0.16)"
+        filter={`url(#glow-${uid})`}
+      />
+    </svg>
+  );
+}
+
+/**
+ * Wrapper con parallax + animación de brindis que contiene el SVG realista.
  */
 function ChampagneGlass({
   side,
@@ -20,28 +251,13 @@ function ChampagneGlass({
   parallaxRef,
 }: {
   side: 'left' | 'right';
-  bubbles: Array<{ id: number; left: number; delay: number; duration: number }>;
+  bubbles: SvgBubble[];
   parallaxRef?: (el: HTMLDivElement | null) => void;
 }) {
   return (
     <div className="conecta-glass-wrap" ref={parallaxRef}>
       <div className={`conecta-glass ${side === 'right' ? 'is-right' : ''}`}>
-        <div className="conecta-glass-cup">
-          <div className="conecta-liquid" />
-          {bubbles.map((b) => (
-            <span
-              key={b.id}
-              className="conecta-bubble"
-              style={{
-                left: `${b.left}%`,
-                animationDelay: `${b.delay}s`,
-                animationDuration: `${b.duration}s`,
-              }}
-            />
-          ))}
-        </div>
-        <div className="conecta-glass-stem" />
-        <div className="conecta-glass-base" />
+        <ChampagneGlassSVG side={side} bubbles={bubbles} />
       </div>
     </div>
   );
@@ -73,27 +289,30 @@ export function AgeGate({ onConfirm }: AgeGateProps) {
     [],
   );
 
-  const bubblesLeft = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 80 + 10,
-        delay: Math.random() * 2,
-        duration: Math.random() * 1 + 1.5,
-      })),
-    [],
-  );
+  // Genera burbujas en "streams" (cadenas) desde puntos de nucleación en el
+  // fondo de la copa — como el champán real. Todas arrancan en el fondo (cy=106)
+  // con delays repartidos para que siempre haya burbujas subiendo.
+  const makeBubbles = useCallback((nucleationXs: number[]): SvgBubble[] => {
+    let id = 0;
+    const result: SvgBubble[] = [];
+    nucleationXs.forEach((nx) => {
+      const count = 5 + Math.floor(Math.random() * 3); // 5-7 por cadena
+      for (let i = 0; i < count; i++) {
+        result.push({
+          id: id++,
+          cx: nx + (Math.random() * 3 - 1.5),
+          cy: 106,
+          r: 0.8 + Math.random() * 1.6,
+          delay: (i / count) * 2.4,
+          duration: 2 + Math.random() * 1.2,
+        });
+      }
+    });
+    return result;
+  }, []);
 
-  const bubblesRight = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 80 + 10,
-        delay: Math.random() * 2,
-        duration: Math.random() * 1 + 1.5,
-      })),
-    [],
-  );
+  const bubblesLeft = useMemo(() => makeBubbles([47, 60, 73]), [makeBubbles]);
+  const bubblesRight = useMemo(() => makeBubbles([48, 60, 72]), [makeBubbles]);
 
   const splashParticles = useMemo(
     () =>

@@ -522,3 +522,51 @@ Stage Summary:
 - Contenido legal/regulatorio íntegro (legislación venezolana + advertencia + términos)
 - Responsive: copas escalan en móvil (90px → 76px en pantallas muy pequeñas)
 - Las 3 capturas de pantalla están disponibles para el usuario
+
+---
+Task ID: 8-realistic-glasses
+Agent: main
+Task: Hacer las copas de champán más realistas y detalladas (reemplazar divs por SVG)
+
+Work Log:
+- Reemplazadas copas basadas en divs por SVG vectorial detallado (ChampagneGlassSVG)
+- Cada copa SVG contiene:
+  * Bowl en forma de flauta tulip (path Bezier: ancho arriba, se estrecha al tallo)
+  * Vidrio translúcido con degradado horizontal cilíndrico (6 stops: bordes transparentes, centro brillante)
+  * Borde superior (boca) con elipse doble que da profundidad 3D
+  * Líquido dorado con degradado vertical (4 stops: #FFF3B0 pálido → #FFD700 → #F0B020 → #D88800 profundo)
+  * Superficie del líquido con menisco + brillo elíptico
+  * Corona de espuma (mousse): 9 círculos pequeños con radialGradient blanco→dorado + filter glow
+  * 3 puntos de nucleación estáticos en el fondo (origen visible de las burbujas)
+  * Burbujas en "streams" (cadenas): 3 puntos de nucleación × 5-7 burbujas cada uno = ~16-21 por copa
+    - Todas arrancan en cy=106 (fondo del líquido)
+    - Delays repartidos uniformemente (i/count × 2.4s) para flujo continuo
+    - Tamaños aleatorios (r=0.8 a 2.4) como champán real
+    - Animación CSS: translateY(0→-66px) + scale(0.6→1.2) + opacity fade
+    - Clipped al path del líquido (clipPath) para que solo se vean dentro
+  * Reflejos cilíndricos del vidrio: 3 paths verticales con curva Bezier (brillo principal + secundario + lado derecho)
+  * Brillo del borde superior (arco Q)
+  * Tallo elegante cónico (path trapecial: 6px arriba → 7px abajo)
+  * Brillo vertical del tallo (line)
+  * Base elíptica con: fill de vidrio + borde dorado + reflejo superior + brillo + resplandor dorado (filter glow)
+- IDs únicos por copa (uid=side) para evitar colisiones de gradientes/filtros SVG
+- Actualizado generador de burbujas: makeBubbles() produce streams desde nucleación vs. distribución aleatoria plana
+- CSS: añadido .conecta-glass-svg (drop-shadow dorado) + @keyframes conecta-svg-bubble-rise (scale creciente como champán real)
+- CSS: .conecta-svg-bubble con transform-box: fill-box para transforms SVG correctos
+- Responsive: SVG escala con .conecta-glass width (120px desktop → 90px tablet → 76px móvil)
+- prefers-reduced-motion: desactiva animación de burbujas SVG también
+- bun run lint: PASS (0 errores)
+- Verificación Agent Browser:
+  * 2 SVGs renderizando, 2 bowls, 4 líquidos (2 visibles + 2 clipPaths), 6 espumas, 37 burbujas, 2 bases, 8 gradientes
+  * 0 errores de consola, 0 errores de página
+  * Desktop 1280×900: copas detalladas visibles
+  * Mobile iPhone 14: copas escalan correctamente
+  * Click "SOY MAYOR DE EDAD" → entra al sitio correctamente
+- Capturas: age-gate-realistic-desktop.png (584 KB), age-gate-realistic-mobile.png (1.4 MB)
+
+Stage Summary:
+- Copas reemplazadas de divs planos a SVG vectorial fotorrealista
+- Detalles de realismo: forma tulip, vidrio con curvatura cilíndrica, líquido con gradiente dorado profundo, espuma mousse con glow, burbujas en cadenas desde nucleación que crecen al subir, reflejos verticales, tallo cónico, base con reflejos múltiples
+- ~17 burbujas por copa animándose continuamente (37 total)
+- Performance: SVG con CSS transforms, clipPath para clipping, filter glow solo en espuma/base (no en burbujas)
+- Accesibilidad: aria-hidden en SVGs decorativos, prefers-reduced-motion respetado
