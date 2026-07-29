@@ -1,0 +1,81 @@
+# Worklog — Migración CONECTA-LT a Next.js 16
+
+Proyecto: directorio de vida nocturna de Los Teques (licorerías, tascas, discotecas).
+Stack destino: Next.js 16 (App Router) + TypeScript + Tailwind 4 + shadcn/ui + framer-motion + zustand.
+Restricción: solo se puede usar la ruta `/` → se implementa como SPA con vistas internas controladas por estado.
+
+---
+Task ID: 0
+Agent: main
+Task: Setup inicial — explorar proyecto, planificar migración, crear worklog
+
+Work Log:
+- Leído código original (1702 líneas, React + React Router + framer-motion)
+- Explorado proyecto Next.js: package.json, globals.css, layout.tsx, page.tsx
+- Confirmado stack disponible: framer-motion 12, zustand 5, lucide-react, shadcn/ui completo
+- Planificado migración como SPA (sin React Router, estado global con zustand)
+- Creado este worklog
+
+Stage Summary:
+- Plan: 10 tareas (setup tailwind, tipos/datos, imágenes, store, navbar/notifications, home, mapa, detalle, integración page.tsx, verificación browser)
+- Restricción clave: solo ruta `/` → SPA con vistas internas
+- Próximo: configurar globals.css y lanzar subagent para imágenes en paralelo
+
+---
+Task ID: 4
+Agent: image-generator
+Task: Generar 7 imágenes para CONECTA-LT
+
+Work Log:
+- Leído worklog.md para contexto (directorio vida nocturna Los Teques, estética dorado/ámbar/púrpura/negro)
+- Creado directorio /home/z/my-project/public/images/
+- Primer intento: 7 comandos en paralelo → solo tasca.png exitosa. Causas de fallo:
+  * hero.png (1440x720): rechazado por API (400) — 720 NO es múltiplo de 32. Cambiado a 1344x768 (mismo aspect widescreen, válido: 1344/32=42, 768/32=24)
+  * 5 restantes: HTTP 429 Too Many Requests (rate limit por concurrencia alta)
+- Segundo intento: regeneración secuencial con función gen_retry (backoff exponencial 12s/24s/36s... hasta 5 intentos sobre 429)
+- Tras 2 timeouts del tool (context deadline), reanudado en cada punto: todos los archivos quedaron guardados correctamente
+- Verificación final: 7 archivos PNG presentes, tamaño > 0, dimensiones correctas
+- Nota técnica: el CLI `z-ai image` escribe bytes JPEG (JFIF, magic ffd8ffe0) aunque el path tenga extensión .png. Funcionalmente OK para Next.js/browsers (content sniffing), pero el contenido real es JPEG.
+
+Stage Summary:
+- 7/7 imágenes generadas en /home/z/my-project/public/images/:
+  * hero.png       — 163,851 bytes (1344x768, hero banner calle nocturna dorado)
+  * licoreria.png  — 201,692 bytes (1024x1024, interior licorería premium)
+  * tasca.png      — 132,404 bytes (1024x1024, tasca española íntima)
+  * discoteca.png  — 137,551 bytes (1024x1024, discoteca púrpura/dorado)
+  * offer1.png     — 73,026  bytes (1024x1024, cocktail ámbar close-up)
+  * offer2.png     — 105,515 bytes (1024x1024, whisky premium)
+  * gallery1.png   — 157,683 bytes (1024x1024, estantería licores backlit)
+  * Total: ~971 KB
+- Paleta respetada: dorado/ámbar/púrpura/negro (sin azul/índigo dominante)
+- Cambio de tamaño: hero 1440x720 → 1344x768 (API requiere múltiplos de 32; 720 no lo era)
+- Las imágenes están listas para ser referenciadas como /images/<name>.png en el código Next.js
+- No se modificó código ni se crearon archivos adicionales
+
+---
+Task ID: 5-9
+Agent: main
+Task: Implementar todos los componentes y integrar en page.tsx
+
+Work Log:
+- Configurado globals.css con colores custom (obsidian #090d1a, gold #d4af37, purple #c026d3, amber #f59e0b) y clases utilitarias (glass-card, glass-nav, glass-ticket, glow-gold/amber/purple, card-glow-hover, radar-pulse-*, bg-orbs, conecta-scroll)
+- Creado src/lib/types.ts con interfaces: Establishment, Offer, Review, User, View, AppNotification, MatchAnswers, BookingData
+- Creado src/lib/data.ts con 21 locales, 5 ofertas, 3 reviews iniciales, mockGoogleUser
+- Creado src/lib/store.ts con Zustand: estado global (view, selectedEstablishmentId, user, reviews, notifications), acciones (login/logout, addReview, getDynamicRating, addNotification), helpers (calculateMatch, getRecommendedDrink, generateReservationCode, defaultBookingData)
+- Creado src/components/conecta/Notifications.tsx — toasts animados con aria-live
+- Creado src/components/conecta/Navbar.tsx — navbar glassmorphism con login/logout Google simulado + nav móvil
+- Creado src/components/conecta/Matchmaker.tsx — wizard 3 pasos (mood/company/budget) + pantalla de recomendación con trago sugerido
+- Creado src/components/conecta/HomePage.tsx — hero full-screen + buscador + grid responsive (1/2/3 cols) con filtros por categoría + AnimatePresence con layout
+- Creado src/components/conecta/MapPage.tsx — mapa 1000x620 arrastrable con framer-motion useMotionValue, zoom 0.8-2.5, pines con radar-pulse por categoría, leyenda, bottom sheet de detalle, search overlay
+- Creado src/components/conecta/EstablishmentPage.tsx — galería con carrusel + flechas + bullets, ofertas scroll horizontal, distribución de estrellas, sub-ratings (ambiente/servicio/precio-calidad), lista de reviews ordenable (recientes/valoracion), form de reseña con estrellas, modal de reserva 3 pasos (form → loading → ticket holográfico con QR decorativo)
+- Actualizado src/app/page.tsx como SPA con AnimatePresence mode="wait" entre vistas, scroll-to-top en cambio de vista, footer sticky con mt-auto
+- Actualizado src/app/layout.tsx con metadata de CONECTA-LT
+- Lint: 0 errores, 0 warnings tras --fix
+- Dev server: levantado en puerto 3000, responde HTTP 200, compila sin errores
+
+Stage Summary:
+- Migración completa del código React original a Next.js 16 como SPA (sin React Router, estado global con Zustand)
+- 7 archivos de componentes + 3 lib + 1 page.tsx + globals.css
+- Se respetaron TODAS las funcionalidades del original: hero, buscador, filtros, matchmaker, mapa arrastrable, pines radar, galería, reservas con ticket, reviews con rating ponderado, login Google simulado, notificaciones
+- Mejoras vs original: tipado completo (sin `any`), IDs anti-colisión, setTimeout safe, navegación con estado (no window.location), scroll-to-top, footer sticky, accesibilidad (aria-label, aria-live), responsive móvil mejorado, hero responsive
+- Dev server responde 200 cuando está corriendo (limitación del sandbox: el proceso se cae entre llamadas al tool bash, pero el panel de preview del usuario lo mantiene vivo)

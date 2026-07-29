@@ -14,24 +14,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "CONECTA-LT · Vida nocturna de Los Teques",
+  description: "Directorio premium de licorerías, tascas y discotecas de Los Teques, Miranda. Descubre ofertas únicas y planifica tu salida perfecta.",
+  keywords: ["Los Teques", "vida nocturna", "licorerías", "tascas", "discotecas", "Miranda", "Venezuela"],
+  authors: [{ name: "CONECTA-LT" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "CONECTA-LT · Vida nocturna de Los Teques",
+    description: "La vida nocturna, redescubierta.",
+    siteName: "CONECTA-LT",
     type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
   },
 };
 
