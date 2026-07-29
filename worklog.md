@@ -470,3 +470,55 @@ Stage Summary:
   6. Responsive: galería 2-col en mobile, 5-col en desktop; VP banner adaptable
 - Mejora adicional: countdown "Días restantes" en banner de promo activa
 - Mejora adicional: handler copy robusto (feedback siempre visible)
+
+---
+Task ID: 7-cinema-agegate
+Agent: main
+Task: Aplicar diseño cinematográfico de copas de champán animadas al AgeGate (basado en HTML proporcionado por el usuario)
+
+Work Log:
+- Leído AgeGate.tsx actual y estructura de globals.css (622 líneas)
+- Añadido bloque CSS "AgeGate cinematográfico" al final de globals.css (~210 líneas):
+  * .conecta-agegate-bg: degradado oscuro #090d1a → #1a1a2e → #16213e
+  * .conecta-particle + @keyframes conecta-float: 40 partículas doradas que suben flotando
+  * .conecta-golden-line + @keyframes conecta-drawLine: 5 líneas de conexión doradas que se dibujan
+  * .conecta-glass-wrap: wrapper con CSS vars --px/--py para parallax de mouse
+  * .conecta-glass + @keyframes conecta-toastBounce: rebote + inclinación del brindis
+  * .conecta-glass-cup: vidrio con blur, borde dorado, sombra
+  * .conecta-liquid + @keyframes conecta-liquidWave: líquido dorado que ondule
+  * .conecta-bubble + @keyframes conecta-bubbleRise: 8 burbujas que suben por copa
+  * .conecta-glass-stem / .conecta-glass-base: tallo y base luminosos
+  * .conecta-splash-particle + @keyframes conecta-splash: 20 partículas que explotan desde el centro
+  * .conecta-cinema-btn: botón degradado #FFD700→#FFA500 con shimmer (::before) y hover scale
+  * .conecta-logo-glow: texto dorado con text-shadow doble
+  * Media queries responsive (768px y 380px): copas más pequeñas en móvil
+  * @media prefers-reduced-motion: desactiva animaciones, copas estáticas inclinadas
+- Reescrito AgeGate.tsx completamente:
+  * Componente ChampagneGlass extraído (vidrio + líquido + burbujas + tallo + base)
+  * useMemo para arreglos deterministas: 40 partículas, 8 burbujas×2, 20 splash, 5 líneas
+  * useEffect con mousemove → setProperty('--px'/'--py') en las 2 copas (parallax suave)
+  * Layout: fondo cinematográfico + logo + copas con splash + texto legal + botones
+  * Conservado: texto legal venezolano, advertencia amber, footer de términos
+  * Conservado: estado 'denied' con escudo rojo + botón SALIR + volver
+  * Estado denegado ahora también usa fondo cinematográfico (partículas tenues opacity-40)
+  * Botón principal usa .conecta-cinema-btn (degradado dorado + shimmer hover)
+- bun run lint: PASS (0 errores)
+- Dev server compila limpio, solo responses 200
+- Verificación Agent Browser:
+  * Desktop 1280×900: copas animadas visibles, partículas, líneas, botón dorado con glow
+  * Mobile iPhone 14 (1170×2532): copas reducidas, layout responsive correcto
+  * Click "SOY MENOR DE EDAD" → estado "Acceso denegado" con fondo cinematográfico
+  * Click "Volver a la verificación" → "SOY MAYOR DE EDAD" → entra al directorio correctamente
+- Capturas guardadas en public/screenshots/:
+  * age-gate-cinema-desktop.png (549 KB)
+  * age-gate-cinema-mobile.png (1.4 MB)
+  * age-gate-cinema-denied.png (367 KB)
+
+Stage Summary:
+- AgeGate rediseñado con estética cinematográfica de celebración (copas de champán brindando)
+- Efectos visuales portados del HTML del usuario: partículas, líneas, splash, líquido, burbujas, parallax
+- Botón "SOY MAYOR DE EDAD" ahora dorado con shimmer animado (más llamativo)
+- Accesibilidad conservada: ARIA roles, autofocus, prefers-reduced-motion respetado
+- Contenido legal/regulatorio íntegro (legislación venezolana + advertencia + términos)
+- Responsive: copas escalan en móvil (90px → 76px en pantallas muy pequeñas)
+- Las 3 capturas de pantalla están disponibles para el usuario
