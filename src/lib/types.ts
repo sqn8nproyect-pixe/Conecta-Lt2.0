@@ -35,7 +35,7 @@ export interface Establishment {
   lng: number;
   address: string;
   phone: string;
-  /** Legacy handle (e.g. "@eldoradolt"). Kept for backwards-compat with existing UI. */
+  /** Legacy handle (e.g. "@licoreriadonsancho"). Kept for backwards-compat with existing UI. */
   instagram: string;
   coverImage: string;
   /** Legacy array (2-3 photos). Kept for backwards-compat with the hero slider. */

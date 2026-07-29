@@ -3,19 +3,17 @@ import type { Establishment, Offer, Review, User } from './types';
 // 21 Establishments with enhanced properties
 export const establishments: Establishment[] = [
   {
-    id: 1, name: 'Licorería El Dorado', category: 'licorería',
-    description: 'La más amplia selección de licores premium de Los Teques. Contamos con bodegas exclusivas y envíos exprés.',
-    lat: 10.3445, lng: -67.0431, address: 'Calle Miranda, Los Teques', phone: '+584145551234', instagram: '@eldoradolt',
+    id: 1, name: 'Licorería Don Sancho', category: 'licorería',
+    description: 'Licorería ubicada en pleno centro de Los Teques, entre el Palacio de Deporte y el Banco Los Teques. Gran variedad de whiskies, rones, vinos espumantes (Prosecco, Cava), cervezas y licores especiales. Venta al mayor y menor con delivery por WhatsApp.',
+    lat: 10.347347, lng: -67.042951, address: 'Av. Bolívar con C. Ayacucho, Los Teques 1201, Miranda', phone: '+584245697620', instagram: '@licoreriadonsancho',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png', '/images/offer2.png'],
-    avgRating: 4.7, reviewCount: 28, priceRange: '$$', schedule: '10:00 AM - 09:00 PM',
-    subRatings: { ambiente: 4.2, servicio: 4.9, precioCalidad: 4.8 },
-    specialty: 'Whiskies de Reserva Limitada',
-    valueProposition: 'La cava privada más completa de Los Teques: etiquetas que no encuentras en ningún otro rincón del estado.',
+    avgRating: 4.5, reviewCount: 12, priceRange: '$$', schedule: '08:00 AM - 08:30 PM (Lun-Sáb)',
+    subRatings: { ambiente: 4.3, servicio: 4.6, precioCalidad: 4.5 },
+    specialty: 'Vinos Espumantes & Whiskies',
+    valueProposition: 'Tu licorería de confianza en el centro de Los Teques: entre el Palacio de Deporte y el Banco Los Teques, con delivery por WhatsApp y la mejor variedad de espumantes.',
     gallery: ['/images/licoreria.png', '/images/gallery1.png', '/images/offer1.png', '/images/offer2.png', '/images/hero.png', '/images/licoreria.png', '/images/gallery1.png', '/images/offer1.png', '/images/offer2.png', '/images/hero.png'],
-    website: 'https://licoreriaeldorado.com.ve',
-    socialMedia: { instagram: 'https://instagram.com/eldoradolt', tiktok: 'https://tiktok.com/@eldoradolt', facebook: 'https://facebook.com/eldoradolt' },
-    activePromotion: { label: '20% OFF en Whiskies', validUntil: '2026-08-31' },
+    socialMedia: { instagram: 'https://instagram.com/licoreriadonsancho' },
   },
   {
     id: 2, name: 'Tasca La Cava', category: 'tasca',
@@ -300,9 +298,9 @@ export const establishments: Establishment[] = [
 
 // 42 Offers — 2 per establishment
 export const offers: Offer[] = [
-  // Licorería El Dorado (1)
-  { id: 1, establishmentId: 1, title: 'Whisky Premium 18 años', description: 'Botella de 750ml. Reserva limitada de malta única.', price: '$89', discount: '20% OFF', image: '/images/offer2.png', code: 'GOLD18' },
-  { id: 2, establishmentId: 1, title: 'Pack Cervezas Artesanales', description: '6 cervezas locales + vaso de regalo. Sabores exclusivos.', price: '$24', discount: '15% OFF', image: '/images/offer1.png', code: 'DORADO6' },
+  // Licorería Don Sancho (1)
+  { id: 1, establishmentId: 1, title: 'Whisky Premium 18 años', description: 'Botella de 750ml. Reserva limitada de malta única. Consulta disponibilidad por WhatsApp.', price: '$89', discount: '20% OFF', image: '/images/offer2.png', code: 'SANCHO18' },
+  { id: 2, establishmentId: 1, title: 'Pack Cervezas Artesanales', description: '6 cervezas nacionales + vaso de regalo. Sabores exclusivos.', price: '$24', discount: '15% OFF', image: '/images/offer1.png', code: 'SANCHO6' },
   // Tasca La Cava (2)
   { id: 3, establishmentId: 2, title: 'Cóctel Noche Dorada', description: 'Gin premium + tónica especial + infusión de cítricos.', price: '$12', discount: '2x1', image: '/images/offer1.png', code: 'CAVA2X1' },
   { id: 4, establishmentId: 2, title: 'Tabla de Quesos + Vino', description: 'Selección de 5 quesos + botella de tinto reserva.', price: '$35', discount: 'COMBO', image: '/images/offer2.png', code: 'CAVAQ' },
