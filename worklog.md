@@ -607,3 +607,76 @@ Stage Summary:
 - Componente AgeGate.tsx reducido de ~612 líneas → ~204 líneas
 - Todo el contenido legal/regulatorio conservado (legislación venezolana, advertencia, términos)
 - Funcionalidad intacta: verificación + estado denegado + redirect + volver
+
+---
+Task ID: 10-user-location-map
+Agent: main
+Task: Añadir marcador de usuario (rojo pulsante) en el mapa tras login, con panel de opciones cercanas (radio 1km) para móviles
+
+Work Log:
+CSS (globals.css):
+- Añadido bloque "Marcador de usuario (punto rojo pulsante estilo Google Maps)"
+- .conecta-user-marker: contenedor del marcador
+- .conecta-user-dot: punto rojo #ef4444 con borde blanco 3px + box-shadow glow + sombra
+- .conecta-user-pulse: halo rojo semitransparente con @keyframes conecta-user-pulse (scale 0.5→3, opacity 1→0, 2s)
+- @media prefers-reduced-motion: desactiva el pulse
+
+LeafletMap.tsx:
+- Exportada constante NEARBY_RADIUS_M = 1000 (1km)
+- Exportada interfaz UserLocation { lat, lng }
+- Añadido makeUserIcon(): DivIcon con html del dot + pulse, iconSize [24,24], iconAnchor [12,12]
+- Añadido componente FlyToUser: usa useMap() para flyTo a la ubicación del usuario con zoom 16
+- Acepta prop userLocation: UserLocation | null
+- Renderiza Marker de usuario (zIndexOffset 1000) con Popup "TU UBICACIÓN · Estás aquí · Mostrando opciones a menos de 1 km"
+- Renderiza Circle de 1km con pathOptions: color #ef4444, weight 2, fillColor #ef4444, fillOpacity 0.06, dashArray "6 6"
+- Importado Circle de react-leaflet
+
+MapPage.tsx:
+- Importados icons: LocateFixed, Loader2, Navigation, LogIn, AlertCircle
+- Añadido state: userLocation, locating, geoError
+- Añadido helper haversineKm() (fórmula de Haversine, R=6371km)
+- Añadido handleLocate(): gateado por login (if !user return), usa navigator.geolocation.getCurrentPosition con enableHighAccuracy, timeout 10s, maximumAge 0; maneja errores codes 1/2/3 con mensajes en español
+- Añadido nearbyEst memo: filtra establecimientos dentro de 1km, ordena por distancia ascendente
+- Botón "Mi ubicación" con 4 estados visuales:
+  * No logueado: gris deshabilitado "INICIA SESIÓN PARA VER CERCANOS" + icon LogIn
+  * Localizando: rojo translúcido "LOCALIZANDO…" + icon Loader2 spin
+  * Con ubicación: rojo translúcido "ACTUALIZAR MI UBICACIÓN" + icon LocateFixed
+  * Default: rojo sólido "MI UBICACIÓN" + icon Navigation
+- Caja de error geolocalización (rojo) con AlertCircle
+- Panel "CERCANOS · 1 KM" (AnimatePresence height auto):
+  * Header con count de lugares
+  * Lista scrollable (max-h-48) con scrollbar dorado (conecta-gallery-strip)
+  * Cada item: nombre + categoría + rating + badge de distancia (m si <1km, km si >=1km)
+  * Click → setSelectedEst (abre bottom sheet)
+  * Mensaje "No hay locales a menos de 1 km" si vacío
+- Bottom sheet: añadido badge de distancia "a X m/km de ti" cuando userLocation está activo
+- Leyenda: añadido "Tu ubicación" con punto rojo + ring blanco
+
+Verificación Agent Browser (geolocalización simulada via eval mock):
+- Age gate → SOY MAYOR DE EDAD ✓
+- Login Google → "Mi Perfil" + avatar visible ✓
+- Mapa → botón "Mostrar mi ubicación y opciones cercanas" presente ✓
+- Mock geolocation (10.3444, -67.0428) → click Mi ubicación:
+  * userMarker=1, userDot=1, userPulse=1 ✓
+  * circles=1 (path stroke #ef4444) ✓
+  * cercanosCount=17 establecimientos dentro de 1km ✓
+  * Lista ordenada: El Dorado 35m → Vinos del Valle 890m ✓
+- Click "Licorería El Dorado" en panel → bottom sheet con WhatsApp + Ver Detalles ✓
+- Logout → botón cambia a "INICIA SESIÓN PARA VER CERCANOS" [disabled] ✓ (gate por login funciona)
+- Mobile iPhone 14: mismo flujo, 17 cercanos, layout responsive ✓
+- 0 errores de consola/página
+- bun run lint: PASS (0 errores)
+
+Capturas:
+- map-user-location.png (desktop 1280×900, 381 KB)
+- map-user-location-mobile.png (iPhone 14 1170×2532, 793 KB)
+
+Stage Summary:
+- Marcador de usuario rojo pulsante implementado en el mapa (estilo Google Maps blue dot pero en rojo)
+- Círculo de proximidad de 1km con línea discontinua roja
+- Panel "Cercanos" con 17 establecimientos ordenados por distancia Haversine
+- Gate por login: botón deshabilitado si no hay sesión, con CTA claro
+- Manejo de errores de geolocalización (permiso denegado, GPS no disponible, timeout)
+- Responsive: funciona en desktop y móvil
+- API nativa navigator.geolocation (enableHighAccuracy para GPS real en móviles)
+- Constante NEARBY_RADIUS_M fácil de cambiar (actualmente 1000m para pruebas)

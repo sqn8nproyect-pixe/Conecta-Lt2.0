@@ -6,6 +6,7 @@ import {
   TileLayer,
   Marker,
   Popup,
+  Circle,
   ZoomControl,
   useMap,
 } from 'react-leaflet';
@@ -16,6 +17,9 @@ import { establishments } from '@/lib/data';
 import type { Category, Establishment } from '@/lib/types';
 
 const LOS_TEQUES_CENTER: [number, number] = [10.3444, -67.0428];
+
+/** Radio de proximidad para "opciones cercanas" (en metros). 1000m = 1km. */
+export const NEARBY_RADIUS_M = 1000;
 
 type PinColor = 'gold' | 'amber' | 'purple';
 
@@ -35,6 +39,21 @@ function makeIcon(color: PinColor): L.DivIcon {
   });
 }
 
+/** Icono del usuario: punto rojo pulsante con halo animado. */
+function makeUserIcon(): L.DivIcon {
+  return L.divIcon({
+    className: 'conecta-user-marker',
+    html: `<div class="conecta-user-dot"></div><div class="conecta-user-pulse"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
+
+export interface UserLocation {
+  lat: number;
+  lng: number;
+}
+
 /**
  * Flies the map to the selected establishment whenever it changes.
  * Lives inside <MapContainer> so it can use the useMap() hook.
@@ -50,16 +69,36 @@ function FlyTo({ selected }: { selected: Establishment | null }) {
 }
 
 /**
+ * Flies the map to the user's location when it first becomes available.
+ * Runs inside <MapContainer>.
+ */
+function FlyToUser({ userLocation }: { userLocation: UserLocation | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (userLocation) {
+      map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 0.9 });
+    }
+  }, [userLocation, map]);
+  return null;
+}
+
+/**
  * Real Leaflet map. Dynamically imported with `ssr: false` from MapPage
  * because leaflet/react-leaflet access `window` at module evaluation.
  */
-export function LeafletMap({ searchQuery }: { searchQuery: string }) {
+export function LeafletMap({
+  searchQuery,
+  userLocation,
+}: {
+  searchQuery: string;
+  userLocation: UserLocation | null;
+}) {
   const selectedEst = useAppStore((s) => s.selectedMapEstablishment);
   const setSelectedEst = useAppStore((s) => s.setSelectedMapEstablishment);
   const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const goToDetail = useAppStore((s) => s.goToDetail);
 
-  // Build the three colored pin icons once.
+  // Build the three colored pin icons + the user icon once.
   const icons = useMemo(
     () => ({
       gold: makeIcon('gold'),
@@ -68,6 +107,7 @@ export function LeafletMap({ searchQuery }: { searchQuery: string }) {
     }),
     [],
   );
+  const userIcon = useMemo(() => makeUserIcon(), []);
 
   // Filter markers by name or category when the search box is used.
   const filteredEst = useMemo(() => {
@@ -103,6 +143,7 @@ export function LeafletMap({ searchQuery }: { searchQuery: string }) {
           overlap the search box, especially on mobile). */}
       <ZoomControl position="bottomright" />
       <FlyTo selected={selectedEst} />
+      <FlyToUser userLocation={userLocation} />
 
       {filteredEst.map((est) => {
         const rating = getDynamicRating(est.id);
@@ -135,6 +176,40 @@ export function LeafletMap({ searchQuery }: { searchQuery: string }) {
           </Marker>
         );
       })}
+
+      {/* === Marcador del usuario + círculo de proximidad (1km) === */}
+      {userLocation && (
+        <>
+          <Marker
+            position={[userLocation.lat, userLocation.lng]}
+            icon={userIcon}
+            zIndexOffset={1000}
+          >
+            <Popup>
+              <div className="conecta-popup">
+                <div className="conecta-popup-cat" style={{ color: '#ef4444' }}>
+                  TU UBICACIÓN
+                </div>
+                <div className="conecta-popup-name">Estás aquí</div>
+                <div className="conecta-popup-addr">
+                  Mostrando opciones a menos de 1 km
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+          <Circle
+            center={[userLocation.lat, userLocation.lng]}
+            radius={NEARBY_RADIUS_M}
+            pathOptions={{
+              color: '#ef4444',
+              weight: 2,
+              fillColor: '#ef4444',
+              fillOpacity: 0.06,
+              dashArray: '6 6',
+            }}
+          />
+        </>
+      )}
     </MapContainer>
   );
 }

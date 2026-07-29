@@ -1,10 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Search, Star, ChevronRight, X } from 'lucide-react';
+import {
+  MapPin,
+  Search,
+  Star,
+  ChevronRight,
+  X,
+  LocateFixed,
+  Loader2,
+  Navigation,
+  LogIn,
+  AlertCircle,
+} from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { establishments } from '@/lib/data';
 import type { Establishment } from '@/lib/types';
 
 // Leaflet accesses `window` at module evaluation, so the actual map is
@@ -18,6 +30,9 @@ const LeafletMap = dynamic(
   },
 );
 
+// Re-exported constant so MapPage and LeafletMap share the same radius.
+const NEARBY_RADIUS_M = 1000;
+
 function LoadingSkeleton() {
   return (
     <div className="absolute inset-0 bg-[#0b0f19] flex items-center justify-center">
@@ -29,22 +44,98 @@ function LoadingSkeleton() {
   );
 }
 
+/** Distancia Haversine entre dos puntos (en kilómetros). */
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+interface UserLocation {
+  lat: number;
+  lng: number;
+}
+
 export function MapPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   const selectedEst = useAppStore((s) => s.selectedMapEstablishment);
   const setSelectedEst = useAppStore((s) => s.setSelectedMapEstablishment);
   const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const goToDetail = useAppStore((s) => s.goToDetail);
+  const user = useAppStore((s) => s.user);
 
   // Clear the selected establishment when leaving the map view so the
   // bottom sheet doesn't reappear on return.
   useEffect(() => () => setSelectedEst(null), [setSelectedEst]);
 
+  /** Solicita la geolocalización del usuario (gateada por login). */
+  const handleLocate = () => {
+    if (!user) return; // solo disponible tras login
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeoError('Tu navegador no soporta geolocalización.');
+      return;
+    }
+    setLocating(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setLocating(false);
+      },
+      (err) => {
+        const messages: Record<number, string> = {
+          1: 'Permiso denegado. Habilita el acceso a tu ubicación en el navegador.',
+          2: 'No se pudo determinar tu ubicación. Verifica tu GPS o conexión.',
+          3: 'La solicitud tardó demasiado. Inténtalo de nuevo.',
+        };
+        setGeoError(messages[err.code] || err.message);
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  };
+
+  /** Establecimientos dentro del radio de cercanía (1km), ordenados por distancia. */
+  const nearbyEst = useMemo(() => {
+    if (!userLocation) return [];
+    return establishments
+      .map((est) => ({
+        ...est,
+        distance: haversineKm(
+          userLocation.lat,
+          userLocation.lng,
+          est.lat,
+          est.lng,
+        ),
+      }))
+      .filter((est) => est.distance * 1000 <= NEARBY_RADIUS_M)
+      .sort((a, b) => a.distance - b.distance);
+  }, [userLocation]);
+
   const handleViewDetails = (est: Establishment) => {
     setSelectedEst(null);
     goToDetail(est.id);
   };
+
+  const isLoggedIn = !!user;
 
   return (
     <motion.div
@@ -56,7 +147,7 @@ export function MapPage() {
     >
       {/* Leaflet map fills its container */}
       <div className="absolute inset-0">
-        <LeafletMap searchQuery={searchQuery} />
+        <LeafletMap searchQuery={searchQuery} userLocation={userLocation} />
       </div>
 
       {/* Search Overlay */}
@@ -78,6 +169,124 @@ export function MapPage() {
               className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm placeholder:text-white/40 focus:border-gold outline-none transition-colors text-white"
             />
           </div>
+
+          {/* === Botón Mi ubicación (gateado por login) === */}
+          <button
+            type="button"
+            onClick={handleLocate}
+            disabled={!isLoggedIn || locating}
+            aria-label={
+              !isLoggedIn
+                ? 'Inicia sesión para ver opciones cercanas'
+                : 'Mostrar mi ubicación y opciones cercanas'
+            }
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs tracking-wider transition-all active:scale-95 ${
+              !isLoggedIn
+                ? 'bg-white/5 border border-white/10 text-white/40 cursor-not-allowed'
+                : locating
+                  ? 'bg-red-500/20 border border-red-500/40 text-red-300 cursor-wait'
+                  : userLocation
+                    ? 'bg-red-500/20 border border-red-500/50 text-red-300 hover:bg-red-500/30'
+                    : 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30'
+            }`}
+          >
+            {!isLoggedIn ? (
+              <>
+                <LogIn size={14} /> INICIA SESIÓN PARA VER CERCANOS
+              </>
+            ) : locating ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> LOCALIZANDO…
+              </>
+            ) : userLocation ? (
+              <>
+                <LocateFixed size={14} /> ACTUALIZAR MI UBICACIÓN
+              </>
+            ) : (
+              <>
+                <Navigation size={14} /> MI UBICACIÓN
+              </>
+            )}
+          </button>
+
+          {/* Error de geolocalización */}
+          {geoError && (
+            <div className="flex items-start gap-2 text-left bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+              <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-red-300 leading-relaxed">
+                {geoError}
+              </p>
+            </div>
+          )}
+
+          {/* === Panel Cercanos === */}
+          <AnimatePresence>
+            {userLocation && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-white/10 pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-mono font-bold tracking-[2px] text-red-400 flex items-center gap-1.5">
+                      <Navigation size={10} /> CERCANOS · 1 KM
+                    </span>
+                    <span className="text-[10px] font-mono text-white/50">
+                      {nearbyEst.length}{' '}
+                      {nearbyEst.length === 1 ? 'lugar' : 'lugares'}
+                    </span>
+                  </div>
+
+                  {nearbyEst.length === 0 ? (
+                    <p className="text-[11px] text-white/50 leading-relaxed py-2">
+                      No hay locales registrados a menos de 1 km de tu
+                      ubicación. Prueba moviéndote o usa el buscador.
+                    </p>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto conecta-gallery-strip flex flex-col gap-1.5 pr-1">
+                      {nearbyEst.map((est) => {
+                        const rating = getDynamicRating(est.id);
+                        return (
+                          <button
+                            key={est.id}
+                            type="button"
+                            onClick={() => setSelectedEst(est)}
+                            className="w-full text-left flex items-center gap-2.5 p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/15 transition-all group"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-semibold text-white truncate group-hover:text-gold transition-colors">
+                                {est.name}
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px] text-white/50">
+                                <span className="uppercase tracking-wide">
+                                  {est.category}
+                                </span>
+                                <span className="flex items-center gap-0.5">
+                                  <Star
+                                    size={9}
+                                    fill="#d4af37"
+                                    color="#d4af37"
+                                  />
+                                  {rating.avg}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-red-300 bg-red-500/15 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {est.distance < 1
+                                ? `${Math.round(est.distance * 1000)} m`
+                                : `${est.distance.toFixed(2)} km`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -98,6 +307,10 @@ export function MapPage() {
           <div className="flex items-center gap-2.5">
             <div className="w-3 h-3 rounded-full bg-[#C026D3] glow-purple" />
             <span className="text-white/80 font-medium">Discotecas</span>
+          </div>
+          <div className="flex items-center gap-2.5 pt-1 mt-1 border-t border-white/10">
+            <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-white/60" />
+            <span className="text-white/80 font-medium">Tu ubicación</span>
           </div>
         </div>
       </div>
@@ -143,6 +356,24 @@ export function MapPage() {
                 </div>
                 <span className="hidden sm:inline">•</span>
                 <span className="line-clamp-1">{selectedEst.address}</span>
+                {userLocation && (
+                  <>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="text-red-300 font-mono">
+                      {(() => {
+                        const d = haversineKm(
+                          userLocation.lat,
+                          userLocation.lng,
+                          selectedEst.lat,
+                          selectedEst.lng,
+                        );
+                        return d < 1
+                          ? `a ${Math.round(d * 1000)} m de ti`
+                          : `a ${d.toFixed(2)} km de ti`;
+                      })()}
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
