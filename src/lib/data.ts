@@ -5,7 +5,7 @@ export const establishments: Establishment[] = [
   {
     id: 1, name: 'Licorería Don Sancho', category: 'licorería',
     description: 'Licorería ubicada en pleno centro de Los Teques, entre el Palacio de Deporte y el Banco Los Teques. Gran variedad de whiskies, rones, vinos espumantes (Prosecco, Cava), cervezas y licores especiales. Venta al mayor y menor con delivery por WhatsApp.',
-    lat: 10.347347, lng: -67.042951, address: 'Av. Bolívar con C. Ayacucho, Los Teques 1201, Miranda', phone: '+584245697620', instagram: '@licoreriadonsancho',
+    lat: 10.347347, lng: -67.042951, address: 'Av. Bolívar con C. Ayacucho, Los Teques 1201, Miranda', phone: '+584242569762', instagram: '@licoreriadonsancho',
     coverImage: '/images/licoreria.png',
     images: ['/images/licoreria.png', '/images/gallery1.png', '/images/offer2.png'],
     avgRating: 4.5, reviewCount: 12, priceRange: '$$', schedule: '08:00 AM - 08:30 PM (Lun-Sáb)',
