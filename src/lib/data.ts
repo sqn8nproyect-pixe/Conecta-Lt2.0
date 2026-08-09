@@ -437,7 +437,7 @@ function buildReviews(): Review[] {
       }
       usedComments.add(cIdx);
       const uIdx = (est.id * 2 + i * 3) % reviewUsers.length;
-      const user = reviewUsers[uIdx];
+      const user = reviewUsers[uIdx]!;
       // Rating: most around avgRating, some lower/higher
       const variance = ((est.id + i) % 3) - 1; // -1, 0, or 1
       let rating = Math.round(est.avgRating + variance);
@@ -450,8 +450,8 @@ function buildReviews(): Review[] {
         userName: user.name,
         userAvatar: user.avatar,
         rating,
-        comment: pool[cIdx],
-        date: dates[dateIdx],
+        comment: pool[cIdx]!,
+        date: dates[dateIdx]!,
       });
     }
   });
