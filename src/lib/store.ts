@@ -98,7 +98,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       userAvatar: user.avatar,
       rating,
       comment,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString().split('T')[0] ?? '',
     };
 
     set({ reviews: [newReview, ...reviews] });
@@ -177,22 +177,22 @@ export function calculateMatch(
   if (ans.mood === 'party') {
     const clubs = allEstablishments.filter((e) => e.category === 'discoteca');
     if (ans.budget === 'premium') {
-      return clubs.find((c) => c.id === 3 || c.id === 21) || clubs[0];
+      return clubs.find((c) => c.id === 3 || c.id === 21) ?? clubs[0]!;
     }
-    return clubs.find((c) => c.id === 15 || c.id === 6) || clubs[0];
+    return clubs.find((c) => c.id === 15 || c.id === 6) ?? clubs[0]!;
   }
   // chill
   if (ans.company === 'couple') {
     const tascas = allEstablishments.filter((e) => e.category === 'tasca');
-    return tascas.find((t) => t.id === 2 || t.id === 17) || tascas[0];
+    return tascas.find((t) => t.id === 2 || t.id === 17) ?? tascas[0]!;
   }
   // friends / group
   if (ans.budget === 'premium') {
-    return allEstablishments.find((e) => e.id === 7 || e.id === 19) || allEstablishments[0];
+    return allEstablishments.find((e) => e.id === 7 || e.id === 19) ?? allEstablishments[0]!;
   }
   return (
-    allEstablishments.find((e) => e.id === 5 || e.id === 11 || e.id === 1) ||
-    allEstablishments[0]
+    allEstablishments.find((e) => e.id === 5 || e.id === 11 || e.id === 1) ??
+    allEstablishments[0]!
   );
 }
 
@@ -228,7 +228,7 @@ export function generateReservationCode(): string {
 export function defaultBookingData(user: User | null): BookingData {
   return {
     name: user ? user.name : '',
-    date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    date: new Date(Date.now() + 86400000).toISOString().split('T')[0] ?? '',
     time: '20:00',
     guests: '2',
     dealId: '',
