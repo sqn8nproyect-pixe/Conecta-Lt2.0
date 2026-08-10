@@ -73,11 +73,15 @@ export interface Offer {
   code: string;
   /** ISO date string — when the promotion expires. Optional because legacy
    *  seeded offers may not have it (Etapa 4 backfill adds it to all 42). */
-  endDate?: string;
+  endDate?: string | null;
+  /** ISO date string — when the promotion starts. */
+  startDate?: string | null;
   /** Max number of redemptions allowed for this promotion (null = unlimited). */
   maxRedemptions?: number | null;
   /** Running count of users who have claimed this promotion. */
   redemptionCount?: number;
+  /** Status from DB: ACTIVE, EXPIRED, PAUSED, DRAFT. */
+  status?: string;
 }
 
 /**

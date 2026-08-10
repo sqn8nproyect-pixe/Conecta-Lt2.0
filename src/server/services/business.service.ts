@@ -163,6 +163,12 @@ export function transformPromotion(prom: Promotion, businessId: string): Offer {
     discount: prom.discount ?? '',
     image: prom.image ?? '',
     code: prom.code ?? '',
+    // Etapa 4: campos de vigencia + redenciones
+    endDate: prom.endDate?.toISOString() ?? null,
+    startDate: prom.startDate?.toISOString() ?? null,
+    maxRedemptions: prom.maxRedemptions,
+    redemptionCount: prom.redemptionCount,
+    status: prom.status,
   };
 }
 
