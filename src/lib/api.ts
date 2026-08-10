@@ -3,7 +3,13 @@
 // Thin wrappers around fetch() for the public-facing endpoints.
 // ─────────────────────────────────────────────────────────────
 
-import type { CouponRedemption, Establishment, RedeemedPromotion, Review } from './types';
+import type {
+  CouponRedemption,
+  Establishment,
+  RedeemedPromotion,
+  Reservation,
+  Review,
+} from './types';
 
 // The API returns an extended Establishment shape that also embeds
 // the establishment's offers and reviews (see transformBusiness).
@@ -153,5 +159,57 @@ export async function checkRedemptions(
   if (res.status === 401) return {};
   if (!res.ok) throw new Error('Failed to check redemptions');
   return res.json();
+}
+
+// ─── Reservations (Etapa 5) ────────────────────────────────────
+// Persistent "bookings" — backed by the Reservation table.
+// Replaces the local `generateReservationCode()` flow in the booking
+// modal so that the confirmation code is generated server-side and
+// survives reloads / logouts.
+
+export async function createReservation(input: {
+  businessSlug: string;
+  name: string;
+  phone: string;
+  email?: string;
+  date: string;
+  time: string;
+  guests: number;
+  notes?: string;
+  couponRedemptionId?: string;
+}): Promise<{ reservation: Reservation; confirmationCode: string }> {
+  const res = await fetch('/api/reservations', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (res.status === 401) throw new Error('NOT_AUTHENTICATED');
+  const data = await res.json().catch(() => ({
+    error: 'Failed to create reservation',
+  }));
+  if (!res.ok) throw new Error(data.error ?? 'Failed to create reservation');
+  return data;
+}
+
+export async function fetchMyReservations(): Promise<Reservation[]> {
+  const res = await fetch('/api/reservations');
+  if (res.status === 401) return [];
+  if (!res.ok) throw new Error('Failed to fetch reservations');
+  return res.json();
+}
+
+export async function cancelReservation(
+  id: string,
+): Promise<{ reservation: { id: string; status: string } }> {
+  const res = await fetch(`/api/reservations/${id}/cancel`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+  });
+  if (res.status === 401) throw new Error('NOT_AUTHENTICATED');
+  const data = await res.json().catch(() => ({
+    error: 'Failed to cancel reservation',
+  }));
+  if (!res.ok) throw new Error(data.error ?? 'Failed to cancel reservation');
+  return data;
 }
 

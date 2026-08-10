@@ -15,15 +15,21 @@ import {
   Copy,
   Check,
   Calendar,
+  Clock,
+  Users,
+  X,
+  CalendarX,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
+import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import {
   fetchFavorites,
   fetchMyReviews,
   fetchMyRedemptions,
+  fetchMyReservations,
 } from '@/lib/api';
-import type { CouponRedemption } from '@/lib/types';
+import type { CouponRedemption, Reservation, ReservationStatus } from '@/lib/types';
 
 export function ProfilePage() {
   const goToDetail = useAppStore((s) => s.goToDetail);
@@ -31,6 +37,7 @@ export function ProfilePage() {
   const addNotification = useAppStore((s) => s.addNotification);
   const { status } = useSession();
   const { toggle: toggleFavorite } = useFavoriteActions();
+  const { cancelReservation, isCancelling } = useReservationActions();
 
   // Server-backed favorites (canonical) — same query the rest of the app uses
   const { data: favoriteEsts = [] } = useQuery({
@@ -50,6 +57,13 @@ export function ProfilePage() {
   const { data: redemptions = [] } = useQuery({
     queryKey: ['my-redemptions'],
     queryFn: fetchMyRedemptions,
+    enabled: status === 'authenticated',
+  });
+
+  // Server-backed reservations (Etapa 5) — drives the MIS RESERVAS section.
+  const { data: reservations = [] } = useQuery({
+    queryKey: ['my-reservations'],
+    queryFn: fetchMyReservations,
     enabled: status === 'authenticated',
   });
 
@@ -104,9 +118,12 @@ export function ProfilePage() {
     favoriteEsts={favoriteEsts}
     userReviews={userReviews}
     redemptions={redemptions}
+    reservations={reservations}
     onLogout={handleLogout}
     onGoToDetail={goToDetail}
     onToggleFavorite={toggleFavorite}
+    onCancelReservation={cancelReservation}
+    isCancellingReservation={isCancelling}
     onSetView={setView}
     onNotify={addNotification}
   />;
@@ -116,18 +133,24 @@ function ProfileContent({
   favoriteEsts,
   userReviews,
   redemptions,
+  reservations,
   onLogout,
   onGoToDetail,
   onToggleFavorite,
+  onCancelReservation,
+  isCancellingReservation,
   onSetView,
   onNotify,
 }: {
   favoriteEsts: import('@/lib/api').EstablishmentWithRelations[];
   userReviews: import('@/lib/api').ReviewWithEstablishment[];
   redemptions: CouponRedemption[];
+  reservations: Reservation[];
   onLogout: () => void;
   onGoToDetail: (slug: string) => void;
   onToggleFavorite: (slug: string, name?: string) => void;
+  onCancelReservation: (id: string) => Promise<boolean>;
+  isCancellingReservation: (id: string) => boolean;
   onSetView: (view: 'home' | 'map' | 'detail' | 'profile') => void;
   onNotify: (message: string, type?: 'success' | 'info') => void;
 }) {
@@ -206,8 +229,10 @@ function ProfileContent({
             </div>
           </div>
 
-          {/* Stats row */}
-          <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-center sm:justify-start gap-8">
+          {/* Stats row — 2x2 grid on mobile, single row on sm+.
+           * Etapa 5 adds the 4th stat (Reservas) alongside the existing
+           * Favoritos / Reseñas / Cupones counters. */}
+          <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:justify-start gap-x-8 gap-y-4">
             <div className="flex items-center gap-2">
               <Heart size={18} className="text-gold" fill="#d4af37" />
               <div>
@@ -238,6 +263,17 @@ function ProfileContent({
                 </div>
                 <div className="text-[10px] text-white/50 tracking-widest uppercase">
                   Cupones
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar size={18} className="text-gold" />
+              <div>
+                <div className="font-mono text-xl font-bold text-white tabular-nums">
+                  {reservations.length}
+                </div>
+                <div className="text-[10px] text-white/50 tracking-widest uppercase">
+                  Reservas
                 </div>
               </div>
             </div>
@@ -541,6 +577,211 @@ function ProfileContent({
           </div>
         )}
       </section>
+
+      {/* Mis Reservas — Etapa 5 persistent reservations */}
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+            MIS RESERVAS
+          </h2>
+          <span className="text-white/40 text-xs font-mono">
+            ({reservations.length})
+          </span>
+        </div>
+
+        {reservations.length === 0 ? (
+          <div className="glass-card rounded-2xl py-16 px-6 text-center text-white/40 space-y-5">
+            <CalendarX size={36} className="mx-auto opacity-50" />
+            <p className="text-sm leading-relaxed max-w-md mx-auto">
+              Aún no tienes reservas. ¡Explora los locales y reserva tu mesa!
+            </p>
+            <button
+              onClick={() => onSetView('home')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-obsidian font-bold hover:bg-gold hover:text-obsidian active:scale-95 transition-all text-xs tracking-wider glow-gold"
+            >
+              <Sparkles size={14} /> EXPLORAR DIRECTORIO
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {reservations.map((r) => {
+              const status = r.status as ReservationStatus;
+              const statusMeta =
+                status === 'PENDING'
+                  ? {
+                      label: 'PENDIENTE',
+                      cls: 'bg-amber-500/25 border-amber-500/50 text-amber-300',
+                    }
+                  : status === 'CONFIRMED'
+                    ? {
+                        label: 'CONFIRMADA',
+                        cls: 'bg-emerald-500/25 border-emerald-500/50 text-emerald-300',
+                      }
+                    : status === 'CANCELLED'
+                      ? {
+                          label: 'CANCELADA',
+                          cls: 'bg-white/15 border-white/30 text-white/60',
+                        }
+                      : status === 'COMPLETED'
+                        ? {
+                            label: 'COMPLETADA',
+                            cls: 'bg-sky-500/25 border-sky-500/50 text-sky-300',
+                          }
+                        : {
+                            label: 'NO ASISTIÓ',
+                            cls: 'bg-red-500/25 border-red-500/50 text-red-300',
+                          };
+              const canCancel =
+                status === 'PENDING' || status === 'CONFIRMED';
+              const cancelling = isCancellingReservation(r.id);
+
+              return (
+                <article
+                  key={r.id}
+                  className={`glass-card rounded-2xl p-5 transition-opacity ${
+                    status === 'CANCELLED' ? 'opacity-60' : ''
+                  }`}
+                >
+                  {/* Top row: code + status badge */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-white/40 font-bold font-mono tracking-widest uppercase">
+                        CÓDIGO
+                      </span>
+                      <span className="font-mono font-black text-gold tracking-wider text-base">
+                        {r.confirmationCode}
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 rounded-full border text-[10px] font-black tracking-wider ${statusMeta.cls}`}
+                    >
+                      {statusMeta.label}
+                    </span>
+                  </div>
+
+                  {/* Business name (clickable → detail) */}
+                  <button
+                    onClick={() => onGoToDetail(r.business.slug)}
+                    className="font-serif text-lg font-bold text-gold hover:underline transition-all text-left block"
+                  >
+                    {r.business.name}
+                  </button>
+
+                  {/* Date + time + guests row */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-white/70">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar size={12} className="text-gold" />
+                      <span className="font-mono">
+                        {new Date(r.date + 'T00:00:00').toLocaleDateString(
+                          'es-VE',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock size={12} className="text-gold" />
+                      <span className="font-mono">{r.time}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users size={12} className="text-gold" />
+                      <span>
+                        {r.guests}{' '}
+                        {r.guests === 1 ? 'persona' : 'personas'}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* Coupon code chip (if linked) */}
+                  {r.coupon && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode(r.coupon!.code)}
+                      aria-label={
+                        copiedCode === r.coupon.code
+                          ? 'Código copiado'
+                          : `Copiar código ${r.coupon.code}`
+                      }
+                      className="mt-3 w-full flex items-center justify-between gap-2 p-2.5 rounded-xl bg-black/40 border border-dashed border-gold/40 hover:border-gold/80 hover:bg-black/60 transition-all"
+                    >
+                      <span className="text-[9px] text-white/50 font-bold tracking-wider uppercase">
+                        {copiedCode === r.coupon.code ? 'Copiado' : 'Cupón'}
+                      </span>
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono font-black text-gold tracking-wider text-sm truncate">
+                          {r.coupon.code}
+                        </span>
+                        <span className="shrink-0 w-6 h-6 rounded-lg bg-gold/15 border border-gold/40 flex items-center justify-center text-gold">
+                          {copiedCode === r.coupon.code ? (
+                            <Check size={12} />
+                          ) : (
+                            <Copy size={11} />
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Notes (if any) */}
+                  {r.notes && (
+                    <p className="mt-3 text-xs text-white/50 leading-relaxed italic">
+                      “{r.notes}”
+                    </p>
+                  )}
+
+                  {/* Bottom row: countdown + cancel button */}
+                  <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                    <div className="text-[10px] text-white/50 font-mono">
+                      {getReservationCountdown(r.date)}
+                    </div>
+                    {canCancel && (
+                      <button
+                        onClick={() => onCancelReservation(r.id)}
+                        disabled={cancelling}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 disabled:opacity-50 disabled:cursor-wait transition-all text-[11px] font-bold tracking-wider"
+                      >
+                        {cancelling ? (
+                          <>
+                            <span className="w-3 h-3 rounded-full border-2 border-red-300/40 border-t-red-300 animate-spin" />
+                            CANCELANDO…
+                          </>
+                        ) : (
+                          <>
+                            <X size={12} /> CANCELAR
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </motion.div>
   );
+}
+
+// ─── Helpers (Etapa 5) ─────────────────────────────────────────────
+// Countdown text shown next to each reservation card. Returns one of:
+// "En N días" / "En 1 día" / "Hoy" / "Ayer" / "Hace N días" / "Fecha pasada"
+function getReservationCountdown(dateStr: string): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const date = new Date(dateStr + 'T00:00:00');
+  if (Number.isNaN(date.getTime())) return 'Fecha pasada';
+  date.setHours(0, 0, 0, 0);
+  const diffDays = Math.round(
+    (date.getTime() - today.getTime()) / 86_400_000,
+  );
+  if (diffDays > 1) return `En ${diffDays} días`;
+  if (diffDays === 1) return 'En 1 día';
+  if (diffDays === 0) return 'Hoy';
+  if (diffDays === -1) return 'Ayer';
+  if (diffDays < -1) return `Hace ${Math.abs(diffDays)} días`;
+  return 'Fecha pasada';
 }

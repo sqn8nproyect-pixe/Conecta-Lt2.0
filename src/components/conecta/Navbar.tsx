@@ -5,6 +5,7 @@ import { signIn, signOut } from 'next-auth/react';
 import { useAppStore } from '@/lib/store';
 import { useFavoritesSync } from '@/lib/hooks/use-favorites-sync';
 import { useRedemptionsSync } from '@/lib/hooks/use-redemptions-sync';
+import { useReservationsSync } from '@/lib/hooks/use-reservations-sync';
 import { useAuthProviders } from '@/lib/hooks/use-auth-providers';
 import type { View } from '@/lib/types';
 
@@ -54,6 +55,11 @@ export function Navbar() {
   // Same singleton pattern as useFavoritesSync — runs the
   // ['my-redemptions'] query once per page tree.
   useRedemptionsSync();
+
+  // Hydrate reservations (Etapa 5 persistent bookings).
+  // Same singleton pattern — runs the ['my-reservations'] query once
+  // per page tree so ProfilePage's MIS RESERVAS section is in sync.
+  useReservationsSync();
 
   const navItem = (label: string, target: View) => (
     <button

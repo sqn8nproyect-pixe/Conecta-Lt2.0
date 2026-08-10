@@ -6,6 +6,7 @@ import type {
   BookingData,
   Establishment,
   MatchAnswers,
+  Reservation,
   User,
   View,
 } from './types';
@@ -33,6 +34,12 @@ interface AppState {
   // the optimistic update while the redeem() request is in flight.
   redeemedPromotionIds: string[];
 
+  // Reservations — Etapa 5 persistent bookings.
+  // Mirrors the user's Reservation rows on the server (hydrated by
+  // useReservationsSync in the Navbar). Drives the MIS RESERVAS section
+  // in the ProfilePage so a reload / re-login keeps the user's bookings.
+  reservations: Reservation[];
+
   // Notifications
   notifications: AppNotification[];
 
@@ -52,6 +59,11 @@ interface AppState {
   addRedeemedPromotionId: (id: string) => void;
   removeRedeemedPromotionId: (id: string) => void;
 
+  // Actions: reservations (Etapa 5) — singleton bootstrap hydrates the
+  // array from /api/reservations on login. createReservation() and
+  // cancelReservation() invalidate the query so the array re-syncs.
+  setReservations: (r: Reservation[]) => void;
+
   // Actions: notifications
   addNotification: (message: string, type?: 'success' | 'info') => void;
   dismissNotification: (id: number) => void;
@@ -64,6 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   favorites: [],
   redeemedPromotionIds: [],
+  reservations: [],
   notifications: [],
 
   setView: (view) => set({ view }),
@@ -79,9 +92,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     // user changed (login/logout/switch) — clear local favorites AND
-    // redeemed promotion IDs so the Navbar's useQuery can re-hydrate
-    // from /api/favorites and /api/promotions/redeemed.
-    set({ user, favorites: [], redeemedPromotionIds: [] });
+    // redeemed promotion IDs AND reservations so the Navbar's useQuery
+    // can re-hydrate from /api/favorites, /api/promotions/redeemed
+    // and /api/reservations.
+    set({ user, favorites: [], redeemedPromotionIds: [], reservations: [] });
   },
   setFavorites: (slugs) => set({ favorites: slugs }),
   addFavoriteLocal: (slug) =>
@@ -104,6 +118,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       redeemedPromotionIds: s.redeemedPromotionIds.filter((x) => x !== id),
     })),
+
+  setReservations: (r) => set({ reservations: r }),
 
   addNotification: (message, type = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -189,9 +205,12 @@ export function generateReservationCode(): string {
 export function defaultBookingData(user: User | null): BookingData {
   return {
     name: user ? user.name : '',
+    phone: '',
     date: new Date(Date.now() + 86400000).toISOString().split('T')[0] ?? '',
     time: '20:00',
     guests: '2',
+    notes: '',
     dealId: '',
+    dealTitle: '',
   };
 }

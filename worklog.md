@@ -1873,3 +1873,126 @@ Stage Summary:
   3. Frontend: store con redeemedPromotionIds, hooks (sync + actions), EstablishmentPage con contadores X/Y + badges, ProfilePage con MIS CUPONES + countdown
   4. Producción: fix pusheado, Vercel desplegando
 - 0 errores lint, 0 errores tsc, verificación browser exitosa en home + establishment + profile
+
+---
+Task ID: 5.3
+Agent: full-stack-developer
+Task: Etapa 5 — Frontend de Reservas reales persistentes. Conectar el modal de reserva existente en EstablishmentPage.tsx al backend real (POST /api/reservations), añadir la sección MIS RESERVAS al ProfilePage, e hidratar las reservas del usuario en el store via un hook singleton bootstrap (useReservationsSync) + un hook multi-instancia de acciones (useReservationActions). Sigue los patrones de useFavoritesSync (Etapa 2) y useRedemptionsSync (Etapa 4).
+
+Work Log:
+- Leído worklog.md (hasta Etapa 4.5-verify) para contexto: 21 negocios seed, 42 promos (28 ACTIVE + 14 EXPIRED), 2 CouponRedemption de Ana, schema CouponRedemption ya tiene `reservationId @unique` para linkear 1:1 con Reservation.
+- Leídos archivos existentes que sirven de plantilla: use-redemptions-sync.ts, use-redemption-actions.ts, use-favorites-sync.ts, use-favorite-actions.ts, store.ts, types.ts, api.ts, Navbar.tsx, EstablishmentPage.tsx (completo, 1336 líneas), ProfilePage.tsx (completo, 546 líneas).
+- Implementación en orden:
+  1. `src/lib/types.ts` — añadidos `ReservationStatus` (PENDING|CONFIRMED|CANCELLED|COMPLETED|NO_SHOW) + `Reservation` (id, confirmationCode, status, date, time, guests, notes, name, phone, email, createdAt, business{id,name,slug,address,coverImage,phone}, coupon{code,title,image,discount}|null). Extendido `BookingData` con `phone`, `notes`, `dealTitle` (dealId ahora guarda el offer.id real; dealTitle el label para mostrar).
+  2. `src/lib/api.ts` — añadidos `createReservation(input)` (POST /api/reservations, throw NOT_AUTHENTICATED on 401), `fetchMyReservations()` (GET /api/reservations, return [] on 401), `cancelReservation(id)` (POST /api/reservations/${id}/cancel, throw NOT_AUTHENTICATED on 401).
+  3. `src/lib/store.ts` — añadidos `reservations: Reservation[]` y `setReservations(r)`. setUser ahora también limpia `reservations: []` cuando cambia el usuario (junto con favorites y redeemedPromotionIds). defaultBookingData ahora incluye `phone: '', notes: '', dealTitle: ''`.
+  4. `src/lib/hooks/use-reservations-sync.ts` (NEW) — singleton bootstrap montado UNA vez en Navbar. useQuery con queryKey `['my-reservations']`, queryFn `fetchMyReservations`, enabled: status === 'authenticated', staleTime 30_000. Sync server→store via `setReservations` solo cuando cambia el set ordenado de IDs. Limpia `reservations: []` en logout. Exporta `RESERVATIONS_QUERY_KEY`.
+  5. `src/lib/hooks/use-reservation-actions.ts` (NEW) — multi-instancia. `createReservation(input)` invalida `['my-reservations']` + `['business', slug]` + `['businesses']` y notifica `¡Reserva confirmada! Código: XXX`. `cancelReservation(id)` hace update optimístico (flip status→CANCELLED en el store) + rollback en error, invalida `['my-reservations']`, notifica `Reserva cancelada`. `isCancelling(id)` para el spinner del botón. Maneja `NOT_AUTHENTICATED` → notification "Inicia sesión para reservar.".
+  6. `src/components/conecta/Navbar.tsx` — añadido `useReservationsSync()` junto a los useFavoritesSync() y useRedemptionsSync() existentes (singleton bootstrap).
+  7. `src/components/conecta/EstablishmentPage.tsx`:
+     * Removido import de `generateReservationCode` (ya no se usa; la función sigue definida en store.ts por si acaso).
+     * Añadidos imports: `useReservationActions`, tipo `CouponRedemption`.
+     * `handleStartBooking(dealId, dealTitle)` ahora recibe ambos: el ID real de la offer + su título para display.
+     * Cambio de call site: `handleStartBooking(offer.id, offer.title)` (antes pasaba solo `offer.title`).
+     * `handleConfirmBooking` reescrito como async: llama `createReservation()` en lugar de `generateReservationCode()` + setTimeout. Si hay `bookingData.dealId`, busca en el cache `['my-resemptions']` de React Query el CouponRedemption cuyo `promotion.id === dealId` y pasa su `id` como `couponRedemptionId` (linkeo 1:1 con el cupón reclamado). On success: set `reservationCode` al confirmationCode retornado, avanza a step 3. On error: notification + reset `bookingStep` a 1.
+     * Añadido campo **Teléfono de contacto** (input type=tel, required) al form.
+     * Añadido campo **Notas (opcional)** (textarea) al form.
+     * Updated disabled check del botón CONFIRMAR RESERVACIÓN para requerir phone.
+     * Updated displays "Oferta seleccionada" y "PROMO:" del ticket para usar `bookingData.dealTitle` (dealId ahora es un ID opaco).
+     * Diseño visual del ticket holográfico + QR intacto — solo se cambió la fuente del código (de local generateReservationCode a confirmationCode del servidor).
+  8. `src/components/conecta/ProfilePage.tsx`:
+     * Añadidos imports: useReservationActions, fetchMyReservations, Reservation + ReservationStatus, iconos Clock/Users/X/CalendarX.
+     * Añadido useQuery para `['my-reservations']`.
+     * Pasado `reservations`, `onCancelReservation`, `isCancellingReservation` a ProfileContent.
+     * Stats row reestructurado a `grid grid-cols-2 sm:flex` (2x2 en mobile, fila única en sm+). Añadido 4to stat: **Reservas** (icono Calendar, count = reservations.length).
+     * Añadida sección **MIS RESERVAS** después de MIS CUPONES (sigue el orden de stats: Favoritos → Reseñas → Cupones → Reservas). Cada card muestra:
+       - confirmationCode (font-mono gold, label "CÓDIGO")
+       - status badge: PENDING (amber "PENDIENTE"), CONFIRMED (emerald "CONFIRMADA"), CANCELLED (grey "CANCELADA"), COMPLETED (sky "COMPLETADA"), NO_SHOW (red "NO ASISTIÓ")
+       - business name clickable → goToDetail
+       - date + time + guests (iconos Calendar/Clock/Users, font-mono, pluralización "persona/personas")
+       - coupon code chip (gold, border-dashed, botón copiar) si la reserva tiene cupón linkeado
+       - notes (si las hay, italic blockquote)
+       - countdown text via helper `getReservationCountdown(date)`: "En N días" / "En 1 día" / "Hoy" / "Ayer" / "Hace N días" / "Fecha pasada"
+       - CANCELAR button (solo si status === PENDING || CONFIRMED) con spinner durante el request optimista; cards CANCELLED con opacity-60
+     * Empty state: CalendarX icon + "Aún no tienes reservas. ¡Explora los locales y reserva tu mesa!" + botón EXPLORAR DIRECTORIO.
+     * Helper `getReservationCountdown` añadido al final del archivo.
+
+Decisiones / desviaciones del spec:
+1. **bookingData.dealId**: el spec asumía que ya contenía el offer ID, pero en realidad el código viejo pasaba `offer.title` a handleStartBooking. Split en `dealId` (offer.id real) + `dealTitle` (label) para que el linkeo de couponRedemptionId funcione.
+2. **couponRedemptionId lookup**: el store tiene `redeemedPromotionIds` (array de PROMOTION IDs), pero el backend espera el CouponRedemption ROW ID. Solución: leer el cache `['my-redemptions']` de React Query dentro de handleConfirmBooking y encontrar el match por `promotion.id === dealId`, pasar su `id` como couponRedemptionId.
+3. **Campos phone + notes añadidos al form**: el backend REQUIERE phone pero el form no lo tenía. Añadidos phone (required) + notes (opcional) siguiendo el estilo visual existente.
+4. **Stats row en grid 2x2 mobile**: 4 stats en una fila en mobile quedaba apretado, así que se reestructuró a `grid grid-cols-2 sm:flex`.
+5. **MIS RESERVAS después de MIS CUPONES**: spec decía "between MIS RESEÑAS y MIS CUPONES (or after MIS CUPONES)". Elegí AFTER para coincidir con el orden de stats (Favoritos → Reseñas → Cupones → Reservas).
+6. **CANCELAR con update optimista + rollback** (sin confirm dialog): el hook cancelReservation ya hace flip optimístico de status→CANCELLED + rollback en error. Spinner visible durante el request.
+7. **generateReservationCode se mantuvo definido en store.ts**: solo se removió el import de EstablishmentPage. La función sigue ahí por backwards-compat (por si otros archivos la referencian — no se auditó exhaustivamente).
+
+Verificación:
+- `bun run lint` → 0 errores, 0 warnings.
+- `npx tsc --noEmit` → 0 errores.
+- Dev server: HTTP 200 en /, sin errores de compile en dev.log.
+
+Stage Summary:
+- Frontend de Etapa 5 COMPLETO y listo para integrarse con el backend 5.2 (en paralelo).
+- 2 archivos nuevos: use-reservations-sync.ts, use-reservation-actions.ts.
+- 6 archivos modificados: types.ts, api.ts, store.ts, Navbar.tsx, EstablishmentPage.tsx, ProfilePage.tsx.
+- 0 archivos backend modificados (per spec — el backend 5.2 se hace en paralelo).
+- Patrones existentes (singleton bootstrap + multi-instance actions hook) respetados al 100%.
+- Diseño visual intacto: ticket holográfico + QR + glass-card + gold accents + font-mono para códigos + border-gold/40 para chips.
+- Mobile-first responsive: stats 2x2 en mobile, MIS RESERVAS cards en flex-col gap-4.
+- Cuando el backend 5.2 termine, el flujo end-to-end será: usuario llena form → POST /api/reservations → confirmationCode del servidor → ticket holográfico lo muestra → MIS RESERVAS en profile hidratado por GET /api/reservations → CANCELAR → POST /api/reservations/[id]/cancel → status CANCELLED persistido.
+- 0 errores lint, 0 errores tsc, 0 errores de runtime.
+- Listo para verificación E2E con Agent Browser una vez el backend 5.2 termine.
+
+---
+Task ID: 5.2
+Agent: full-stack-developer
+Task: Implementar el backend de Etapa 5 — Reservas reales persistentes. Repository + Service + API routes (POST/GET /api/reservations, POST /api/reservations/[id]/cancel) con vinculación atómica de cupones (CLAIMED↔USED) en transacciones Prisma.
+
+Work Log:
+- Leído worklog.md y los patrones de referencia: promotion.repository.ts, promotion.service.ts, business.repository.ts, review.service.ts, favorite.repository.ts y src/lib/store.ts (para replicar generateReservationCode).
+- Verificado que la tabla Reservation ya existe en prisma/schema.prisma (con couponRedemption @relation 1:1 y CouponRedemption.reservationId @unique). NO se modificó el schema.
+- Creado `src/server/repositories/reservation.repository.ts`:
+  * `reservationBusinessSelect` (select minimal: id, name, slug, address, coverImage, phone — evita cargar el businessInclude completo con hours/socials/images/promotions/reviews).
+  * `reservationInclude` (business select + couponRedemption { include: { promotion: { select: { id, title, code, image, discount, price } } } }).
+  * Tipo `ReservationWithRelations = Prisma.ReservationGetPayload<{ include: typeof reservationInclude }>`.
+  * Métodos: findById(id, tx?), findByConfirmationCode(code, tx?) → {id}|null, listByUser(userId) ordenado por date asc, create(data, tx?) (inserta en PENDING, devuelve con relaciones), updateStatus(id, status, tx?), linkCouponRedemption(reservationId, couponRedemptionId, tx?) (set reservationId + status=USED + usedAt=now), unlinkCouponRedemption(couponRedemptionId, tx?) (clear reservationId + revert status=CLAIMED + clear usedAt), findCouponRedemptionByUser(couponRedemptionId, userId, tx?) (findFirst para no filtrar por una constraint compuesta inexistente).
+- Creado `src/server/services/reservation.service.ts`:
+  * `jsonError(message, status): Response` (lanza Response, route handler la captura con `if (e instanceof Response) return e`).
+  * Helpers `isValidDate` (YYYY-MM-DD con round-trip por Date.UTC para rechazar 2025-13-45 / 2025-02-31), `isValidTime` (HH:mm 24h, h 00-23, m 00-59), `generateConfirmationCode` (réplica exacta de src/lib/store.ts: LT-XXXX-X), `generateUniqueConfirmationCode` (5 reintentos si colisión en DB).
+  * `createReservation(userId, input)`: valida negocio por slug (404), fecha+hora (400), guests entero ≥ 1 (400 — acepta number o string para compatibilidad con BookingData), name no vacío (400), phone no vacío (400). Genera código único. Si couponRedemptionId presente, dentro del $transaction lo valida (404 si no existe o no es del usuario, 400 si status≠CLAIMED). Crea reserva en PENDING. Si cupón, linkCouponRedemption (CLAIMED→USED + usedAt). Re-fetch para incluir la couponRedemption recién linkeada en la respuesta. Devuelve { reservation, confirmationCode }.
+  * `listMyReservations(userId)`: lista reservas del usuario con business minimal + coupon (null si no hay) mapeado a {code, title, image, discount}. Ordenado por date asc.
+  * `cancelReservation(userId, reservationId)`: findById (404 si no existe), valida userId===reservation.userId (403), valida status∈{PENDING,CONFIRMED} (400). En $transaction: updateStatus a CANCELLED + (si couponRedemption) unlinkCouponRedemption (revierte USED→CLAIMED, limpia usedAt y reservationId). Devuelve { reservation: { id, status } }.
+  * Tipos exportados: CreateReservationResult, MyReservationEntry.
+- Creado `src/app/api/reservations/route.ts`:
+  * GET — requireUser + listMyReservations → 200 array.
+  * POST — requireUser + parse JSON body + createReservation → 201 con { reservation, confirmationCode }. Catch P2002 (carrera concurrente linkCouponRedemption) → 400 "Este cupón ya fue usado". Catch Response → propagate. Catch-all → 500.
+- Creado `src/app/api/reservations/[id]/cancel/route.ts`:
+  * POST — requireUser + params Promise<{id:string}> (patrón Next.js 16) + cancelReservation → 200 con { reservation: { id, status } }. Catch Response → propagate. Catch-all → 500.
+- Lint + tsc: ambos 0 errores.
+- Smoke tests (todos via curl con login NextAuth demo callback):
+  * T1  GET /api/reservations (vacío inicial) → 200 `[]` ✅
+  * T2  POST /api/reservations válido → 201 con confirmationCode LT-4066-I ✅
+  * T3  POST mismo payload otra vez → 201 con confirmationCode distinto LT-7478-K ✅
+  * T4  POST con fecha inválida → 400 "Fecha u hora inválida" ✅
+  * T5  POST con name vacío → 400 "Nombre requerido" ✅
+  * T6  POST con slug inexistente → 404 "Negocio no encontrado" ✅
+  * T7  GET /api/reservations → 200 con 2 reservas ✅
+  * T8  POST /api/reservations/[id]/cancel → 200 { status: CANCELLED } ✅
+  * T9  POST /api/reservations/[id]/cancel de nuevo → 400 "Esta reserva ya no puede cancelarse" ✅
+  * T10a GET /api/promotions/redeemed → 200 con 2 cupones CLAIMED ✅
+  * T10b POST /api/reservations con couponRedemptionId → 201, couponRedemption.status=USED ✅
+  * T10c GET /api/promotions/redeemed → el cupón ahora figura USED ✅
+  * T10d GET /api/reservations → la nueva reserva muestra coupon { code: SANCHO18, title: Whisky Premium 18 años } ✅
+  * T11 GET /api/reservations sin auth → 401 "No autenticado" ✅
+  * BONUS: cancelar una reserva CON cupón vinculado → el cupón revierte de USED → CLAIMED (verificado via GET /api/promotions/redeemed) ✅
+
+Stage Summary:
+- Artefactos creados (4 archivos, 0 schemas modificados):
+  * `src/server/repositories/reservation.repository.ts` — 7 accessors Prisma (findById, findByConfirmationCode, listByUser, create, updateStatus, linkCouponRedemption, unlinkCouponRedemption, findCouponRedemptionByUser) con soporte de transaction client.
+  * `src/server/services/reservation.service.ts` — 3 métodos de orquestación (createReservation, listMyReservations, cancelReservation) con validaciones en español y transacciones atómicas.
+  * `src/app/api/reservations/route.ts` — POST (201) + GET (200) con auth + manejo P2002.
+  * `src/app/api/reservations/[id]/cancel/route.ts` — POST (200) con params Promise Next.js 16.
+- Confirmación de código de reserva: formato `LT-XXXX-X` idéntico al frontend (src/lib/store.ts generateReservationCode), con 5 reintentos si colisión en DB.
+- Vinculación de cupones 1:1 transaccional: crear reserva + linkear cupón (CLAIMED→USED) en una sola $transaction; cancelar reserva + deslinkear cupón (USED→CLAIMED) en otra. El unique constraint en CouponRedemption.reservationId garantiza que un cupón solo pueda linkearse a UNA reserva; si dos peticiones concurrentes compiten, el perdedor recibe 400 "Este cupón ya fue usado".
+- Lint 0 errores, tsc 0 errores, 15/15 smoke tests OK (incluyendo cancelación con revierto de cupón).
+- Listo para que el frontend Etapa 5.1 (ya implementado por el agente 5.1) hidrate MIS RESERVAS desde GET /api/reservations y dispare POST /api/reservations + POST /api/reservations/[id]/cancel.

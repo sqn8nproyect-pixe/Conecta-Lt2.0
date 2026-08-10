@@ -28,13 +28,13 @@ import {
 } from 'lucide-react';
 import {
   useAppStore,
-  generateReservationCode,
   defaultBookingData,
 } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
+import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import { fetchBusinessBySlug, createReview } from '@/lib/api';
-import type { BookingData, Offer, Review } from '@/lib/types';
+import type { BookingData, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
 import { SocialContactPanel } from '@/components/establishment/SocialContactPanel';
@@ -131,6 +131,7 @@ export function EstablishmentPage() {
   const { toggle: toggleFavorite } = useFavoriteActions();
   const { redeem: redeemCoupon, isRedeeming: isCouponRedeeming } =
     useRedemptionActions();
+  const { createReservation } = useReservationActions();
   const { status: authStatus } = useSession();
   const queryClient = useQueryClient();
 
@@ -287,23 +288,72 @@ export function EstablishmentPage() {
     });
   };
 
-  const handleStartBooking = (dealId: string = '') => {
+  const handleStartBooking = (
+    dealId: string = '',
+    dealTitle: string = '',
+  ) => {
     setBookingData({
       ...defaultBookingData(user),
       dealId,
+      dealTitle,
     });
     setBookingStep(1);
     setBookingOpen(true);
   };
 
-  const handleConfirmBooking = () => {
-    if (!bookingData.name.trim() || !bookingData.date || !bookingData.time) return;
+  const handleConfirmBooking = async () => {
+    if (
+      !bookingData.name.trim() ||
+      !bookingData.phone.trim() ||
+      !bookingData.date ||
+      !bookingData.time
+    )
+      return;
     setBookingStep(2);
-    setTimeout(() => {
-      setReservationCode(generateReservationCode());
+    try {
+      // Etapa 5: real persistent reservation — POST /api/reservations.
+      // The backend generates the confirmationCode (replaces the old
+      // local `generateReservationCode()` which was lost on reload).
+      //
+      // If the user is reserving with a claimed coupon ("RESERVAR CON ESTA
+      // OFERTA"), look up the matching CouponRedemption row id from the
+      // ['my-redemptions'] React Query cache and pass it as
+      // `couponRedemptionId` so the backend can link them.
+      let couponRedemptionId: string | undefined;
+      if (bookingData.dealId) {
+        const cache = queryClient.getQueryData<CouponRedemption[]>([
+          'my-redemptions',
+        ]);
+        const match = cache?.find(
+          (r) => r.promotion.id === bookingData.dealId,
+        );
+        if (match) couponRedemptionId = match.id;
+      }
+      const guestsNum = parseInt(bookingData.guests.replace('+', ''), 10) || 1;
+      const result = await createReservation({
+        businessSlug: est.slug,
+        name: bookingData.name.trim(),
+        phone: bookingData.phone.trim(),
+        email: user?.email || undefined,
+        date: bookingData.date,
+        time: bookingData.time,
+        guests: guestsNum,
+        notes: bookingData.notes.trim() || undefined,
+        couponRedemptionId,
+      });
+      if (!result) {
+        // Error path — notification already shown by the hook.
+        setBookingStep(1);
+        return;
+      }
+      setReservationCode(result.confirmationCode);
       setBookingStep(3);
-      addNotification('¡Reserva confirmada!');
-    }, 1800);
+    } catch {
+      // Defensive — createReservation already swallows errors and returns
+      // null, but be safe in case of unexpected throw.
+      addNotification('No se pudo crear la reserva. Intenta de nuevo.', 'info');
+      setBookingStep(1);
+    }
   };
 
   const handleClaimCode = async (offer: Offer) => {
@@ -743,7 +793,9 @@ export function EstablishmentPage() {
                             </span>
                           </button>
                           <button
-                            onClick={() => handleStartBooking(offer.title)}
+                            onClick={() =>
+                              handleStartBooking(offer.id, offer.title)
+                            }
                             className="w-full py-3 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2"
                           >
                             <Calendar size={14} /> RESERVAR CON ESTA OFERTA
@@ -1017,10 +1069,10 @@ export function EstablishmentPage() {
                     </div>
 
                     <div className="space-y-4">
-                      {bookingData.dealId && (
+                      {bookingData.dealTitle && (
                         <div className="p-3 bg-gold/10 border border-gold/20 rounded-xl text-xs text-gold flex items-center gap-2">
                           <Ticket size={14} /> Oferta seleccionada:{' '}
-                          <strong>{bookingData.dealId}</strong>
+                          <strong>{bookingData.dealTitle}</strong>
                         </div>
                       )}
 
@@ -1035,6 +1087,22 @@ export function EstablishmentPage() {
                             setBookingData({ ...bookingData, name: e.target.value })
                           }
                           placeholder="Tu nombre completo..."
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors text-white placeholder:text-white/30"
+                        />
+                      </div>
+
+                      {/* Etapa 5 — phone is required by POST /api/reservations. */}
+                      <div>
+                        <label className="text-[10px] tracking-wider text-white/40 block mb-1 font-bold uppercase">
+                          Teléfono de contacto
+                        </label>
+                        <input
+                          type="tel"
+                          value={bookingData.phone}
+                          onChange={(e) =>
+                            setBookingData({ ...bookingData, phone: e.target.value })
+                          }
+                          placeholder="+58 412 000 0000"
                           className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors text-white placeholder:text-white/30"
                         />
                       </div>
@@ -1091,12 +1159,29 @@ export function EstablishmentPage() {
                           ))}
                         </div>
                       </div>
+
+                      {/* Etapa 5 — optional notes sent to the venue. */}
+                      <div>
+                        <label className="text-[10px] tracking-wider text-white/40 block mb-1 font-bold uppercase">
+                          Notas (opcional)
+                        </label>
+                        <textarea
+                          value={bookingData.notes}
+                          onChange={(e) =>
+                            setBookingData({ ...bookingData, notes: e.target.value })
+                          }
+                          placeholder="Mesa cerca de la barra, celebración, etc..."
+                          rows={2}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors text-white placeholder:text-white/30 resize-none"
+                        />
+                      </div>
                     </div>
 
                     <button
                       onClick={handleConfirmBooking}
                       disabled={
                         !bookingData.name.trim() ||
+                        !bookingData.phone.trim() ||
                         !bookingData.date ||
                         !bookingData.time
                       }
@@ -1196,9 +1281,9 @@ export function EstablishmentPage() {
                         </div>
                       </div>
 
-                      {bookingData.dealId && (
+                      {bookingData.dealTitle && (
                         <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] text-white/70">
-                          PROMO: <strong>{bookingData.dealId}</strong>
+                          PROMO: <strong>{bookingData.dealTitle}</strong>
                         </div>
                       )}
 

@@ -116,6 +116,49 @@ export interface CouponRedemption {
   promotion: RedeemedPromotion;
 }
 
+// ─── Reservations (Etapa 5) ─────────────────────────────────────
+// Persistent reservations — backed by the Reservation table.
+// Replaces the old `generateReservationCode()` local-only code so that
+// a user who logs out and back in still sees the reservations they made.
+
+export type ReservationStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CANCELLED'
+  | 'COMPLETED'
+  | 'NO_SHOW';
+
+export interface Reservation {
+  id: string;
+  confirmationCode: string;
+  status: ReservationStatus;
+  /** ISO date string YYYY-MM-DD — the day the reservation is for. */
+  date: string;
+  /** HH:mm (24h) — the time the reservation is for. */
+  time: string;
+  guests: number;
+  notes: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  /** ISO timestamp of when the reservation was created. */
+  createdAt: string;
+  business: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string;
+    coverImage: string | null;
+    phone: string | null;
+  };
+  coupon: {
+    code: string;
+    title: string;
+    image: string | null;
+    discount: string | null;
+  } | null;
+}
+
 export interface Review {
   id: string;
   establishmentId: string;
@@ -159,8 +202,15 @@ export interface MatchAnswers {
 
 export interface BookingData {
   name: string;
+  /** Contact phone — required by the backend (POST /api/reservations). */
+  phone: string;
   date: string;
   time: string;
   guests: string;
+  /** Optional notes the user wants to send to the venue. */
+  notes: string;
+  /** The promotion ID the user is reserving with (empty if none). */
   dealId: string;
+  /** Display label for the offer (its title) — shown on the modal + ticket. */
+  dealTitle: string;
 }
