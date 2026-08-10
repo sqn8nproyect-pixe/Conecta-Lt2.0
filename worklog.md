@@ -1305,3 +1305,52 @@ Stage Summary:
   * Review: Ana → Don Sancho (rating 5, comment "Excelente servicio...")
   * Business.avgRating: 4.8 (recalculado desde 4.5)
 - Para habilitar Google OAuth real: el usuario solo necesita añadir GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET a .env.local (el provider se registra automáticamente)
+
+---
+Task ID: 2-followup
+Agent: main
+Task: 3 opciones pre-Etapa-2 — (1) Rotar NEXTAUTH_SECRET, (2) Navbar condicional Google/Demo, (3) Verificación E2E con Agent Browser
+
+Work Log:
+- Generado nuevo NEXTAUTH_SECRET con `openssl rand -base64 48` (64 chars, más seguro que el anterior de 43).
+- Rotado en `.env.local` y `.env` (AUTH_SECRET y NEXTAUTH_SECRET al mismo valor).
+- Renombrado `GOOGLE_CLIENT_ID` → `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en ambos .env (el Client ID es público por definición, solo el Secret es privado).
+- Actualizado `src/lib/auth.ts` para leer `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+- Creado `src/lib/hooks/use-auth-providers.ts` — hook client-side que expone `googleEnabled`.
+- Actualizado `src/components/conecta/Navbar.tsx`:
+  * Agregado componente `GoogleIcon` (SVG oficial 4 colores de Google).
+  * `handleLogin()` ahora llama `signIn('google')` si hay creds, `signIn('demo')` si no.
+  * Botón muestra "CONTINUAR CON GOOGLE" + ícono G si googleEnabled, o "CUENTA DEMO" + ícono User si no.
+  * Tooltip descriptivo en cada caso.
+- Lint: 0 errores. Dev server recargó env vars automáticamente.
+- Verificación E2E con Agent Browser (6 screenshots en public/screenshots/):
+  * etapa2-01-home.png — Home con edad gate y botón "CUENTA DEMO"
+  * etapa2-02-favorito-toggle.png — Toggle favorito en Discoteca Glamour
+  * etapa2-03-review-form.png — Formulario de reseña lleno (5★ + texto)
+  * etapa2-04-review-sent.png — Reseña enviada
+  * etapa2-05-review-persisted.png — Reseña visible en lista (contador 4→5)
+  * etapa2-06-profile.png — Perfil con 2 favoritos y 2 reseñas
+- Flujo verificado end-to-end:
+  * Login con Cuenta Demo → JWT creado (id=cmsmi7dhx0000mgjaqxoke86l, expira 2026-09-09)
+  * POST /api/favorites 200 (Discoteca Glamour añadida)
+  * GET /api/favorites 200 (devolvió 2 negocios)
+  * POST /api/reviews 200 (reseña nueva creada, 7s)
+  * Contador de reseñas pasó de (4) → (5) tras reload
+  * Rating promedio actualizado a 4.8 (5★=80%, 4★=20%)
+  * Perfil muestra 2 favoritos y 2 reseñas (1 nueva + 1 seed)
+  * Footer sticky al fondo en todas las páginas
+  * Sesión persiste tras reload (JWT cookie)
+- Console errors: 0. Page errors: 0. Solo logs info de React DevTools + HMR.
+
+Stage Summary:
+- Etapa 2 lista para producción: cuando el usuario agregue NEXT_PUBLIC_GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + NEXTAUTH_URL ( dominio Vercel ) + NEXTAUTH_SECRET en Vercel, el botón cambiará automáticamente a "CONTINUAR CON GOOGLE" y usará OAuth real.
+- Mientras tanto, el botón "CUENTA DEMO" mantiene la app 100% funcional en sandbox.
+- Variables a configurar en Vercel (5):
+  * NEXT_PUBLIC_GOOGLE_CLIENT_ID — de Google Cloud Console
+  * GOOGLE_CLIENT_SECRET — de Google Cloud Console
+  * NEXTAUTH_URL — https://tu-dominio.vercel.app (sin slash final)
+  * NEXTAUTH_SECRET — [REDACTED-NEXTAUTH-SECRET-ROTATED] (nuevo)
+  * AUTH_SECRET — mismo valor que NEXTAUTH_SECRET
+- URIs de redireccionamiento autorizadas en Google Cloud Console (CRÍTICO):
+  * http://localhost:3000/api/auth/callback/google (dev local)
+  * https://tu-dominio.vercel.app/api/auth/callback/google (producción)

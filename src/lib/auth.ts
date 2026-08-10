@@ -2,7 +2,7 @@
 // CONECTA-LT 3.0 — NextAuth.js v4 configuration
 // ─────────────────────────────────────────────────────────────
 // Providers:
-//   1. Google OAuth  →  when GOOGLE_CLIENT_ID/SECRET are set
+//   1. Google OAuth  →  when NEXT_PUBLIC_GOOGLE_CLIENT_ID/SECRET are set
 //   2. Credentials   →  demo fallback (Ana Rodríguez) so the app
 //                       is fully functional in the sandbox without
 //                       real OAuth credentials.
@@ -42,10 +42,13 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [
     // Google OAuth (real). Only registered when creds are present.
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    // We read the client ID from NEXT_PUBLIC_GOOGLE_CLIENT_ID so the
+    // Navbar can show/hide the Google button on the client side too.
+    ...(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID &&
+    process.env.GOOGLE_CLIENT_SECRET
       ? [
           GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           }),
         ]
