@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Star, X, ChevronRight } from 'lucide-react';
 import {
@@ -8,7 +9,7 @@ import {
   getRecommendedDrink,
   useAppStore,
 } from '@/lib/store';
-import { establishments } from '@/lib/data';
+import { fetchBusinesses } from '@/lib/api';
 import type { Establishment, MatchAnswers } from '@/lib/types';
 
 interface MatchmakerProps {
@@ -29,7 +30,11 @@ export function Matchmaker({ open, onClose }: MatchmakerProps) {
   } | null>(null);
 
   const goToDetail = useAppStore((s) => s.goToDetail);
-  const getDynamicRating = useAppStore((s) => s.getDynamicRating);
+
+  const { data: allEstablishments = [] } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: () => fetchBusinesses(),
+  });
 
   const handleAnswer = (key: keyof MatchAnswers, value: string) => {
     const updated = { ...answers, [key]: value };
@@ -38,7 +43,7 @@ export function Matchmaker({ open, onClose }: MatchmakerProps) {
     if (step < 3) {
       setStep((p) => p + 1);
     } else {
-      const recEst = calculateMatch(updated, establishments);
+      const recEst = calculateMatch(updated, allEstablishments);
       const recDrink = getRecommendedDrink(updated, recEst);
       setRecommendation({ establishment: recEst, drink: recDrink });
       setStep(4);
@@ -59,7 +64,7 @@ export function Matchmaker({ open, onClose }: MatchmakerProps) {
   const goToRecDetail = () => {
     if (recommendation) {
       handleClose();
-      goToDetail(recommendation.establishment.id);
+      goToDetail(recommendation.establishment.slug);
     }
   };
 
@@ -239,10 +244,10 @@ export function Matchmaker({ open, onClose }: MatchmakerProps) {
                     <div className="flex items-center justify-center gap-1.5 text-gold text-sm mb-4">
                       <Star size={14} fill="#d4af37" />
                       <span className="font-mono font-bold text-base">
-                        {getDynamicRating(recommendation.establishment.id).avg}
+                        {recommendation.establishment.avgRating}
                       </span>
                       <span className="text-white/40">
-                        ({getDynamicRating(recommendation.establishment.id).count} reseñas)
+                        ({recommendation.establishment.reviewCount} reseñas)
                       </span>
                     </div>
 

@@ -755,3 +755,166 @@ Stage Summary:
 - NO se inventaron datos: eliminados tiktok, facebook, website, promoción activa (todos opcionales)
 - Gallery usa placeholders existentes (no se inventaron URLs de fotos falsas)
 - 20 establecimientos restantes siguen con datos mock (pendientes de real-izar)
+
+---
+Task ID: 1.4-1.5
+Agent: full-stack-developer
+Task: Create the server layer (services + repositories) and API routes that transform Prisma models into the frontend types and expose them via REST endpoints. Also update `src/lib/types.ts` to use string IDs and add `slug`, plus create a thin `src/lib/api.ts` client helper.
+
+Work Log:
+- Leído worklog.md, prisma/schema.prisma, src/lib/types.ts, src/lib/data.ts, src/lib/db.ts, src/lib/store.ts para entender el dominio y la forma esperada por el frontend.
+- Modificado `src/lib/types.ts` (cambios mínimos):
+  * `Establishment.id`: number → string
+  * `Offer.id` y `Offer.establishmentId`: number → string
+  * `Review.id` y `Review.establishmentId`: number → string
+  * Añadido `slug: string` a `Establishment` (justo después de `name`)
+  * Resto de interfaces intactas (Category union, SubRatings, SocialMedia, etc.)
+- Creado `src/server/services/business.service.ts`:
+  * Helper `to12h(time24)`: convierte "20:30" → "08:30 PM"
+  * Helper `formatDayRange(days[])`: produce rangos tipo "Lun-Sáb", "Vie-Dom", "Lun, Sáb-Dom"
+  * `formatSchedule(hours[])`: agrupa por par openTime|closeTime|isClosed; si un grupo cubre los 7 días usa "(Lun-Dom)"; si hay varios grupos los une con ", "; si hours está vacío devuelve "09:00 AM - 10:00 PM (Lun-Dom)"
+  * `extractInstagramHandle(url)`: "https://instagram.com/foo" → "@foo"
+  * `buildSocialMedia(socials[])`: mapea INSTAGRAM/TIKTOK/FACEBOOK al objeto SocialMedia
+  * `transformPromotion(prom, businessId)` → Offer (con nullish coalescing a '')
+  * `transformReview(review, businessId)` → Review (date como YYYY-MM-DD, userAvatar fallback a inicial del nombre)
+  * `transformBusiness(business)` → Establishment & { offers, reviews }
+    - images: hasta 3 GALLERY, rellena con COVER si faltan
+    - gallery: hasta 10 URLs, rellena ciclando las disponibles
+    - coverImage: business.coverImage ?? COVER[0] ?? GALLERY[0] ?? ''
+    - phone: business.phone ?? socials.PHONE ?? ''
+    - instagram (legacy): handle extraído de socials.INSTAGRAM
+    - website: socials.WEBSITE ?? undefined
+    - activePromotion: undefined (Etapa 3)
+- Creado `src/server/repositories/business.repository.ts`:
+  * Constante `businessInclude` compartida (satisfies Prisma.BusinessInclude) con category, hours, socials, images (ordenado por sortOrder), promotions (status ACTIVE, ordenado por createdAt asc), reviews (status PUBLISHED, con user, ordenado por createdAt desc)
+  * `businessRepository.findAll(where?)`: filtra por status ACTIVE + where opcional, ordena por avgRating desc
+  * `businessRepository.findBySlug(slug)` y `findById(id)`
+  * `categoryRepository.findAll()`: ordenado por sortOrder asc
+- Creadas 3 rutas API:
+  * `src/app/api/businesses/route.ts` — GET con filtros query (category, priceRange, q con OR insensitive sobre name/description/specialty)
+  * `src/app/api/businesses/[slug]/route.ts` — GET por slug, 404 si no existe. Usa `params: Promise<{ slug: string }>` (Next.js 16 signature)
+  * `src/app/api/categories/route.ts` — GET lista de categorías
+- Creado `src/lib/api.ts`:
+  * Tipo `EstablishmentWithRelations = Establishment & { offers: Offer[]; reviews: Review[] }`
+  * `fetchBusinesses(params?)`, `fetchBusinessBySlug(slug)` (devuelve null si 404), `fetchCategories()`
+- Generado el cliente Prisma con `npx prisma generate` para que los tipos de `@prisma/client` estén disponibles.
+- `bun run lint` → ✓ sin errores.
+- `npx tsc --noEmit` → ✓ sin errores en NINGÚN archivo nuevo/modificado por mí.
+  Los errores restantes están en `src/lib/data.ts`, `src/lib/store.ts`, `src/components/conecta/*`, `prisma/seed.ts` — son consecuencia esperada del cambio `id: number → string` y, según las reglas del task, están fuera de mi scope (el usuario los abordará al integrar el frontend).
+- Smoke tests con curl:
+  * `GET /api/businesses` → 200, 21 negocios con la forma correcta
+  * `GET /api/businesses?category=tasca` → 200, solo tascas
+  * `GET /api/categories` → 200, 3 categorías (licorería, tasca, discoteca) con color y sortOrder
+  * `GET /api/businesses/licoreria-don-sancho` → 200, con 2 offers + 4 reviews embebidas
+  * `GET /api/businesses/nonexistent-slug` → 404
+  * Verificado que el schedule de "Licorería Don Sancho" se reconstruye exactamente como en data.ts: `"08:00 AM - 08:30 PM (Lun-Sáb)"` (24h → 12h + day-range en español)
+  * Instagram legacy handle: `https://instagram.com/licoreriadonsancho` → `@licoreriadonsancho` ✓
+  * socialMedia.instagram retiene la URL completa ✓
+  * gallery padded a 10 items ✓; images a 3 ✓
+
+Stage Summary:
+- Server layer completa: repositories → services → API routes → frontend helpers.
+- 6 archivos creados + 1 modificado (solo cambios de tipos: id string + slug).
+- Tipado estricto sin `any`; nullable fields cubiertos con `?? ''` / `?? undefined`.
+- `formatSchedule` reconstruye el string de horario desde `BusinessHours[]` agrupando por par open/close, convirtiendo 24h→12h, y usando rangos en español (Lun-Dom cuando cubre los 7 días).
+- El transformer embebe `offers` y `reviews` directamente en el Establishment retornado (tipo `EstablishmentWithRelations`), manteniendo el interfaz `Establishment` original sin tocar su shape.
+- Próximo paso (a cargo del usuario): conectar HomePage/MapPage/EstablishmentPage/Store a `fetchBusinesses`/`fetchBusinessBySlug` y migrar `data.ts`/`store.ts` de ids numéricos a strings/slug.
+
+---
+Task ID: 1.6
+Agent: conecta-frontend-migrator
+Task: Actualizar 6 componentes para consumir la API REST (React Query) en lugar de `@/lib/data`
+
+Work Log:
+- Leído worklog.md y los archivos ya modificados por la Task 1.4-1.5 (store.ts, types.ts, api.ts, providers.tsx).
+- Confirmado que la API responde correctamente: `GET /api/businesses` (lista de 21 locales), `GET /api/businesses/[slug]` (con `offers` y `reviews` embebidos), `GET /api/categories`.
+- Actualizados 6 componentes en `src/components/conecta/`:
+
+  1. **HomePage.tsx**
+     - Eliminado `import { establishments } from '@/lib/data'`
+     - Añadidos imports `useQuery` + `fetchBusinesses`
+     - Añadido hook `useQuery({ queryKey: ['businesses'], queryFn: fetchBusinesses })`
+     - Removido `getDynamicRating` del store
+     - Sort por `b.avgRating - a.avgRating` y `b.reviewCount - a.reviewCount`
+     - Rating en card: `const avg = est.avgRating; const count = est.reviewCount;`
+     - `goToDetail(est.id)` → `goToDetail(est.slug)`
+     - `toggleFavorite(est.id)` → `toggleFavorite(est.id, est.name)`
+     - Añadido estado de carga: spinner dorado centrado (`min-h-[60vh]`) cuando `isLoading`
+
+  2. **MapPage.tsx**
+     - Eliminado `import { establishments } from '@/lib/data'`
+     - Añadidos imports `useQuery` + `fetchBusinesses`
+     - Removido `getDynamicRating`
+     - `rating` en panel cercanos: `{ avg: est.avgRating, count: est.reviewCount }`
+     - Bottom sheet: `selectedEst.avgRating` y `selectedEst.reviewCount`
+     - `goToDetail(est.id)` → `goToDetail(est.slug)`
+     - Añadida dependencia `establishments` al `useMemo` de `nearbyEst` (porque ahora es data fetched, no static import)
+     - Pasado `establishments={establishments}` como prop a `<LeafletMap>`
+
+  3. **LeafletMap.tsx**
+     - Eliminado `import { establishments } from '@/lib/data'`
+     - Añadido `establishments: Establishment[]` a las props del componente
+     - Removido `getDynamicRating`
+     - Rating en popup: `{ avg: est.avgRating, count: est.reviewCount }`
+     - `goToDetail(est.id)` → `goToDetail(est.slug)`
+     - Añadida dependencia `establishments` al `useMemo` de `filteredEst`
+
+  4. **EstablishmentPage.tsx**
+     - Eliminado `import { establishments, offers } from '@/lib/data'`
+     - Añadidos imports `useQuery` + `fetchBusinessBySlug`
+     - `selectedEstablishmentId` → `selectedEstablishmentSlug`
+     - Removidos `reviews`, `addReview`, `getDynamicRating`
+     - `const est = establishments.find(...)` reemplazado por `useQuery({ queryKey: ['business', slug], queryFn: () => fetchBusinessBySlug(slug!), enabled: !!slug })`
+     - Añadido early return `if (isLoading)` mostrando "Cargando..."
+     - `estOffers = offers.filter(...)` → `est.offers ?? []` (embebido por la API)
+     - `estReviews = reviews.filter(...)` → `est.reviews ?? []` (embebido por la API)
+     - `getDynamicRating(est.id)` → `est.avgRating` / `est.reviewCount`
+     - `handleSubmitReview` reescrito: ya no llama `addReview`; ahora muestra notification `info` "Las reseñas persistentes estarán disponibles pronto." Se conserva `e.preventDefault()` porque la función sigue siendo usada como `onSubmit` de un `<form>`.
+     - `toggleFavorite(est.id)` → `toggleFavorite(est.id, est.name)`
+
+  5. **ProfilePage.tsx**
+     - Eliminado `import { establishments } from '@/lib/data'`
+     - Añadidos imports `useQuery` + `fetchBusinesses`
+     - Removidos `reviews` y `getDynamicRating` del store
+     - Añadido `const { data: allBusinesses = [] } = useQuery(...)`
+     - `favoriteEsts` ahora deriva de `allBusinesses.filter(...)` (envuelto en `useMemo` con dependencias `[allBusinesses, favorites]`)
+     - `userReviews` ahora es `const userReviews: Review[] = []` (Etapa 2: reviews persistentes)
+     - `getDynamicRating(est.id)` → `est.avgRating`
+     - `goToDetail(est.id)` → `goToDetail(est.slug)`
+     - `toggleFavorite(est.id)` → `toggleFavorite(est.id, est.name)`
+     - En la sección "Mis Reseñas" (que ahora está vacía): el lookup de establishment usa `allBusinesses.find(...)` en vez de `establishments`, y el `onClick` usa `est && goToDetail(est.slug)` (forward-compatible para Etapa 2)
+
+  6. **Matchmaker.tsx**
+     - Eliminado `import { establishments } from '@/lib/data'`
+     - Añadidos imports `useQuery` + `fetchBusinesses`
+     - Removido `getDynamicRating`
+     - Añadido `const { data: allEstablishments = [] } = useQuery(...)`
+     - `calculateMatch(updated, establishments)` → `calculateMatch(updated, allEstablishments)`
+     - `getDynamicRating(recommendation.establishment.id).avg/count` → `recommendation.establishment.avgRating` / `.reviewCount`
+     - `goToDetail(recommendation.establishment.id)` → `goToDetail(recommendation.establishment.slug)`
+
+Verificación:
+- `bun run lint` → **0 errores** (tuvo 2 errores iniciales por React Compiler detectando que `useMemo` no incluía `establishments` en deps; arreglado añadiendo la dependencia).
+- `npx tsc --noEmit` → **0 errores en componentes modificados**. Los únicos errores reportados son pre-existentes en `src/lib/data.ts` y `prisma/seed.ts` (IDs numéricos que ahora chocan con `id: string` en types.ts), pero las instrucciones prohíben modificar `data.ts`.
+- `curl /api/businesses` → 200 (21 locales con `id`, `slug`, `avgRating`, `reviewCount`)
+- `curl /api/businesses/discoteca-glamour` → 200 (incluye `offers: 2`, `reviews: 4`)
+- Dev log: `GET / 200 in 243ms`, sin errores de runtime recientes.
+
+Patrones aplicados consistentemente:
+- `getDynamicRating(X.id).avg` → `X.avgRating`
+- `getDynamicRating(X.id).count` → `X.reviewCount`
+- `goToDetail(X.id)` → `goToDetail(X.slug)`
+- `toggleFavorite(X.id)` → `toggleFavorite(X.id, X.name)`
+- `selectedEstablishmentId` → `selectedEstablishmentSlug`
+- Eliminado todo `import { establishments } from '@/lib/data'` en los 6 componentes
+- Añadido `useQuery` para fetch desde API donde se usaba la lista de establishments
+- Loading states añadidos (HomePage: spinner dorado; EstablishmentPage: mensaje "Cargando...")
+- Sin cambios visuales/UI; sin cambios a `data.ts`, `store.ts`, `types.ts`, `api.ts`, ni rutas API
+
+Stage Summary:
+- 6/6 componentes migrados exitosamente al patrón React Query + API REST.
+- La app carga los 21 locales desde la base de datos Neon en vivo.
+- El detalle del local usa `fetchBusinessBySlug` con `offers` y `reviews` embebidos.
+- El Matchmaker usa `calculateMatch` con los datos fetched (en vez del array estático).
+- ProfilePage funciona con favoritos reales; reseñas de usuario marcadas como "Etapa 2".
+- Sin errores de TypeScript en los archivos modificados; sin errores de ESLint; sin errores runtime.

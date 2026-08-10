@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Star, Heart, Clock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { establishments } from '@/lib/data';
+import { fetchBusinesses } from '@/lib/api';
 import type { Category, Establishment, PriceRange } from '@/lib/types';
 import { Matchmaker } from './Matchmaker';
 import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
@@ -27,8 +28,12 @@ export function HomePage() {
   const [sortBy, setSortBy] = useState<SortBy>('rating');
   const [matchmakerOpen, setMatchmakerOpen] = useState(false);
 
+  const { data: establishments = [], isLoading } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: () => fetchBusinesses(),
+  });
+
   const goToDetail = useAppStore((s) => s.goToDetail);
-  const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const favorites = useAppStore((s) => s.favorites);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
 
@@ -44,16 +49,27 @@ export function HomePage() {
     })
     .sort((a, b) => {
       if (sortBy === 'rating') {
-        return getDynamicRating(b.id).avg - getDynamicRating(a.id).avg;
+        return b.avgRating - a.avgRating;
       }
       if (sortBy === 'reviews') {
-        return getDynamicRating(b.id).count - getDynamicRating(a.id).count;
+        return b.reviewCount - a.reviewCount;
       }
       return a.name.localeCompare(b.name);
     });
 
   const filters: Filter[] = ['Todas', 'licorería', 'tasca', 'discoteca'];
   const priceFilters: PriceFilter[] = ['Todos', '$', '$$', '$$$'];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] px-6">
+        <div className="flex flex-col items-center gap-3 text-white/40">
+          <div className="w-10 h-10 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+          <div className="text-xs tracking-[4px] font-mono">CARGANDO…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -220,7 +236,8 @@ export function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           <AnimatePresence mode="popLayout">
             {filtered.map((est: Establishment, index: number) => {
-              const { avg, count } = getDynamicRating(est.id);
+              const avg = est.avgRating;
+              const count = est.reviewCount;
               const cardClass =
                 est.category === 'discoteca'
                   ? 'card-glow-hover-purple'
@@ -239,7 +256,7 @@ export function HomePage() {
                     className={`glass-card rounded-3xl overflow-hidden ${cardClass} group relative`}
                   >
                     <button
-                      onClick={() => goToDetail(est.id)}
+                      onClick={() => goToDetail(est.slug)}
                       className="block w-full text-left"
                       aria-label={`Ver detalles de ${est.name}`}
                     >
@@ -291,7 +308,7 @@ export function HomePage() {
 
                     {/* Favorite button */}
                     <button
-                      onClick={() => toggleFavorite(est.id)}
+                      onClick={() => toggleFavorite(est.id, est.name)}
                       aria-label={
                         favorites.includes(est.id)
                           ? `Quitar ${est.name} de favoritos`

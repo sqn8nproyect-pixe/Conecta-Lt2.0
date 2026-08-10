@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Heart,
@@ -11,30 +12,30 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { establishments } from '@/lib/data';
+import { fetchBusinesses } from '@/lib/api';
 import type { Review } from '@/lib/types';
 
 export function ProfilePage() {
   const user = useAppStore((s) => s.user);
   const favorites = useAppStore((s) => s.favorites);
-  const reviews = useAppStore((s) => s.reviews);
   const goToDetail = useAppStore((s) => s.goToDetail);
   const setView = useAppStore((s) => s.setView);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
   const logout = useAppStore((s) => s.logout);
   const loginWithGoogle = useAppStore((s) => s.loginWithGoogle);
-  const getDynamicRating = useAppStore((s) => s.getDynamicRating);
 
-  // Compute user reviews with useMemo to avoid returning a new array reference
-  // on every render (which would cause a Zustand useSyncExternalStore infinite loop).
-  const userReviews = useMemo<Review[]>(() => {
-    if (!user) return [];
-    return reviews
-      .filter((r) => r.userId === user.id)
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [user, reviews]);
+  const { data: allBusinesses = [] } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: () => fetchBusinesses(),
+  });
 
-  const favoriteEsts = establishments.filter((e) => favorites.includes(e.id));
+  // Etapa 2: reviews persistentes (aún no implementado en el store)
+  const userReviews: Review[] = [];
+
+  const favoriteEsts = useMemo(
+    () => allBusinesses.filter((est) => favorites.includes(est.id)),
+    [allBusinesses, favorites],
+  );
 
   // Not-logged-in empty state
   if (!user) {
@@ -154,7 +155,7 @@ export function ProfilePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {favoriteEsts.map((est) => {
-              const { avg } = getDynamicRating(est.id);
+              const avg = est.avgRating;
               const cardClass =
                 est.category === 'discoteca'
                   ? 'card-glow-hover-purple'
@@ -165,7 +166,7 @@ export function ProfilePage() {
                   className={`glass-card rounded-2xl overflow-hidden ${cardClass} group relative`}
                 >
                   <button
-                    onClick={() => goToDetail(est.id)}
+                    onClick={() => goToDetail(est.slug)}
                     className="block w-full text-left"
                     aria-label={`Ver detalles de ${est.name}`}
                   >
@@ -206,7 +207,7 @@ export function ProfilePage() {
 
                   {/* Favorite heart (active) */}
                   <button
-                    onClick={() => toggleFavorite(est.id)}
+                    onClick={() => toggleFavorite(est.id, est.name)}
                     aria-label={`Quitar ${est.name} de favoritos`}
                     className="absolute top-3 right-3 w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 bg-gold text-obsidian border-gold glow-gold"
                   >
@@ -238,12 +239,12 @@ export function ProfilePage() {
         ) : (
           <div className="flex flex-col gap-4">
             {userReviews.map((r: Review) => {
-              const est = establishments.find((e) => e.id === r.establishmentId);
+              const est = allBusinesses.find((e) => e.id === r.establishmentId);
               return (
                 <article key={r.id} className="glass-card rounded-2xl p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                     <button
-                      onClick={() => goToDetail(r.establishmentId)}
+                      onClick={() => est && goToDetail(est.slug)}
                       className="font-serif text-lg font-bold text-gold hover:underline transition-all text-left"
                     >
                       {est ? est.name : 'Local eliminado'}

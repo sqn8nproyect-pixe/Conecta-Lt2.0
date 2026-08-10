@@ -1,32 +1,365 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ─────────────────────────────────────────────────────────────
+// Conecta-LT 3.0 — Esquema Prisma (PostgreSQL / Neon)
+// ─────────────────────────────────────────────────────────────
+// Diseñado en Etapa 1 con todos los modelos del dominio real.
+// Las tablas que no se usan todavía (Event, FlashDeal, etc.)
+// se añadirán en sus respectivas etapas con migraciones.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── GEOGRAFÍA ───────────────────────────────────────────────
+// Jerarquía Country → State → City → Zone.
+// Diseñado desde el principio para multi-ciudad (Etapa 5+),
+// aunque el contenido inicial es solo Los Teques.
+
+model Country {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  isoCode String  @unique // "VE"
+  states  State[]
+}
+
+model State {
+  id        String   @id @default(cuid())
+  name      String
+  isoCode   String? // "M" (Miranda)
+  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  countryId String
+  cities    City[]
+
+  @@unique([countryId, name])
+}
+
+model City {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique // "los-teques"
+  state    State   @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  stateId  String
+  zones    Zone[]
+  businesses Business[]
+
+  @@unique([stateId, name])
+}
+
+model Zone {
+  id        String   @id @default(cuid())
+  name      String // "Centro", "Las Minas", "Cupira"
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  cityId    String
+  businesses Business[]
+
+  @@unique([cityId, name])
+}
+
+// ── USUARIO ─────────────────────────────────────────────────
+// Compatible con Auth.js v5 Prisma adapter (Etapa 2).
+// Por ahora (Etapa 1) se seedea con usuarios mock para las reviews.
+
+enum UserRole {
+  USER
+  BUSINESS_OWNER
+  BUSINESS_MANAGER
+  MODERATOR
+  ADMIN
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String? // URL del avatar (Google OAuth en Etapa 2)
+  role          UserRole  @default(USER)
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reviews       Review[]
+  favorites     Favorite[]
+  reservations  Reservation[]
+  notifications Notification[]
+  analyticsEvents AnalyticsEvent[]
+  ownedBusinesses Business[] @relation("BusinessOwner")
 }
 
-model Post {
+// ── CATEGORÍAS ──────────────────────────────────────────────
+
+model Category {
   id        String   @id @default(cuid())
+  name      String   @unique // "licorería", "tasca", "discoteca"
+  slug      String   @unique // "licoreria"
+  icon      String? // nombre del icono Lucide
+  color     String? // hex color para el mapa (#d4af37)
+  sortOrder Int      @default(0)
+
+  businesses Business[]
+}
+
+// ── NEGOCIO ─────────────────────────────────────────────────
+
+enum BusinessStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum CapacityLevel {
+  QUIET
+  MODERATE
+  FULL
+}
+
+model Business {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  description     String         @db.Text
+  address         String
+  lat             Float
+  lng             Float
+  phone           String?
+  priceRange      String         @default("$$") // "$", "$$", "$$$"
+  coverImage      String?
+
+  // Ratings (denormalizados — calculados desde reviews)
+  avgRating       Float          @default(0)
+  reviewCount     Int            @default(0)
+  ambienteRating  Float          @default(0)
+  servicioRating  Float          @default(0)
+  precioCalidadRating Float     @default(0)
+
+  // Ficha enriquecida
+  specialty       String?
+  valueProposition String?       @db.Text
+
+  // Estado y operación
+  status          BusinessStatus @default(ACTIVE)
+  currentCapacity CapacityLevel? // aforo en tiempo real (Etapa 3.6)
+  claimedAt       DateTime? // fecha en que el dueño reclamó el perfil
+
+  // Relaciones
+  category        Category       @relation(fields: [categoryId], references: [id])
+  categoryId      String
+  city            City           @relation(fields: [cityId], references: [id])
+  cityId          String
+  zone            Zone?          @relation(fields: [zoneId], references: [id])
+  zoneId          String?
+  owner           User?          @relation("BusinessOwner", fields: [ownerId], references: [id])
+  ownerId         String?
+
+  // Datos relacionados
+  hours           BusinessHours[]
+  socials         BusinessSocial[]
+  images          BusinessImage[]
+  promotions      Promotion[]
+  reviews         Review[]
+  favorites       Favorite[]
+  reservations    Reservation[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([cityId])
+  @@index([status])
+  @@index([lat, lng])
+}
+
+model BusinessHours {
+  id          String   @id @default(cuid())
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  dayOfWeek   Int // 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
+  openTime    String // "HH:mm" 24h — "08:00"
+  closeTime   String // "HH:mm" 24h — "20:30" (puede ser < openTime si cruza medianoche)
+  isClosed    Boolean  @default(false)
+
+  @@unique([businessId, dayOfWeek])
+  @@index([businessId])
+}
+
+enum SocialType {
+  INSTAGRAM
+  WHATSAPP
+  TIKTOK
+  FACEBOOK
+  TWITTER
+  WEBSITE
+  PHONE
+}
+
+model BusinessSocial {
+  id          String     @id @default(cuid())
+  business    Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  type        SocialType
+  value       String // handle, URL, o número
+  sortOrder   Int        @default(0)
+
+  @@unique([businessId, type])
+  @@index([businessId])
+}
+
+enum ImageType {
+  COVER
+  GALLERY
+  LOGO
+  MENU
+}
+
+model BusinessImage {
+  id          String     @id @default(cuid())
+  business    Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  url         String
+  storageKey  String? // clave en R2 para eliminación (Etapa 3)
+  type        ImageType  @default(GALLERY)
+  sortOrder   Int        @default(0)
+
+  @@index([businessId])
+}
+
+// ── PROMOCIONES ─────────────────────────────────────────────
+
+enum PromotionStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  PAUSED
+}
+
+model Promotion {
+  id             String          @id @default(cuid())
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId     String
+  title          String
+  description    String          @db.Text
+  price          String? // "$89" (precio display)
+  discount       String? // "20% OFF", "2x1"
+  image          String?
+  code           String?         @unique // código de canje "SANCHO18"
+  startDate      DateTime?
+  endDate        DateTime?
+  maxRedemptions Int?
+  redemptionCount Int            @default(0)
+  status         PromotionStatus @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+}
+
+// ── REVIEWS ─────────────────────────────────────────────────
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  FLAGGED
+}
+
+model Review {
+  id            String       @id @default(cuid())
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId    String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  rating        Int // 1-5
+  comment       String       @db.Text
+  status        ReviewStatus @default(PUBLISHED)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Un usuario solo puede dejar una review por negocio
+  @@unique([businessId, userId])
+  @@index([businessId, status])
+  @@index([userId])
+}
+
+// ── FAVORITOS ───────────────────────────────────────────────
+
+model Favorite {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, businessId])
+  @@index([userId])
+}
+
+// ── RESERVAS ────────────────────────────────────────────────
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Reservation {
+  id               String            @id @default(cuid())
+  confirmationCode String            @unique
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId       String
+  user             User?             @relation(fields: [userId], references: [id])
+  userId           String?
+  name             String
+  phone            String
+  email            String?
+  date             String // "YYYY-MM-DD"
+  time             String // "HH:mm"
+  guests           Int
+  notes            String?
+  status           ReservationStatus @default(PENDING)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([businessId, date])
+  @@index([userId])
+}
+
+// ── ANALYTICS ───────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  type        String // BUSINESS_VIEW, SEARCH, WHATSAPP_CLICK, etc.
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  businessId  String? // se guarda como string suelto (sin FK) para flexibilidad
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([businessId])
+}
+
+// ── NOTIFICACIONES ──────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  type      String // REVIEW_PUBLISHED, RESERVATION_CONFIRMED, etc.
   title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  message   String
+  read      Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@index([userId, read])
 }
