@@ -13,9 +13,33 @@ import { AgeGate } from '@/components/conecta/AgeGate';
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
-  // Age verification: shows on EVERY page load (no persistence) per alcohol
-  // regulations. The gate stays mounted until the user confirms being 18+.
-  const [ageVerified, setAgeVerified] = useState(false);
+  // Age verification: persisted in sessionStorage so the gate doesn't re-show
+  // after the Google OAuth redirect (which does a full page reload back to /).
+  // sessionStorage (not localStorage) ensures the check resets when the
+  // browser closes — keeps the intent of "ask once per session" for alcohol
+  // regulations while not breaking the OAuth callback flow.
+  //
+  // Lazy initial state reads sessionStorage synchronously on first render
+  // (avoids the gate flashing on mount and the setState-in-effect lint rule).
+  const [ageVerified, setAgeVerified] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return sessionStorage.getItem('age-verified') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const confirmAge = () => {
+    setAgeVerified(true);
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('age-verified', 'true');
+      }
+    } catch {
+      // ignore write failure (private mode / blocked storage)
+    }
+  };
 
   // Scroll to top when view changes
   useEffect(() => {
@@ -31,7 +55,7 @@ export default function Home() {
       </div>
 
       {/* Age verification gate (renders above everything until confirmed) */}
-      {!ageVerified && <AgeGate onConfirm={() => setAgeVerified(true)} />}
+      {!ageVerified && <AgeGate onConfirm={confirmAge} />}
 
       <Notifications />
       <Navbar />
