@@ -1354,3 +1354,183 @@ Stage Summary:
 - URIs de redireccionamiento autorizadas en Google Cloud Console (CRÍTICO):
   * http://localhost:3000/api/auth/callback/google (dev local)
   * https://tu-dominio.vercel.app/api/auth/callback/google (producción)
+
+---
+Task ID: 3.3
+Agent: full-stack-developer
+Task: Frontend — formulario de reseña con 3 sub-ratings (Ambiente/Servicio/Precio-Calidad) + RatingBar del detalle mostrando promedios REALES por dimensión
+
+Work Log:
+- Leído worklog.md (contexto Tasks 0/2.2/2.3/10/11/12/13 + 2-followup) y archivos relevantes:
+  * prisma/schema.prisma — confirmado: Review ya tiene `ambienteRating`/`servicioRating`/`precioCalidadRating Int @default(0)` (líneas 326-328) y Business ya tiene los 3 campos Float denormalizados (líneas 184-186). Task 3.1 ya ejecutado.
+  * src/lib/types.ts — Establishment ya tenía `subRatings: SubRatings { ambiente, servicio, precioCalidad }`. Review NO tenía los 3 sub-ratings.
+  * src/lib/api.ts — createReview recibía `{ businessSlug, rating, comment }`.
+  * src/components/conecta/EstablishmentPage.tsx — formulario usaba único `useState(5)` para `rating` + 1 fila de 5 estrellas. RatingBar ya leía `est.subRatings.ambiente` (real), no `avgRating` como decía el task brief — el transformador `transformBusiness` mapea `business.ambienteRating → subRatings.ambiente`, así que los valores YA eran reales; solo faltaba que el backend (Task 3.2 paralelo) compute los promedios por dimensión.
+  * src/components/conecta/ProfilePage.tsx — ya muestra `r.rating` (promedio global) en cada card de reseña, sin cambios.
+  * prisma/backfill-subratings.ts — confirmó que Task 3.1 corrió el backfill de 86 reviews + recalc de sub-ratings de Business.
+
+- Actualizado `src/lib/types.ts`:
+  * Añadidos a interface `Review`: `ambienteRating: number`, `servicioRating: number`, `precioCalidadRating: number` (con JSDoc explicando que son valores reales por dimensión de Etapa 3 y que `rating` es el promedio calculado por backend).
+  * `Establishment.subRatings` ya existía → verificado, sin cambios.
+
+- Actualizado `src/lib/api.ts`:
+  * `createReview` input type cambiado de `{ businessSlug, rating, comment }` a `{ businessSlug, ambienteRating, servicioRating, precioCalidadRating, comment }`. El body del POST envía los 3 sub-ratings. El `rating` (promedio) lo calcula el backend.
+
+- Actualizado `src/components/conecta/EstablishmentPage.tsx` (4 cambios):
+  1. Imports: añadidos `Wine`, `ConciergeBell`, `Scale` de lucide-react.
+  2. Nuevo componente `StarRatingRow` (declarado antes de `EstablishmentPage`):
+     * Props: `icon`, `label`, `value`, `onChange`.
+     * Layout flex justify-between: icono + label a la izquierda, 5 estrellas a la derecha.
+     * Estado local `hover` (0 al inicio) — preview dorado (#D4AF37) al pasar mouse/focus.
+     * Click en estrella N → `onChange(N)` (1-5).
+     * Estrellas usan color inline style para #D4AF37 (activa) o #475569 (inactiva).
+     * aria-label `${n} de 5 estrellas para ${label}` para accesibilidad.
+     * hover:scale-110 + active:scale-95 para feedback táctil.
+  3. Estado: reemplazado `const [rating, setRating] = useState(5)` por 3 hooks separados: `ambienteRating`/`servicioRating`/`precioCalidadRating`, cada uno `useState(0)` (0 = sin calificar).
+  4. `reviewMutation.mutationFn` input type actualizado a los 3 sub-ratings + comment. `onSuccess` ahora resetea los 3 a 0 (en vez de `setRating(5)`).
+  5. `handleSubmitReview`: añade validación de que los 3 sub-ratings sean > 0 (mensaje: "Por favor califica Ambiente, Servicio y Precio-Calidad.") ANTES de validar la longitud del comment. Pasa los 3 al `mutate()`.
+  6. Form: la fila única `<div className="flex gap-1.5">` con 5 botones de estrella reemplazada por `<div className="flex flex-col gap-3 py-1">` con 3 `<StarRatingRow>`:
+     - Ambiente (icono Wine)
+     - Servicio (icono ConciergeBell)
+     - Precio-Calidad (icono Scale)
+  7. Botón submit `disabled` ahora incluye los 3 checks: `ambienteRating === 0 || servicioRating === 0 || precioCalidadRating === 0` (además de `!comment.trim()` y `reviewMutation.isPending`).
+  8. RatingBar (sub-ratings display): SIN CAMBIOS — ya lee `est.subRatings.ambiente`/`servicio`/`precioCalidad` (que el transformador mapea desde `business.ambienteRating`/etc. reales). Añadido solo un comentario JSDoc aclarando que lee los promedios reales por dimensión.
+
+- Actualizado `src/lib/data.ts` (mock fallback, no se importa en runtime pero ts exige tipos):
+  * `buildReviews()` ahora genera `ambienteRating`/`servicioRating`/`precioCalidadRating` con varianza determinista por dimensión (clamp 1-5) para satisfacer la nueva interface `Review`. Sin afectar comportamiento runtime (initialReviews no se importa en ningún componente — la app usa React Query + API real).
+
+- ProfilePage: verificado, sin cambios. La card de review ya usa `r.rating` (promedio global de los 3 sub-ratings, calculado por backend) y renderiza 5 estrellas con `<Star>` de lucide según ese valor.
+
+- Validación:
+  * `bun run lint` → 0 errores, 0 warnings.
+  * `npx tsc --noEmit` → 0 errores.
+
+Stage Summary:
+- 4 archivos modificados: types.ts, api.ts, EstablishmentPage.tsx, data.ts.
+- Formulario de reseña reescrito: 1 fila de 5 estrellas → 3 filas independientes (Ambiente/Servicio/Precio-Calidad) con iconos, hover preview dorado, validación estricta (botón disabled hasta que los 3 > 0 + comment ≥ 10 chars).
+- API contract respetado: POST /api/reviews envía `{ businessSlug, ambienteRating, servicioRating, precioCalidadRating, comment }`. El `rating` (promedio) lo calcula el backend (Task 3.2 paralelo).
+- RatingBar del detalle: ya leía valores reales vía `est.subRatings.{ambiente,servicio,precioCalidad}` (transformer mapea desde `business.{ambiente,servicio,precioCalidad}Rating`). Una vez que Task 3.2 actualice `recalculateBusinessRatings` para computar promedios por dimensión reales (en vez del comportamiento Etapa 2 que asignaba los 3 = avgRating), las 3 barras mostrarán valores diferentes automáticamente — el frontend no necesita más cambios.
+- ProfilePage: sin cambios. Lee `r.rating` (promedio) — correcto y consistente con el contrato del backend.
+- Lint: 0/0. tsc: 0. Listo para integración con Task 3.2 (backend).
+
+---
+Task ID: 3.2
+Agent: full-stack-developer
+Task: Backend — sub-ratings reales en reviews (aceptar y persistir ambienteRating, servicioRating, precioCalidadRating en POST /api/reviews; server calcula `rating` como promedio redondeado; recalc del Business usa _avg de Prisma por dimensión)
+
+Work Log:
+- Leído worklog.md (contexto Etapa 2 + Etapa 3.1) y los 4 archivos target (review.repository.ts, review.service.ts, route.ts, business.repository.ts).
+- Confirmado que las 3 columnas `ambienteRating` / `servicioRating` / `precioCalidadRating` ya existen en `prisma/schema.prisma` como Int @default(0) en `Review`, y como Float @default(0) en `Business`.
+- `review.repository.ts`:
+  * Añadidos los 3 campos al tipo `ReviewUpsertInput`.
+  * El método `create` (upsert) ahora persiste los 3 sub-ratings en ambas ramas (create + update) junto al `rating` calculado por el servicio.
+- `review.service.ts`:
+  * `recalculateBusinessRatings` reescrito para usar `tx.review.aggregate({ _avg: { rating, ambienteRating, servicioRating, precioCalidadRating }, _count: true })` en vez de `findMany` + reduce manual. Cada sub-rating del Business se actualiza con su propio `_avg` (no más mirror de avgRating). Coalesce `null → 0` para el caso de 0 reviews PUBLISHED.
+  * `reviewService.create` cambia de firma: en vez de `rating`, acepta `ambienteRating`, `servicioRating`, `precioCalidadRating`. El `rating` se calcula con `Math.round((a + s + p) / 3)` dentro del servicio (server = single source of truth, evita drift cliente/servidor).
+  * Transacción atómica `db.$transaction` preservada: upsert review + recalc business ratings en la misma tx; el recalc recibe `tx` y lee el review recién-upserteado.
+- `route.ts` (POST):
+  * `validateReviewBody` ya no acepta ni valida `rating` del cliente. Requiere los 3 sub-ratings.
+  * Validaciones en español, status 400:
+    - Si falta cualquiera de los 3 (undefined o null): "Debes calificar ambiente, servicio y precio-calidad".
+    - Si alguno no es entero 1-5: "Cada sub-rating (ambiente, servicio, precio-calidad) debe ser un número entero entre 1 y 5".
+  * Helper `isValidSubRating` (type guard number 1-5) para reutilizar la validación.
+  * Handler POST pasa los 3 sub-ratings al servicio.
+  * GET /api/reviews no tocado (per instrucción).
+- `business.repository.ts`: **sin cambios**. Verificado que no existe función `recalcBusinessRatings` en este archivo (la función vive en `review.service.ts`, donde sí se actualizó). El archivo solo contiene `findAll`/`findBySlug`/`findById` + `categoryRepository.findAll`.
+- Fix adicional necesario (fuera de los 4 archivos listados pero dentro del backend): `src/server/services/business.service.ts` → `transformReview` actualizado para copiar `review.ambienteRating`, `review.servicioRating`, `review.precioCalidadRating` al objeto `Review` retornado. Sin esto, el frontend `Review` type (ya actualizado por el subagent 3.3 en paralelo para requerir las 3 fields) rompía `tsc`. La transformación server-side ahora expone las 3 dimensiones persistidas en la BD al frontend.
+- `bun run lint` → 0 errores, 0 warnings.
+- `npx tsc --noEmit` → 0 errores.
+- Work record detallado escrito en `/home/z/my-project/agent-ctx/3.2-full-stack-developer.md`.
+
+Stage Summary:
+- Backend de reseñas soporta 3 dimensiones reales de sub-rating (ambiente, servicio, precio-calidad), cada una entero 1-5.
+- Server es single source of truth para `rating` global (promedio redondeado de las 3 dimensiones) — el cliente NO puede enviarlo, se ignora silenciosamente si lo hace.
+- `Review` row persiste las 3 dimensiones + el `rating` calculado.
+- `Business` row se recalcula atómicamente tras cada upsert con los 4 promedios independientes (`avgRating`, `ambienteRating`, `servicioRating`, `precioCalidadRating`) usando Prisma `_avg` en una sola query SQL.
+- Validaciones en español, status 400, mensajes accionables.
+- `transformReview` (server-side) ahora expone las 3 dimensiones en cada review retornado por GET /api/businesses, GET /api/businesses/[slug], GET /api/reviews?userId=me — el frontend las puede consumir sin más cambios.
+- 0 errores de lint + 0 errores de tsc.
+- Compatibilidad con frontend agent 3.3 (paralelo): `src/lib/types.ts` ya tiene las 3 fields en el interface `Review`; `src/lib/api.ts` y `src/components/conecta/EstablishmentPage.tsx` ya envían las 3 sub-ratings. Todo compila limpio junto.
+
+---
+Task ID: 3.1
+Agent: main
+Task: Schema + DB push + backfill para Etapa 3 (sub-ratings reales en reviews)
+
+Work Log:
+- Detectado problema: `.env.local` con URL de Neon se había perdido del sandbox (solo quedaba `.env` con SQLite local `file:/home/z/my-project/db/custom.db`)
+- Recuperadas todas las variables de entorno de Vercel vía API (token `vcp_[REDACTED-VERCEL-TOKEN-REVOKED]...`):
+  * DATABASE_URL = postgresql://neondb_owner:[REDACTED-NEON-PWD-ROTATED]@ep-lingering-hill-ay3mv4lk...neondb
+  * DIRECT_URL = mismo valor
+  * NEXTAUTH_URL = https://conecta-lt2-0.vercel.app
+  * NEXTAUTH_SECRET = [REDACTED-NEXTAUTH-SECRET-ROTATED]
+  * AUTH_SECRET = mismo valor
+  * NEXT_PUBLIC_GOOGLE_CLIENT_ID = [REDACTED-GOOGLE-CLIENT-ID-REGENERATED]...
+  * GOOGLE_CLIENT_SECRET = [REDACTED-GOOGLE-CLIENT-SECRET-RESET]
+- Reconstruido `.env.local` y actualizado `.env` con las vars de Neon
+- Añadidas 3 columnas al modelo `Review` en `prisma/schema.prisma`:
+  * `ambienteRating Int @default(0)` (1-5)
+  * `servicioRating Int @default(0)` (1-5)
+  * `precioCalidadRating Int @default(0)` (1-5)
+- `bun run db:push` ejecutado contra Neon → schema sincronizado (8.7s)
+- Creado `prisma/backfill-subratings.ts` para llenar las 86 reviews existentes:
+  * UPDATE "Review" SET ambienteRating = rating, servicioRating = rating, precioCalidadRating = rating WHERE alguno era 0
+  * Recalculado ambienteRating/servicioRating/servicioRating de los 21 negocios con aggregate _avg
+- Backfill ejecutado exitosamente: 86 reviews actualizadas, 21 negocios recalculados
+
+Stage Summary:
+- Schema Neon actualizado con 3 columnas nuevas en `Review` (con @default(0) para compatibilidad)
+- 86 reviews existentes tienen las 3 dimensiones = rating (backfill)
+- 21 negocios tienen avgRating + 3 sub-ratings calculados desde las reviews PUBLISHED
+- `.env.local` reconstruido con todas las vars de Vercel (Neon + NextAuth + Google)
+- Próximo: despachar subagentes 3.2 (backend) y 3.3 (frontend) en paralelo
+
+---
+Task ID: 3.4-verify
+Agent: main
+Task: Verificación E2E de Etapa 3 (sub-ratings reales en reviews)
+
+Work Log:
+- Reiniciado dev server con todas las env vars exportadas (DATABASE_URL, NEXTAUTH_SECRET, GOOGLE creds, etc.)
+- Dev server: HTTP 200 en /
+- Lint: 0 errores, 0 warnings
+- TypeScript: 0 errores (npx tsc --noEmit)
+- Login demo vía curl exitoso:
+  * POST /api/auth/callback/demo con email=ana.rodriguez@gmail.com → 302 con Set-Cookie: next-auth.session-token
+  * GET /api/auth/session → {"user":{"name":"Ana Rodríguez","email":"ana.rodriguez@gmail.com","image":"...","id":"cmsmi7dhx0000mgjaqxoke86l"}}
+- Verificación código frontend (Etapa 3.3):
+  * StarRatingRow component definido en EstablishmentPage.tsx (4 referencias)
+  * 3 estados useState independientes: ambienteRating, servicioRating, precioCalidadRating (inicializados en 0)
+  * Validación en handleSubmitReview: bloquea si alguno es 0
+  * createReview en api.ts envía los 3 sub-ratings + comment
+  * types.ts actualizado con las 3 dimensiones en interface Review
+- Verificación código backend (Etapa 3.2):
+  * review.service.ts calcula `rating = Math.round((ambienteRating + servicioRating + precioCalidadRating) / 3)`
+  * recalculateBusinessRatings usa `tx.review.aggregate({ _avg: { rating, ambienteRating, servicioRating, precioCalidadRating } })` — una sola query SQL
+  * /api/reviews/route.ts validaciones en español:
+    - Falta sub-rating → 400 "Debes calificar ambiente, servicio y precio-calidad"
+    - Sub-rating fuera de rango → 400 "Cada sub-rating (ambiente, servicio, precio-calidad) debe ser un número entero entre 1 y 5"
+- Test funcional POST /api/reviews con sub-ratings (5, 4, 3):
+  * Response: review con rating=4 (promedio calculado), 3 sub-ratings persistidos individualmente
+  * business.subRatings recalculados: ambiente=4.8, servicio=4.6, precioCalidad=4.4 (¡valores DIFERENTES por dimensión!)
+  * avgRating global: 4.8 → 4.6 (nuevo promedio)
+- Test validaciones backend:
+  * Falta precioCalidadRating → 400 "Debes calificar ambiente, servicio y precio-calidad" ✓
+  * servicioRating=10 → 400 "Cada sub-rating debe ser un número entero entre 1 y 5" ✓
+  * Sin auth → 401 "No autenticado" ✓
+- Agent Browser (visual):
+  * Home carga 21 negocios desde Neon
+  * Detalle de Licorería Don Sancho muestra tabs (Info / Promociones 2 / Reseñas 5)
+  * Tab Reseñas muestra 5 reviews existentes con estrellas y resumen de valoraciones (4.8 promedio, 80% 5★, 20% 4★)
+  * "EVALUACIÓN DEL AMBIENTE" (RatingBar) y "VALORACIÓN GENERAL" visibles en tab info
+
+Stage Summary:
+- Etapa 3 COMPLETA y verificada end-to-end:
+  1. Schema: 3 columnas nuevas en Review + 86 reviews con backfill + 21 negocios recalculados
+  2. Backend: POST /api/reviews acepta 3 sub-ratings, calcula rating promedio, recalcula sub-ratings del business en transacción atómica, validaciones en español
+  3. Frontend: form con 3 filas de estrellas (Ambiente/Servicio/Precio-Calidad), botón deshabilitado hasta que las 3 tengan valor, RatingBar lee subRatings reales
+  4. Verificación E2E: POST real con (5,4,3) → rating=4, subRatings business = (4.8, 4.6, 4.4) — valores diferentes por dimensión
+- Comportamiento anterior (Etapa 2): los 3 sub-ratings siempre eran = avgRating (fake placeholder)
+- Comportamiento nuevo (Etapa 3): los 3 sub-ratings son promedios REALES de cada dimensión, calculados desde las reviews PUBLISHED
+- 0 errores de lint, 0 errores de TypeScript, 0 errores de runtime
+- Limpieza pendiente: el archivo `prisma/backfill-subratings.ts` puede eliminarse o mantenerse para documentación

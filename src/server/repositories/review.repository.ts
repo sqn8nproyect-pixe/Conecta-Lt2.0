@@ -26,7 +26,14 @@ export type ReviewWithBusiness = Prisma.ReviewGetPayload<{
 export type ReviewUpsertInput = {
   businessId: string;
   userId: string;
+  // Overall rating — computed by the service as the rounded average of the
+  // 3 sub-ratings below. The server is the single source of truth for this
+  // field to avoid inconsistencies between client-sent values and the
+  // sub-ratings actually persisted.
   rating: number;
+  ambienteRating: number; // 1-5
+  servicioRating: number; // 1-5
+  precioCalidadRating: number; // 1-5
   comment: string;
 };
 
@@ -84,9 +91,12 @@ export const reviewRepository = {
 
   /**
    * Upsert a review for (businessId, userId).
-   * - If a row exists, update rating + comment + reset status to PUBLISHED.
+   * - If a row exists, update rating + the 3 sub-ratings + comment + reset status to PUBLISHED.
    * - Otherwise, create a new row with status PUBLISHED.
    * Returns the row with the user relation included.
+   *
+   * The `rating` field is the rounded average of the 3 sub-ratings and is
+   * computed by the service layer (server is the single source of truth).
    *
    * Accepts an optional transaction client so the service can wrap this
    * write + the business ratings recalculation in a single transaction.
@@ -106,11 +116,17 @@ export const reviewRepository = {
         businessId: data.businessId,
         userId: data.userId,
         rating: data.rating,
+        ambienteRating: data.ambienteRating,
+        servicioRating: data.servicioRating,
+        precioCalidadRating: data.precioCalidadRating,
         comment: data.comment,
         status: 'PUBLISHED',
       },
       update: {
         rating: data.rating,
+        ambienteRating: data.ambienteRating,
+        servicioRating: data.servicioRating,
+        precioCalidadRating: data.precioCalidadRating,
         comment: data.comment,
         status: 'PUBLISHED',
       },

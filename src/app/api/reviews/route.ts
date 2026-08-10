@@ -17,15 +17,45 @@ const MIN_COMMENT_LEN = 10;
 const MAX_COMMENT_LEN = 1000;
 
 type ValidationError = { ok: false; error: string };
-type ReviewInput = { ok: true; businessSlug: string; rating: number; comment: string };
+type ReviewInput = {
+  ok: true;
+  businessSlug: string;
+  ambienteRating: number;
+  servicioRating: number;
+  precioCalidadRating: number;
+  comment: string;
+};
+
+/**
+ * Type guard: an integer between 1 and 5 (inclusive), the only valid
+ * value for any sub-rating dimension.
+ */
+function isValidSubRating(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 5
+  );
+}
 
 /**
  * Validate the JSON body of POST /api/reviews.
  *
- * Rules:
- *   - businessSlug: non-empty string
- *   - rating:       integer between 1 and 5 (inclusive)
- *   - comment:      non-empty string, trimmed length 10..1000 chars
+ * Required shape:
+ *   - businessSlug:        non-empty string
+ *   - ambienteRating:      integer 1-5
+ *   - servicioRating:      integer 1-5
+ *   - precioCalidadRating: integer 1-5
+ *   - comment:             non-empty string, trimmed length 10..1000 chars
+ *
+ * The overall `rating` is NOT accepted from the client — the service
+ * layer computes it as the rounded average of the 3 sub-ratings so the
+ * server stays the single source of truth.
+ *
+ * Validation errors (all 400):
+ *   - Missing any of the 3 sub-ratings → "Debes calificar ambiente, servicio y precio-calidad"
+ *   - Any sub-rating present but not an integer 1-5 → per-field message
  */
 function validateReviewBody(body: unknown): ValidationError | ReviewInput {
   if (typeof body !== 'object' || body === null) {
@@ -40,19 +70,34 @@ function validateReviewBody(body: unknown): ValidationError | ReviewInput {
   }
   const businessSlug = b.businessSlug;
 
-  // rating
+  // Sub-ratings — first check presence, then validity.
+  const hasAmbiente = b.ambienteRating !== undefined && b.ambienteRating !== null;
+  const hasServicio = b.servicioRating !== undefined && b.servicioRating !== null;
+  const hasPrecio =
+    b.precioCalidadRating !== undefined && b.precioCalidadRating !== null;
+
+  if (!hasAmbiente || !hasServicio || !hasPrecio) {
+    return {
+      ok: false,
+      error: 'Debes calificar ambiente, servicio y precio-calidad',
+    };
+  }
+
   if (
-    typeof b.rating !== 'number' ||
-    !Number.isInteger(b.rating) ||
-    b.rating < 1 ||
-    b.rating > 5
+    !isValidSubRating(b.ambienteRating) ||
+    !isValidSubRating(b.servicioRating) ||
+    !isValidSubRating(b.precioCalidadRating)
   ) {
     return {
       ok: false,
-      error: 'rating debe ser un número entero entre 1 y 5',
+      error:
+        'Cada sub-rating (ambiente, servicio, precio-calidad) debe ser un número entero entre 1 y 5',
     };
   }
-  const rating = b.rating;
+
+  const ambienteRating = b.ambienteRating;
+  const servicioRating = b.servicioRating;
+  const precioCalidadRating = b.precioCalidadRating;
 
   // comment
   if (typeof b.comment !== 'string') {
@@ -72,7 +117,14 @@ function validateReviewBody(body: unknown): ValidationError | ReviewInput {
     };
   }
 
-  return { ok: true, businessSlug, rating, comment };
+  return {
+    ok: true,
+    businessSlug,
+    ambienteRating,
+    servicioRating,
+    precioCalidadRating,
+    comment,
+  };
 }
 
 // ─── Route handlers ────────────────────────────────────────────
@@ -115,13 +167,24 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/reviews
- * Body: { businessSlug: string, rating: number (1-5), comment: string }
+ * Body: {
+ *   businessSlug: string,
+ *   ambienteRating: number (1-5),
+ *   servicioRating: number (1-5),
+ *   precioCalidadRating: number (1-5),
+ *   comment: string
+ * }
+ *
+ * The overall `rating` is computed by the service as the rounded average
+ * of the 3 sub-ratings; it is NOT accepted from the client.
  *
  * Returns: { review: Review, business: Establishment }
- *   - `business` carries the freshly recalculated avgRating / reviewCount.
+ *   - `business` carries the freshly recalculated avgRating / reviewCount
+ *     and the 3 per-dimension averages (ambienteRating, servicioRating,
+ *     precioCalidadRating).
  *
  * Errors:
- *   400 — invalid body (missing fields, rating out of range, comment too short/long)
+ *   400 — invalid body (missing sub-ratings, sub-rating out of range, comment too short/long)
  *   401 — not authenticated
  *   404 — business slug doesn't match any row
  *
@@ -151,7 +214,9 @@ export async function POST(request: Request) {
     const result = await reviewService.create({
       businessSlug: validated.businessSlug,
       userId: user.id,
-      rating: validated.rating,
+      ambienteRating: validated.ambienteRating,
+      servicioRating: validated.servicioRating,
+      precioCalidadRating: validated.precioCalidadRating,
       comment: validated.comment,
     });
     return NextResponse.json(result);

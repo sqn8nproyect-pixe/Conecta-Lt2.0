@@ -178,6 +178,12 @@ export function transformReview(
     userName,
     userAvatar,
     rating: review.rating,
+    // Etapa 3: real per-dimension sub-ratings (1-5 each). The overall
+    // `rating` above is the rounded average of these three, computed by
+    // the review service when the review is upserted.
+    ambienteRating: review.ambienteRating,
+    servicioRating: review.servicioRating,
+    precioCalidadRating: review.precioCalidadRating,
     comment: review.comment,
     date: review.createdAt.toISOString().slice(0, 10), // YYYY-MM-DD
   };

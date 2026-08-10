@@ -448,6 +448,13 @@ function buildReviews(): Review[] {
       const variance = ((estIdNum + i) % 3) - 1; // -1, 0, or 1
       let rating = Math.round(est.avgRating + variance);
       rating = Math.max(3, Math.min(5, rating));
+      // Etapa 3: sub-ratings por dimensión (Ambiente / Servicio / Precio-Calidad).
+      // Para los mocks, derivamos los 3 del rating global con leve varianza
+      // determinista por dimensión — el backend real los guarda por separado.
+      const clamp = (n: number) => Math.max(1, Math.min(5, n));
+      const ambienteRating = clamp(rating + ((estIdNum + i) % 2 === 0 ? 0 : -1));
+      const servicioRating = clamp(rating + ((estIdNum + i) % 3 === 0 ? 1 : 0));
+      const precioCalidadRating = clamp(rating - ((estIdNum + i) % 2));
       const dateIdx = (estIdNum + i * 2) % dates.length;
       reviews.push({
         id: String(reviewId++),
@@ -456,6 +463,9 @@ function buildReviews(): Review[] {
         userName: user.name,
         userAvatar: user.avatar,
         rating,
+        ambienteRating,
+        servicioRating,
+        precioCalidadRating,
         comment: pool[cIdx]!,
         date: dates[dateIdx]!,
       });

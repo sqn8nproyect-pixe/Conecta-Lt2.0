@@ -100,7 +100,9 @@ export async function fetchMyReviews(): Promise<ReviewWithEstablishment[]> {
 
 export async function createReview(input: {
   businessSlug: string;
-  rating: number;
+  ambienteRating: number;
+  servicioRating: number;
+  precioCalidadRating: number;
   comment: string;
 }): Promise<{ review: Review; business: EstablishmentWithRelations }> {
   const res = await fetch('/api/reviews', {

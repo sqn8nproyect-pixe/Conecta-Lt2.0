@@ -33,15 +33,15 @@ function jsonError(message: string, status: number): Response {
  * Recalculate the denormalized rating fields on a Business row from
  * its currently PUBLISHED reviews:
  *
- *   - reviewCount      = number of PUBLISHED reviews
- *   - avgRating        = arithmetic mean of ratings (0 if no reviews)
- *   - ambienteRating   = avgRating   ← (Etapa 3 will split these)
- *   - servicioRating   = avgRating
- *   - precioCalidadRating = avgRating
+ *   - reviewCount         = number of PUBLISHED reviews
+ *   - avgRating           = arithmetic mean of review.rating (0 if no reviews)
+ *   - ambienteRating      = arithmetic mean of review.ambienteRating
+ *   - servicioRating      = arithmetic mean of review.servicioRating
+ *   - precioCalidadRating = arithmetic mean of review.precioCalidadRating
  *
- * The Review model currently only stores a single `rating` field, so we
- * assign the same average to all three sub-ratings. Etapa 3 will extend
- * the Review schema with per-dimension ratings and refine this function.
+ * Each sub-rating dimension is aggregated independently with Prisma's
+ * `_avg` so the Business row reflects the true per-dimension average
+ * across all PUBLISHED reviews (not a mirror of the overall avgRating).
  *
  * Accepts an optional transaction client so the service can run this
  * inside the same transaction as the review write.
@@ -52,26 +52,32 @@ export async function recalculateBusinessRatings(
   businessId: string,
   tx: DbOrTx = db,
 ): Promise<Business> {
-  const reviews = await tx.review.findMany({
+  const agg = await tx.review.aggregate({
     where: { businessId, status: 'PUBLISHED' },
-    select: { rating: true },
+    _avg: {
+      rating: true,
+      ambienteRating: true,
+      servicioRating: true,
+      precioCalidadRating: true,
+    },
+    _count: true,
   });
 
-  const reviewCount = reviews.length;
-  const avgRating =
-    reviewCount === 0
-      ? 0
-      : reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+  const reviewCount = agg._count;
+  // Prisma returns `null` for `_avg` fields when there are no matching rows.
+  const avgRating = agg._avg.rating ?? 0;
+  const ambienteRating = agg._avg.ambienteRating ?? 0;
+  const servicioRating = agg._avg.servicioRating ?? 0;
+  const precioCalidadRating = agg._avg.precioCalidadRating ?? 0;
 
   return tx.business.update({
     where: { id: businessId },
     data: {
       avgRating,
       reviewCount,
-      // Until Etapa 3 adds sub-dimensions to Review, mirror the average.
-      ambienteRating: avgRating,
-      servicioRating: avgRating,
-      precioCalidadRating: avgRating,
+      ambienteRating,
+      servicioRating,
+      precioCalidadRating,
     },
   });
 }
@@ -110,14 +116,22 @@ export const reviewService = {
   /**
    * Create or update a review for (businessSlug, userId).
    *
+   * The caller supplies the 3 sub-rating dimensions (ambiente, servicio,
+   * precio-calidad); the overall `rating` is computed by the server as the
+   * rounded average of the three. This makes the server the single source
+   * of truth for `rating` and avoids drift between client-sent values and
+   * the sub-ratings actually persisted.
+   *
    * Flow:
    *   1. Look up the business by slug → 404 if not found.
    *   2. In a single transaction:
-   *        a. Upsert the review (creates or updates, status PUBLISHED).
+   *        a. Upsert the review with all 3 sub-ratings + computed rating
+   *           (creates or updates, status PUBLISHED).
    *        b. Recalculate the business's denormalized rating fields
+   *           (avgRating, reviewCount, + the 3 sub-rating averages)
    *           from its PUBLISHED reviews.
    *   3. Re-fetch the business with full relations so the response
-   *      carries the updated avgRating/reviewCount visible to the UI.
+   *      carries the updated ratings visible to the UI.
    *
    * Returns `{ review, business }`:
    *   - `review`    = the upserted review, transformed to the frontend type.
@@ -128,10 +142,26 @@ export const reviewService = {
   create: async (params: {
     businessSlug: string;
     userId: string;
-    rating: number;
+    ambienteRating: number; // 1-5
+    servicioRating: number; // 1-5
+    precioCalidadRating: number; // 1-5
     comment: string;
   }): Promise<{ review: Review; business: Establishment }> => {
-    const { businessSlug, userId, rating, comment } = params;
+    const {
+      businessSlug,
+      userId,
+      ambienteRating,
+      servicioRating,
+      precioCalidadRating,
+      comment,
+    } = params;
+
+    // Server-side computation of the overall `rating` from the 3 sub-ratings.
+    // Math.round handles the typical .33/.67 splits (sum is an integer, so
+    // sum/3 has fractional part 0, .33, or .67 — no .5 ties to worry about).
+    const rating = Math.round(
+      (ambienteRating + servicioRating + precioCalidadRating) / 3,
+    );
 
     const business = await businessRepository.findBySlug(businessSlug);
     if (!business) {
@@ -145,6 +175,9 @@ export const reviewService = {
           businessId: business.id,
           userId,
           rating,
+          ambienteRating,
+          servicioRating,
+          precioCalidadRating,
           comment,
         },
         tx,

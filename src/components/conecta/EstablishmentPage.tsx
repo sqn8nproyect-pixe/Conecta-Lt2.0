@@ -21,6 +21,9 @@ import {
   Check,
   Copy,
   Flame,
+  Wine,
+  ConciergeBell,
+  Scale,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -41,7 +44,9 @@ import {
 
 type TabId = 'info' | 'offers' | 'reviews';
 
-// Sub-Rating progress bar helper
+// Sub-Rating progress bar helper — reads the real per-dimension averages
+// exposed by the API on `subRatings` (transformer maps business.ambienteRating
+// → subRatings.ambiente, etc.).
 function RatingBar({ label, score }: { label: string; score: number }) {
   const pct = (score / 5) * 100;
   return (
@@ -64,6 +69,56 @@ function RatingBar({ label, score }: { label: string; score: number }) {
   );
 }
 
+// Interactive 3-row star selector — Ambiente / Servicio / Precio-Calidad.
+// Each row has an icon + label on the left and 5 tappable stars on the right
+// with hover-preview. Clicking sets that row's value (1-5).
+type StarRowIcon = React.ComponentType<{ size?: number; className?: string }>;
+function StarRatingRow({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+}: {
+  icon: StarRowIcon;
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  const [hover, setHover] = useState(0);
+  const shown = hover || value;
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-sm text-white/70 min-w-0">
+        <Icon size={16} className="text-gold shrink-0" />
+        <span className="font-medium truncate">{label}</span>
+      </div>
+      <div
+        className="flex gap-1 shrink-0"
+        onMouseLeave={() => setHover(0)}
+      >
+        {[1, 2, 3, 4, 5].map((n) => {
+          const active = n <= shown;
+          return (
+            <button
+              type="button"
+              key={n}
+              onClick={() => onChange(n)}
+              onMouseEnter={() => setHover(n)}
+              onFocus={() => setHover(n)}
+              onBlur={() => setHover(0)}
+              aria-label={`${n} de 5 estrellas para ${label}`}
+              className="text-2xl leading-none transition-transform hover:scale-110 active:scale-95"
+              style={{ color: active ? '#D4AF37' : '#475569' }}
+            >
+              ★
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function EstablishmentPage() {
   const slug = useAppStore((s) => s.selectedEstablishmentSlug);
   const setView = useAppStore((s) => s.setView);
@@ -81,7 +136,11 @@ export function EstablishmentPage() {
   });
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const [rating, setRating] = useState(5);
+  // Etapa 3: 3 sub-ratings reales en lugar de un único rating global.
+  // El backend calcula `rating = (ambiente + servicio + precioCalidad) / 3`.
+  const [ambienteRating, setAmbienteRating] = useState(0);
+  const [servicioRating, setServicioRating] = useState(0);
+  const [precioCalidadRating, setPrecioCalidadRating] = useState(0);
   const [comment, setComment] = useState('');
   const [reviewOrder, setReviewOrder] = useState<'recientes' | 'valoracion'>(
     'recientes',
@@ -129,20 +188,27 @@ export function EstablishmentPage() {
   }, [addNotification]);
 
   // Review mutation — declared BEFORE any early return so the rules of hooks hold.
-  // The slug is passed in via mutate(slug) so we don't capture `est` in the closure.
+  // Etapa 3: el backend recibe los 3 sub-ratings y calcula `rating` (promedio).
   const reviewMutation = useMutation({
-    mutationFn: (input: { businessSlug: string; rating: number; comment: string }) =>
-      createReview(input),
+    mutationFn: (input: {
+      businessSlug: string;
+      ambienteRating: number;
+      servicioRating: number;
+      precioCalidadRating: number;
+      comment: string;
+    }) => createReview(input),
     onSuccess: (data) => {
       addNotification('¡Reseña publicada con éxito!');
       // Update the business query cache so the new review + recalculated
-      // avgRating/reviewCount show up instantly.
+      // avgRating/reviewCount/sub-ratings show up instantly.
       queryClient.setQueryData(['business', slug], data.business);
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] });
       setComment('');
-      setRating(5);
+      setAmbienteRating(0);
+      setServicioRating(0);
+      setPrecioCalidadRating(0);
       setActiveTab('reviews');
     },
     onError: (err: Error) => {
@@ -193,13 +259,26 @@ export function EstablishmentPage() {
       addNotification('Debes iniciar sesión para dejar una reseña.', 'info');
       return;
     }
+    if (
+      ambienteRating === 0 ||
+      servicioRating === 0 ||
+      precioCalidadRating === 0
+    ) {
+      addNotification(
+        'Por favor califica Ambiente, Servicio y Precio-Calidad.',
+        'info',
+      );
+      return;
+    }
     if (comment.trim().length < 10) {
       addNotification('El comentario debe tener al menos 10 caracteres.', 'info');
       return;
     }
     reviewMutation.mutate({
       businessSlug: est.slug,
-      rating,
+      ambienteRating,
+      servicioRating,
+      precioCalidadRating,
       comment: comment.trim(),
     });
   };
@@ -690,19 +769,27 @@ export function EstablishmentPage() {
                     TU VALORACIÓN
                   </div>
 
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        type="button"
-                        key={n}
-                        onClick={() => setRating(n)}
-                        aria-label={`${n} estrellas`}
-                        className="text-3xl transition-transform hover:scale-110 active:scale-95"
-                        style={{ color: n <= rating ? '#D4AF37' : '#475569' }}
-                      >
-                        ★
-                      </button>
-                    ))}
+                  {/* Etapa 3: 3 sub-ratings reales (Ambiente / Servicio / Precio-Calidad).
+                      El promedio lo calcula el backend. */}
+                  <div className="flex flex-col gap-3 py-1">
+                    <StarRatingRow
+                      icon={Wine}
+                      label="Ambiente"
+                      value={ambienteRating}
+                      onChange={setAmbienteRating}
+                    />
+                    <StarRatingRow
+                      icon={ConciergeBell}
+                      label="Servicio"
+                      value={servicioRating}
+                      onChange={setServicioRating}
+                    />
+                    <StarRatingRow
+                      icon={Scale}
+                      label="Precio-Calidad"
+                      value={precioCalidadRating}
+                      onChange={setPrecioCalidadRating}
+                    />
                   </div>
 
                   <textarea
@@ -715,7 +802,13 @@ export function EstablishmentPage() {
 
                   <button
                     type="submit"
-                    disabled={!comment.trim() || reviewMutation.isPending}
+                    disabled={
+                      !comment.trim() ||
+                      ambienteRating === 0 ||
+                      servicioRating === 0 ||
+                      precioCalidadRating === 0 ||
+                      reviewMutation.isPending
+                    }
                     className="disabled:opacity-40 disabled:cursor-not-allowed w-full bg-gold hover:bg-[#C5A13A] active:scale-95 text-obsidian font-bold h-12 rounded-xl text-xs tracking-wider transition-all glow-gold flex items-center justify-center gap-2"
                   >
                     {reviewMutation.isPending ? 'PUBLICANDO…' : 'ENVIAR VALORACIÓN'}

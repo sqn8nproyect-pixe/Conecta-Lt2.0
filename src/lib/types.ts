@@ -79,7 +79,14 @@ export interface Review {
   userId: string;
   userName: string;
   userAvatar: string;
+  /** Global rating 1-5 — average of the 3 sub-ratings, calculated by the backend. */
   rating: number;
+  /** Sub-rating Ambiente 1-5 (Etapa 3 — real per-dimension value). */
+  ambienteRating: number;
+  /** Sub-rating Servicio 1-5 (Etapa 3 — real per-dimension value). */
+  servicioRating: number;
+  /** Sub-rating Precio-Calidad 1-5 (Etapa 3 — real per-dimension value). */
+  precioCalidadRating: number;
   comment: string;
   date: string;
 }
