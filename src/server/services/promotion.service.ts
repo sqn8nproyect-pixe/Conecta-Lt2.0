@@ -10,16 +10,12 @@
 // ─────────────────────────────────────────────────────────────
 
 import { db } from '@/lib/db';
-import type { Establishment, Offer } from '@/lib/types';
+import type { Offer } from '@/lib/types';
 import {
   promotionRepository,
   type CouponRedemptionWithPromotion,
 } from '@/server/repositories/promotion.repository';
-import {
-  transformBusiness,
-  transformPromotion,
-  type BusinessWithRelations,
-} from '@/server/services/business.service';
+import { transformPromotion } from '@/server/services/business.service';
 
 /**
  * Build a JSON Response (thrown from service → returned by route handler).
@@ -73,20 +69,30 @@ export type RedeemPromotionResult = {
 };
 
 /**
- * Public shape returned by `listMyRedemptions`. Each entry carries the
- * transformed frontend `Offer` (so the UI can render the coupon card
- * directly) and the transformed parent `Establishment` (so the UI can
- * show the business name + link back to the detail page).
+ * Public shape returned by `listMyRedemptions`.
+ *
+ * Matches the frontend `CouponRedemption` interface (src/lib/types.ts):
+ *   - `promotion` carries the transformed `Offer` fields PLUS the parent
+ *     business `{ id, name, slug, address }` so the ProfilePage can render
+ *     the coupon card (title, code, image, countdown) AND link back to the
+ *     establishment detail page without an extra fetch.
+ *
+ * NOTE: the frontend's `useRedemptionsSync` hook reads `r.promotion.id`
+ * to mirror the claimed promotion IDs into the Zustand store, so `promotion`
+ * MUST be present at the top level (not flattened to `promotionId` + `offer`).
  */
 export type MyRedemptionEntry = {
   id: string;
-  userId: string;
-  promotionId: string;
   status: string;
   claimedAt: string;
-  usedAt: string | null;
-  offer: Offer;
-  establishment: Establishment;
+  promotion: Offer & {
+    business: {
+      id: string;
+      name: string;
+      slug: string;
+      address: string;
+    };
+  };
 };
 
 export const promotionService = {
@@ -231,15 +237,17 @@ export const promotionService = {
     const redemptions = await promotionRepository.listRedemptionsByUser(userId);
     return redemptions.map((r: CouponRedemptionWithPromotion) => ({
       id: r.id,
-      userId: r.userId,
-      promotionId: r.promotionId,
       status: r.status,
       claimedAt: r.claimedAt.toISOString(),
-      usedAt: r.usedAt ? r.usedAt.toISOString() : null,
-      offer: transformPromotion(r.promotion, r.promotion.business.id),
-      establishment: transformBusiness(
-        r.promotion.business as BusinessWithRelations,
-      ),
+      promotion: {
+        ...transformPromotion(r.promotion, r.promotion.business.id),
+        business: {
+          id: r.promotion.business.id,
+          name: r.promotion.business.name,
+          slug: r.promotion.business.slug,
+          address: r.promotion.business.address,
+        },
+      },
     }));
   },
 

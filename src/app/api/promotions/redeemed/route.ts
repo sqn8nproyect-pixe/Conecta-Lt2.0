@@ -14,9 +14,8 @@ import { promotionService } from '@/server/services/promotion.service';
  * GET /api/promotions/redeemed
  *
  * Returns: Array<MyRedemptionEntry> = [{
- *   id, userId, promotionId, status, claimedAt, usedAt,
- *   offer:         Offer,
- *   establishment: Establishment,
+ *   id, status, claimedAt,
+ *   promotion: Offer & { business: { id, name, slug, address } },
  * }]
  *
  * Ordered by claimedAt desc (most recently claimed first).
