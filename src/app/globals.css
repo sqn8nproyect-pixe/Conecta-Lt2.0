@@ -241,6 +241,15 @@
     display: none;
   }
 
+  /* Alias used by the "Populares esta semana" horizontal scroller */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;

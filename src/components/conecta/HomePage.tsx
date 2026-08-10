@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Star, Heart, Clock } from 'lucide-react';
+import { Search, Sparkles, Star, Heart, Clock, Eye, TrendingUp } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
-import { fetchBusinesses } from '@/lib/api';
-import type { Category, Establishment, PriceRange } from '@/lib/types';
+import { useAnalytics } from '@/lib/hooks/use-analytics';
+import {
+  fetchBusinesses,
+  fetchBulkBusinessViews,
+  fetchPopularBusinesses,
+} from '@/lib/api';
+import type {
+  Category,
+  Establishment,
+  PopularBusiness,
+  PriceRange,
+} from '@/lib/types';
 import { Matchmaker } from './Matchmaker';
 import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
 import {
@@ -29,9 +39,30 @@ export function HomePage() {
   const [sortBy, setSortBy] = useState<SortBy>('rating');
   const [matchmakerOpen, setMatchmakerOpen] = useState(false);
 
+  const { trackSearch } = useAnalytics();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (value.trim().length >= 2) {
+      searchTimeoutRef.current = setTimeout(() => {
+        trackSearch(value.trim());
+      }, 800);
+    }
+  };
+
   const { data: establishments = [], isLoading } = useQuery({
     queryKey: ['businesses'],
     queryFn: () => fetchBusinesses(),
+  });
+
+  // Etapa 6 — Populares esta semana (top BUSINESS_VIEW count, last 7 days).
+  // Hidden entirely when empty so the homepage never shows an empty rail.
+  const { data: popular = [], isLoading: popularLoading } = useQuery({
+    queryKey: ['analytics', 'popular'],
+    queryFn: () => fetchPopularBusinesses(8),
+    staleTime: 5 * 60 * 1000, // 5 min
   });
 
   const goToDetail = useAppStore((s) => s.goToDetail);
@@ -57,6 +88,24 @@ export function HomePage() {
       }
       return a.name.localeCompare(b.name);
     });
+
+  // Etapa 6 — bulk fetch view counts for every visible card so we can
+  // annotate each grid card with a small "X vistas" badge next to the
+  // review count. Single round-trip (no N+1).
+  const visibleSlugs = useMemo(
+    () => filtered.map((e) => e.slug),
+    [filtered],
+  );
+  const { data: viewCounts = [] } = useQuery({
+    queryKey: ['analytics', 'views', 'bulk', visibleSlugs.join(',')],
+    queryFn: () => fetchBulkBusinessViews(visibleSlugs),
+    enabled: visibleSlugs.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  const viewCountMap = useMemo(
+    () => new Map(viewCounts.map((v) => [v.slug, v.viewCount])),
+    [viewCounts],
+  );
 
   const filters: Filter[] = ['Todas', 'licorería', 'tasca', 'discoteca'];
   const priceFilters: PriceFilter[] = ['Todos', '$', '$$', '$$$'];
@@ -136,7 +185,7 @@ export function HomePage() {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Buscar licorerías, tascas, discotecas..."
                 className="w-full bg-white/5 backdrop-blur-md border border-white/10 focus:border-gold focus:bg-white/10 px-14 h-14 rounded-2xl text-base placeholder:text-white/40 outline-none transition-all text-white"
               />
@@ -150,6 +199,87 @@ export function HomePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Etapa 6 — Populares esta semana (hidden entirely when empty). */}
+      {popular.length > 0 && (
+        <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-8 pb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <TrendingUp className="text-gold" size={20} />
+            <div>
+              <h3 className="text-xs font-bold tracking-[3px] text-gold font-mono">
+                POPULARES ESTA SEMANA
+              </h3>
+              <p className="text-white/60 text-xs mt-0.5">
+                Los locales más vistos en los últimos 7 días
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-3 no-scrollbar">
+            {popularLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-shrink-0 w-44 h-56 rounded-2xl bg-white/5 animate-pulse"
+                  />
+                ))
+              : popular.map((item: PopularBusiness, i: number) => {
+                  const isPodium = i < 3;
+                  return (
+                    <button
+                      key={item.business.id}
+                      onClick={() => goToDetail(item.business.slug)}
+                      className="flex-shrink-0 w-44 text-left group"
+                      aria-label={`Ver ${item.business.name} — ${item.viewCount} vistas`}
+                    >
+                      <div className="relative h-32 w-44 overflow-hidden rounded-2xl">
+                        <img
+                          src={item.business.coverImage}
+                          alt={item.business.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+                        {/* Rank badge — gold solid for podium, gold outline for 4+ */}
+                        <span
+                          className={`absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black font-mono ${
+                            isPodium
+                              ? 'bg-gold text-obsidian border border-gold/60 glow-gold'
+                              : 'bg-black/70 border border-gold/40 text-gold'
+                          }`}
+                        >
+                          #{i + 1}
+                        </span>
+
+                        {/* View count badge */}
+                        <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-black/70 backdrop-blur-sm border border-white/10 text-[10px] text-white/90 font-mono">
+                          <Eye size={11} className="text-gold/80" />
+                          {item.viewCount} vistas
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <h4 className="font-serif text-sm font-bold text-white line-clamp-1 group-hover:text-gold transition-colors">
+                          {item.business.name}
+                        </h4>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/50">
+                          <Star
+                            size={10}
+                            fill="#d4af37"
+                            className="text-gold"
+                          />
+                          <span className="font-mono">
+                            {item.business.avgRating.toFixed(1)}
+                          </span>
+                          <span>·</span>
+                          <span>{item.business.category}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+          </div>
+        </section>
+      )}
 
       {/* Directory Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 relative">
@@ -239,6 +369,7 @@ export function HomePage() {
             {filtered.map((est: Establishment, index: number) => {
               const avg = est.avgRating;
               const count = est.reviewCount;
+              const views = viewCountMap.get(est.slug) ?? 0;
               const cardClass =
                 est.category === 'discoteca'
                   ? 'card-glow-hover-purple'
@@ -292,8 +423,13 @@ export function HomePage() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-white/50 mb-3 font-medium">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-white/50 mb-3 font-medium">
                           <span>{count} reseñas</span>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Eye size={11} className="text-gold/70" />
+                            <span className="font-mono">{views} vistas</span>
+                          </span>
                           <span>•</span>
                           <span className="line-clamp-1">{est.address.split(',')[0]}</span>
                         </div>

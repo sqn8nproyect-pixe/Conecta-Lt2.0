@@ -4,11 +4,14 @@
 // ─────────────────────────────────────────────────────────────
 
 import type {
+  BusinessViewCount,
   CouponRedemption,
   Establishment,
+  PopularBusiness,
   RedeemedPromotion,
   Reservation,
   Review,
+  TrackEventPayload,
 } from './types';
 
 // The API returns an extended Establishment shape that also embeds
@@ -211,5 +214,64 @@ export async function cancelReservation(
   }));
   if (!res.ok) throw new Error(data.error ?? 'Failed to cancel reservation');
   return data;
+}
+
+// ─── Analytics (Etapa 6) ───────────────────────────────────────
+// Fire-and-forget tracking + public read endpoints for "Populares esta
+// semana" and per-business view counts. Mirrors the API contract exposed
+// by the backend in Task 6.1 (see agent-ctx/6.1-full-stack-developer.md).
+
+export async function trackAnalyticsEvent(
+  payload: TrackEventPayload,
+): Promise<void> {
+  // Fire-and-forget: fire the request but never throw to the caller.
+  // If it fails (network/400), just console.warn — tracking must NEVER
+  // break the user flow.
+  try {
+    await fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn('analytics track failed:', e);
+  }
+}
+
+export async function fetchPopularBusinesses(
+  limit = 8,
+): Promise<PopularBusiness[]> {
+  const res = await fetch(`/api/analytics/popular?limit=${limit}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Error' }));
+    throw new Error(data.error ?? 'Error');
+  }
+  return res.json();
+}
+
+export async function fetchBusinessViews(
+  slug: string,
+): Promise<BusinessViewCount> {
+  const res = await fetch(`/api/businesses/${slug}/views`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Error' }));
+    throw new Error(data.error ?? 'Error');
+  }
+  return res.json();
+}
+
+export async function fetchBulkBusinessViews(
+  slugs: string[],
+): Promise<BusinessViewCount[]> {
+  const res = await fetch('/api/businesses/views', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ slugs }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Error' }));
+    throw new Error(data.error ?? 'Error');
+  }
+  return res.json();
 }
 

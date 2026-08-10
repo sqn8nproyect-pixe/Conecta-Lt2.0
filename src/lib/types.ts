@@ -214,3 +214,29 @@ export interface BookingData {
   /** Display label for the offer (its title) — shown on the modal + ticket. */
   dealTitle: string;
 }
+
+// ── ANALYTICS (Etapa 6) ───────────────────────────────────────
+export type AnalyticsEventType =
+  | 'BUSINESS_VIEW'
+  | 'WHATSAPP_CLICK'
+  | 'INSTAGRAM_CLICK'
+  | 'MAPS_CLICK'
+  | 'SEARCH'
+  | 'RESERVE_CLICK'
+  | 'REDEEM_CLICK';
+
+export interface TrackEventPayload {
+  type: AnalyticsEventType;
+  businessSlug?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PopularBusiness {
+  business: Establishment;
+  viewCount: number;
+}
+
+export interface BusinessViewCount {
+  slug: string;
+  viewCount: number;
+}

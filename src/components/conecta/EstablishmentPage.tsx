@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,7 @@ import {
   ConciergeBell,
   Scale,
   Loader2,
+  Eye,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -33,7 +34,8 @@ import {
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
 import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
-import { fetchBusinessBySlug, createReview } from '@/lib/api';
+import { useAnalytics } from '@/lib/hooks/use-analytics';
+import { fetchBusinessBySlug, createReview, fetchBusinessViews } from '@/lib/api';
 import type { BookingData, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
@@ -140,6 +142,33 @@ export function EstablishmentPage() {
     queryFn: () => fetchBusinessBySlug(slug!),
     enabled: !!slug,
   });
+
+  // Etapa 6 — analytics hook. trackPageView is deduped per-mount so we
+  // only fire ONE BUSINESS_VIEW per page open even if React re-renders.
+  const {
+    trackPageView,
+    trackWhatsAppClick,
+    trackInstagramClick,
+    trackMapsClick,
+    trackReserveClick,
+    trackRedeemClick,
+  } = useAnalytics();
+
+  // Etapa 6 — view count for the detail header. Reads from the same
+  // [/api/businesses/[slug]/views] endpoint used by the homepage bulk
+  // fetch — separate query key so it survives navigation.
+  const { data: views } = useQuery({
+    queryKey: ['analytics', 'views', 'single', slug],
+    queryFn: () => fetchBusinessViews(slug!),
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Etapa 6 — fire BUSINESS_VIEW once per mounted page (deduped by the
+  // hook's internal ref so navigating away + back counts as a new view).
+  useEffect(() => {
+    if (est?.slug) trackPageView(est.slug);
+  }, [est?.slug, trackPageView]);
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   // Etapa 3: 3 sub-ratings reales en lugar de un único rating global.
@@ -357,6 +386,8 @@ export function EstablishmentPage() {
   };
 
   const handleClaimCode = async (offer: Offer) => {
+    // Etapa 6 — track the redeem intent fire-and-forget before delegating.
+    trackRedeemClick(est.slug);
     // Etapa 4: persistent coupon — delegates to useRedemptionActions.
     // The hook does the optimistic update + rollback + invalidation.
     await redeemCoupon(offer.id, offer.title);
@@ -459,6 +490,11 @@ export function EstablishmentPage() {
             <span className="text-white/60">
               ({count} reseñas de la comunidad)
             </span>
+            {/* Etapa 6 — view count badge, hydrated from /api/businesses/[slug]/views */}
+            <span className="inline-flex items-center gap-1 text-xs text-white/50">
+              <Eye size={11} className="text-gold/70" />
+              <span className="font-mono">{views?.viewCount ?? '…'} vistas</span>
+            </span>
             {est.activePromotion && (
               <ActivePromotionsBadge
                 promotion={est.activePromotion}
@@ -536,7 +572,10 @@ export function EstablishmentPage() {
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 sm:gap-4">
                 <button
-                  onClick={() => handleStartBooking()}
+                  onClick={() => {
+                    trackReserveClick(est.slug);
+                    handleStartBooking();
+                  }}
                   className="px-6 sm:px-8 h-14 rounded-2xl bg-gold text-obsidian font-bold hover:bg-[#E5BF4A] active:scale-95 transition-all text-sm tracking-wider flex items-center gap-2 shadow-lg glow-gold"
                 >
                   <Calendar size={16} /> RESERVAR MESA
@@ -545,6 +584,7 @@ export function EstablishmentPage() {
                   href={`https://wa.me/${est.phone.replace('+', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackWhatsAppClick(est.slug)}
                   className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
                 >
                   <Phone size={16} /> WHATSAPP
@@ -553,6 +593,7 @@ export function EstablishmentPage() {
                   href={`https://instagram.com/${est.instagram.slice(1)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackInstagramClick(est.slug)}
                   className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
                 >
                   <Instagram size={16} /> INSTAGRAM
@@ -561,6 +602,7 @@ export function EstablishmentPage() {
                   href={`https://maps.google.com/?q=${est.lat},${est.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackMapsClick(est.slug)}
                   className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
                 >
                   <MapPin size={16} /> CÓMO LLEGAR
@@ -793,9 +835,10 @@ export function EstablishmentPage() {
                             </span>
                           </button>
                           <button
-                            onClick={() =>
-                              handleStartBooking(offer.id, offer.title)
-                            }
+                            onClick={() => {
+                              trackRedeemClick(est.slug);
+                              handleStartBooking(offer.id, offer.title);
+                            }}
                             className="w-full py-3 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2"
                           >
                             <Calendar size={14} /> RESERVAR CON ESTA OFERTA
