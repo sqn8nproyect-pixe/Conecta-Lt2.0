@@ -16,8 +16,9 @@ import {
   AlertCircle,
   Info,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '@/lib/store';
-import { establishments } from '@/lib/data';
+import { fetchBusinesses } from '@/lib/api';
 import type { Establishment } from '@/lib/types';
 
 // Leaflet accesses `window` at module evaluation, so the actual map is
@@ -77,9 +78,13 @@ export function MapPage() {
 
   const selectedEst = useAppStore((s) => s.selectedMapEstablishment);
   const setSelectedEst = useAppStore((s) => s.setSelectedMapEstablishment);
-  const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const goToDetail = useAppStore((s) => s.goToDetail);
   const user = useAppStore((s) => s.user);
+
+  const { data: establishments = [] } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: () => fetchBusinesses(),
+  });
 
   // Clear the selected establishment when leaving the map view so the
   // bottom sheet doesn't reappear on return.
@@ -130,11 +135,11 @@ export function MapPage() {
       }))
       .filter((est) => est.distance * 1000 <= NEARBY_RADIUS_M)
       .sort((a, b) => a.distance - b.distance);
-  }, [userLocation]);
+  }, [userLocation, establishments]);
 
   const handleViewDetails = (est: Establishment) => {
     setSelectedEst(null);
-    goToDetail(est.id);
+    goToDetail(est.slug);
   };
 
   const isLoggedIn = !!user;
@@ -149,7 +154,11 @@ export function MapPage() {
     >
       {/* Leaflet map fills its container */}
       <div className="absolute inset-0">
-        <LeafletMap searchQuery={searchQuery} userLocation={userLocation} />
+        <LeafletMap
+          searchQuery={searchQuery}
+          userLocation={userLocation}
+          establishments={establishments}
+        />
       </div>
 
       {/* Search Overlay */}
@@ -249,7 +258,7 @@ export function MapPage() {
                   ) : (
                     <div className="max-h-48 overflow-y-auto conecta-gallery-strip flex flex-col gap-1.5 pr-1">
                       {nearbyEst.map((est) => {
-                        const rating = getDynamicRating(est.id);
+                        const rating = { avg: est.avgRating, count: est.reviewCount };
                         return (
                           <button
                             key={est.id}
@@ -400,10 +409,10 @@ export function MapPage() {
                 <div className="flex items-center gap-1.5">
                   <Star className="text-gold" size={16} fill="#D4AF37" />
                   <span className="font-mono font-bold text-white">
-                    {getDynamicRating(selectedEst.id).avg}
+                    {selectedEst.avgRating}
                   </span>
                   <span>
-                    ({getDynamicRating(selectedEst.id).count} reseñas)
+                    ({selectedEst.reviewCount} reseñas)
                   </span>
                 </div>
                 <span className="hidden sm:inline">•</span>

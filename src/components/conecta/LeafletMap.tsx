@@ -13,7 +13,6 @@ import {
 import L from 'leaflet';
 import { Star } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { establishments } from '@/lib/data';
 import type { Category, Establishment } from '@/lib/types';
 
 const LOS_TEQUES_CENTER: [number, number] = [10.3444, -67.0428];
@@ -89,13 +88,14 @@ function FlyToUser({ userLocation }: { userLocation: UserLocation | null }) {
 export function LeafletMap({
   searchQuery,
   userLocation,
+  establishments,
 }: {
   searchQuery: string;
   userLocation: UserLocation | null;
+  establishments: Establishment[];
 }) {
   const selectedEst = useAppStore((s) => s.selectedMapEstablishment);
   const setSelectedEst = useAppStore((s) => s.setSelectedMapEstablishment);
-  const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const goToDetail = useAppStore((s) => s.goToDetail);
 
   // Build the three colored pin icons + the user icon once.
@@ -118,11 +118,11 @@ export function LeafletMap({
         est.name.toLowerCase().includes(q) ||
         est.category.toLowerCase().includes(q),
     );
-  }, [searchQuery]);
+  }, [searchQuery, establishments]);
 
   const handleViewDetails = (est: Establishment) => {
     setSelectedEst(null);
-    goToDetail(est.id);
+    goToDetail(est.slug);
   };
 
   return (
@@ -146,7 +146,7 @@ export function LeafletMap({
       <FlyToUser userLocation={userLocation} />
 
       {filteredEst.map((est) => {
-        const rating = getDynamicRating(est.id);
+        const rating = { avg: est.avgRating, count: est.reviewCount };
         return (
           <Marker
             key={est.id}

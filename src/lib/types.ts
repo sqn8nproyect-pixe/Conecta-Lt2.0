@@ -27,8 +27,9 @@ export interface ActivePromotion {
 }
 
 export interface Establishment {
-  id: number;
+  id: string;
   name: string;
+  slug: string;
   category: Category;
   description: string;
   lat: number;
@@ -62,8 +63,8 @@ export interface Establishment {
 }
 
 export interface Offer {
-  id: number;
-  establishmentId: number;
+  id: string;
+  establishmentId: string;
   title: string;
   description: string;
   price: string;
@@ -73,8 +74,8 @@ export interface Offer {
 }
 
 export interface Review {
-  id: number;
-  establishmentId: number;
+  id: string;
+  establishmentId: string;
   userId: string;
   userName: string;
   userAvatar: string;

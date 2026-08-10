@@ -6,52 +6,38 @@ import type {
   BookingData,
   Establishment,
   MatchAnswers,
-  Review,
   User,
   View,
 } from './types';
-import { establishments, initialReviews, mockGoogleUser } from './data';
-
-interface DynamicRating {
-  avg: number;
-  count: number;
-}
+import { mockGoogleUser } from './data';
 
 interface AppState {
   // Navigation
   view: View;
-  selectedEstablishmentId: number | null;
+  selectedEstablishmentSlug: string | null;
   selectedMapEstablishment: Establishment | null;
 
-  // Auth
+  // Auth (mock — Etapa 2 reemplaza con Auth.js + Google OAuth)
   user: User | null;
 
-  // Reviews
-  reviews: Review[];
-
-  // Favorites
-  favorites: number[];
+  // Favorites (local state — Etapa 2 persiste en DB)
+  favorites: string[];
 
   // Notifications
   notifications: AppNotification[];
 
   // Actions: navigation
   setView: (view: View) => void;
-  goToDetail: (id: number) => void;
+  goToDetail: (slug: string) => void;
   setSelectedMapEstablishment: (est: Establishment | null) => void;
 
   // Actions: auth
   loginWithGoogle: () => void;
   logout: () => void;
 
-  // Actions: reviews
-  addReview: (estId: number, rating: number, comment: string) => boolean;
-  getDynamicRating: (estId: number) => DynamicRating;
-  getUserReviews: () => Review[];
-
   // Actions: favorites
-  toggleFavorite: (id: number) => void;
-  isFavorite: (id: number) => boolean;
+  toggleFavorite: (id: string, name?: string) => void;
+  isFavorite: (id: string) => boolean;
 
   // Actions: notifications
   addNotification: (message: string, type?: 'success' | 'info') => void;
@@ -60,16 +46,15 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   view: 'home',
-  selectedEstablishmentId: null,
+  selectedEstablishmentSlug: null,
   selectedMapEstablishment: null,
   user: null,
-  reviews: initialReviews,
   favorites: [],
   notifications: [],
 
   setView: (view) => set({ view }),
-  goToDetail: (id) =>
-    set({ view: 'detail', selectedEstablishmentId: id }),
+  goToDetail: (slug) =>
+    set({ view: 'detail', selectedEstablishmentSlug: slug }),
   setSelectedMapEstablishment: (est) => set({ selectedMapEstablishment: est }),
 
   loginWithGoogle: () => {
@@ -81,56 +66,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addNotification('Sesión cerrada correctamente.', 'info');
   },
 
-  addReview: (estId, rating, comment) => {
-    const { user, reviews } = get();
-    if (!user) return false;
-
-    const existing = reviews.find(
-      (r) => r.establishmentId === estId && r.userId === user.id,
-    );
-    if (existing) return false;
-
-    const newReview: Review = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      establishmentId: estId,
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.avatar,
-      rating,
-      comment,
-      date: new Date().toISOString().split('T')[0] ?? '',
-    };
-
-    set({ reviews: [newReview, ...reviews] });
-    get().addNotification('¡Reseña publicada! Gracias por tu opinión.');
-    return true;
-  },
-
-  getDynamicRating: (estId) => {
-    const { reviews } = get();
-    const estReviews = reviews.filter((r) => r.establishmentId === estId);
-    const est = establishments.find((e) => e.id === estId);
-    if (!est) return { avg: 0, count: 0 };
-    if (estReviews.length === 0) {
-      return { avg: est.avgRating, count: est.reviewCount };
+  toggleFavorite: (id, name) => {
+    const { favorites, addNotification } = get();
+    const isFav = favorites.includes(id);
+    set({
+      favorites: isFav
+        ? favorites.filter((f) => f !== id)
+        : [...favorites, id],
+    });
+    if (name) {
+      addNotification(
+        isFav
+          ? `Eliminado de favoritos: ${name}`
+          : `¡Añadido a favoritos!: ${name}`,
+        isFav ? 'info' : 'success',
+      );
     }
-    const totalRating = estReviews.reduce((sum, r) => sum + r.rating, 0);
-    const weightedAvg =
-      (est.avgRating * est.reviewCount + totalRating) /
-      (est.reviewCount + estReviews.length);
-    return {
-      avg: parseFloat(weightedAvg.toFixed(1)),
-      count: est.reviewCount + estReviews.length,
-    };
   },
 
-  getUserReviews: () => {
-    const { user, reviews } = get();
-    if (!user) return [];
-    return reviews
-      .filter((r) => r.userId === user.id)
-      .sort((a, b) => b.date.localeCompare(a.date));
-  },
+  isFavorite: (id) => get().favorites.includes(id),
 
   addNotification: (message, type = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -144,32 +98,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  toggleFavorite: (id) => {
-    const { favorites, addNotification } = get();
-    const est = establishments.find((e) => e.id === id);
-    const isFav = favorites.includes(id);
-    set({
-      favorites: isFav
-        ? favorites.filter((f) => f !== id)
-        : [...favorites, id],
-    });
-    if (est) {
-      addNotification(
-        isFav
-          ? `Eliminado de favoritos: ${est.name}`
-          : `¡Añadido a favoritos!: ${est.name}`,
-        isFav ? 'info' : 'success',
-      );
-    }
-  },
-
-  isFavorite: (id) => get().favorites.includes(id),
-
   dismissNotification: (id) =>
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
 }));
 
-// Matchmaker helpers (pure functions, no state needed)
+// ── Matchmaker helpers (pure functions) ─────────────────────
+// Etapa 5.2 reemplazará esto con scoring real basado en datos.
+
 export function calculateMatch(
   ans: MatchAnswers,
   allEstablishments: Establishment[],
@@ -177,21 +112,21 @@ export function calculateMatch(
   if (ans.mood === 'party') {
     const clubs = allEstablishments.filter((e) => e.category === 'discoteca');
     if (ans.budget === 'premium') {
-      return clubs.find((c) => c.id === 3 || c.id === 21) ?? clubs[0]!;
+      return clubs.find((c) => c.slug === 'discoteca-eclipse' || c.slug === 'discoteca-royal') ?? clubs[0]!;
     }
-    return clubs.find((c) => c.id === 15 || c.id === 6) ?? clubs[0]!;
+    return clubs.find((c) => c.slug === 'discoteca-glamour' || c.slug === 'discoteca-noche-eterna') ?? clubs[0]!;
   }
   // chill
   if (ans.company === 'couple') {
     const tascas = allEstablishments.filter((e) => e.category === 'tasca');
-    return tascas.find((t) => t.id === 2 || t.id === 17) ?? tascas[0]!;
+    return tascas.find((t) => t.slug === 'tasca-la-cava' || t.slug === 'tasca-el-patio') ?? tascas[0]!;
   }
   // friends / group
   if (ans.budget === 'premium') {
-    return allEstablishments.find((e) => e.id === 7 || e.id === 19) ?? allEstablishments[0]!;
+    return allEstablishments.find((e) => e.slug === 'licoreria-vinos-del-valle' || e.slug === 'licoreria-selecta') ?? allEstablishments[0]!;
   }
   return (
-    allEstablishments.find((e) => e.id === 5 || e.id === 11 || e.id === 1) ??
+    allEstablishments.find((e) => e.slug === 'tasca-los-amigos' || e.slug === 'tasca-el-sabor' || e.slug === 'licoreria-don-sancho') ??
     allEstablishments[0]!
   );
 }

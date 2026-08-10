@@ -69,3 +69,4 @@ db/*.db-journal
 /profile-final.png
 /verify-*.png
 public/screenshots/map-*-legend*.png
+public/screenshots/etapa*-*.png

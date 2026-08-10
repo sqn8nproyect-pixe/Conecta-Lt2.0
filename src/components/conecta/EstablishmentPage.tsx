@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -25,7 +26,7 @@ import {
   generateReservationCode,
   defaultBookingData,
 } from '@/lib/store';
-import { establishments, offers } from '@/lib/data';
+import { fetchBusinessBySlug } from '@/lib/api';
 import type { BookingData, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
@@ -62,17 +63,18 @@ function RatingBar({ label, score }: { label: string; score: number }) {
 }
 
 export function EstablishmentPage() {
-  const id = useAppStore((s) => s.selectedEstablishmentId);
+  const slug = useAppStore((s) => s.selectedEstablishmentSlug);
   const setView = useAppStore((s) => s.setView);
   const user = useAppStore((s) => s.user);
-  const reviews = useAppStore((s) => s.reviews);
-  const addReview = useAppStore((s) => s.addReview);
-  const getDynamicRating = useAppStore((s) => s.getDynamicRating);
   const addNotification = useAppStore((s) => s.addNotification);
   const favorites = useAppStore((s) => s.favorites);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
 
-  const est = establishments.find((e) => e.id === id);
+  const { data: est, isLoading } = useQuery({
+    queryKey: ['business', slug],
+    queryFn: () => fetchBusinessBySlug(slug!),
+    enabled: !!slug,
+  });
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [rating, setRating] = useState(5);
@@ -122,6 +124,14 @@ export function EstablishmentPage() {
     setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 2200);
   }, [addNotification]);
 
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-32 text-center text-white/60">
+        Cargando...
+      </div>
+    );
+  }
+
   if (!est) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-32 text-center text-white/60">
@@ -136,9 +146,10 @@ export function EstablishmentPage() {
     );
   }
 
-  const estOffers = offers.filter((o) => o.establishmentId === est.id);
-  const estReviews = reviews.filter((r) => r.establishmentId === est.id);
-  const { avg, count } = getDynamicRating(est.id);
+  const estOffers = est.offers ?? [];
+  const estReviews = est.reviews ?? [];
+  const avg = est.avgRating;
+  const count = est.reviewCount;
   const isFav = favorites.includes(est.id);
 
   const handleNextPhoto = () =>
@@ -148,14 +159,13 @@ export function EstablishmentPage() {
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !comment.trim()) return;
-    const success = addReview(est.id, rating, comment.trim());
-    if (success) {
-      setComment('');
-      setActiveTab('reviews');
-    } else {
-      addNotification('Ya has dejado una reseña para este local.', 'info');
+    if (!user) {
+      addNotification('Debes iniciar sesión para dejar una reseña.', 'info');
+      return;
     }
+    addNotification('Las reseñas persistentes estarán disponibles pronto.', 'info');
+    setComment('');
+    setActiveTab('reviews');
   };
 
   const handleStartBooking = (dealId: string = '') => {
@@ -294,7 +304,7 @@ export function EstablishmentPage() {
 
         {/* Favorite button */}
         <button
-          onClick={() => toggleFavorite(est.id)}
+          onClick={() => toggleFavorite(est.id, est.name)}
           aria-label={isFav ? `Quitar ${est.name} de favoritos` : `Añadir ${est.name} a favoritos`}
           className={`absolute top-5 right-5 w-12 h-12 rounded-2xl backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 ${
             isFav
