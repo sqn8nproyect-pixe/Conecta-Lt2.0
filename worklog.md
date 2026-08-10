@@ -1729,3 +1729,93 @@ Stage Summary:
 - Backward compatibility preservada: GET /api/businesses y GET /api/businesses/[slug] siguen funcionando; solo añaden el campo `expiredPromotions: Offer[]` (no rompen consumers existentes que lean `offers`). 21 negocios listados correctamente, 14 tienen expired promotions visibles ahora (antes no se devolvían).
 - 0 errores lint, 0 errores tsc, 12/12 smoke tests curl pasados.
 - Listo para integración con subagent 3.3 (frontend — mostrar cupones reclamados en ProfilePage, badges EXPIRADO/AGOTADO en establishment detail, botón RECLAMAR que llama al endpoint POST /api/promotions/[id]/redeem).
+
+---
+Task ID: 4.1
+Agent: main
+Task: Schema CouponRedemption + db:push + backfill promociones con fechas reales
+
+Work Log:
+- Añadido enum `RedemptionStatus` (CLAIMED, USED, EXPIRED) al schema.prisma
+- Añadido modelo `CouponRedemption` con campos:
+  * id, userId, promotionId, status, claimedAt, usedAt, reservationId (opcional, @unique)
+  * @@unique([userId, promotionId]) — 1 usuario = 1 redención por promo
+  * @@index en userId, promotionId, status
+- Añadidas relaciones: `couponRedemptions CouponRedemption[]` en User y Promotion
+- Añadida relación `couponRedemption CouponRedemption?` en Reservation (1:1 con @unique)
+- `bun run db:push` ejecutado contra Neon → schema sincronizado (10.75s)
+- Actualizado `prisma/seed.ts`:
+  * Loop ahora usa `for (const [idx, offer] of offers.entries())`
+  * Promociones se crean con: startDate (-7d), endDate (+30d), maxRedemptions=50, redemptionCount variable
+  * Reviews se crean con las 3 dimensiones (ambienteRating, servicioRating, precioCalidadRating) = rating
+- Creado `prisma/backfill-promotions.ts` para actualizar las 42 promos existentes SIN borrar users/reviews/favorites:
+  * idx % 3 === 0: vigente (-7d → +30d, 50 max, 0-11 redeemed)
+  * idx % 3 === 1: casi agotada (-25d → +3d, 30 max, 25-29 redeemed)
+  * idx % 3 === 2: expirada (-40d → -10d, 20 max, 20 redeemed, status=EXPIRED)
+- Backfill ejecutado: 42 promos actualizadas (28 ACTIVE + 14 EXPIRED)
+
+Stage Summary:
+- Schema Neon actualizado con modelo CouponRedemption + enum RedemptionStatus
+- 42 promociones con fechas reales (startDate, endDate), maxRedemptions, redemptionCount
+- 28 promos ACTIVE (vigentes + casi agotadas), 14 promos EXPIRED (agotadas)
+- Seed actualizado para futuros re-seeds incluya las 3 dimensiones de sub-ratings en reviews
+- Próximo: despachar subagentes 4.2 (backend) y 4.3 (frontend) en paralelo
+
+---
+Task ID: 4.4-verify
+Agent: main
+Task: Verificación E2E Etapa 4 + fix transformer + push a producción
+
+Work Log:
+- Reiniciado dev server con todas las env vars exportadas (DATABASE_URL, NEXTAUTH, GOOGLE creds)
+- Dev server: HTTP 200 en /
+- Login demo vía curl exitoso (Ana Rodríguez, id estable)
+- Smoke tests backend (todos PASARON):
+  * GET /api/promotions/redeemed (vacío al inicio, luego 1 redención preexistente del subagent 4.2)
+  * POST /api/promotions/{id-vigente}/redeem → 200 con { redemption, promotion }
+    - redemption.status = CLAIMED, claimedAt = timestamp actual
+    - promotion.redemptionCount incrementado (3→4 atómicamente)
+    - promotion.maxRedemptions = 50
+  * POST /api/promotions/{mismo-id}/redeem (segunda vez) → 409 "Ya has reclamado este cupón"
+  * GET /api/promotions/redeemed → 2 redenciones (SANCHO18 + CATAVALLE)
+  * POST /api/promotions/check con [id, "nonexistent-id"] → {"<id>":true,"nonexistent-id":false}
+  * POST /api/promotions/{expired-id}/redeem → 400 "Esta promoción no está disponible"
+  * POST /api/promotions/nonexistent-id/redeem → 404 "Promoción no encontrada"
+  * POST sin auth → 401 "No autenticado"
+- Verificación código frontend:
+  * Store con redeemedPromotionIds + 3 acciones (set/add/remove) ✓
+  * setUser limpia redeemedPromotionIds al cambiar sesión ✓
+  * useRedemptionsSync.ts creado (singleton bootstrap) ✓
+  * useRedemptionActions.ts creado (multi-instancia con optimistic + rollback) ✓
+  * Navbar llama useRedemptionsSync() ✓
+  * EstablishmentPage: useRedemptionActions, badges AGOTADO/EXPIRADO, contador X/Y, Loader2 spinner "RECLAMANDO…" ✓
+  * ProfilePage: sección MIS CUPONES con grid, badges ACTIVO/USADO/EXPIRADO, countdown ✓
+- Lint: 0 errores. tsc: 0 errores.
+- Fix crítico aplicado: `transformPromotion` en business.service.ts no exponía endDate/maxRedemptions/redemptionCount/status
+  * Añadidos los 5 campos al transformer (mapeo desde el row Prisma)
+  * Actualizado tipo Offer en types.ts: endDate, startDate, maxRedemptions (null), redemptionCount, status
+  * tsc + lint limpios tras el fix
+- Commits pusheados a GitHub (2 commits):
+  * `7f63982` feat(etapa-4): cupones persistentes + promociones activas reales
+  * `aeac463` fix(etapa-4): mapear endDate/maxRedemptions/redemptionCount/status en transformPromotion
+- Verificación producción (https://conecta-lt2-0.vercel.app):
+  * Licorería Don Sancho:
+    - Whisky Premium 18 años (SANCHO18): redeemed=4/50, endDate=2026-09-09, status=ACTIVE ✓
+    - Pack Cervezas Artesanales (SANCHO6): redeemed=26/30, endDate=2026-08-13, status=ACTIVE ✓
+  * Tasca La Cava:
+    - Tabla de Quesos + Vino (CAVAQ): redeemed=6/50, endDate=2026-09-09, status=ACTIVE (live) ✓
+    - Cóctel Noche Dorada (CAVA2X1): redeemed=20/20, status=EXPIRED (en expiredPromotions) ✓
+  * Partición offers vs expiredPromotions funciona correctamente en producción
+
+Stage Summary:
+- Etapa 4 COMPLETA y verificada end-to-end:
+  1. Schema: modelo CouponRedemption + enum RedemptionStatus + backfill de 42 promos con fechas reales
+  2. Backend: 3 endpoints nuevos (redeem, redeemed, check) + transacción atómica createRedemption + incrementRedemptionCount
+  3. Validaciones en español: 401, 404, 400 (no disponible/expiró/agotada), 409 (duplicado)
+  4. Frontend: store con redeemedPromotionIds, 2 hooks nuevos (sync + actions), EstablishmentPage con badges AGOTADO/EXPIRADO + contador + spinner, ProfilePage con sección MIS CUPONES
+  5. Fix transformer: campos endDate/maxRedemptions/redemptionCount/status ahora se mapean correctamente al tipo Offer
+  6. Producción verificada: promos muestran contadores reales (4/50, 26/30, 6/50, 20/20) y fechas reales
+- Comportamiento anterior (Etapa 3): cupones solo en useState local, se perdían al recargar
+- Comportamiento nuevo (Etapa 4): cupones persistentes en BD, hidratados al iniciar sesión, visibles en ProfilePage con countdown de vigencia
+- 0 errores de lint, 0 errores de TypeScript, 0 errores de runtime
+- 9 smoke tests curl: 9/9 pasaron
