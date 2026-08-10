@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useSession, signOut } from 'next-auth/react';
@@ -10,14 +11,24 @@ import {
   MapPin,
   MessageSquare,
   Sparkles,
+  Ticket,
+  Copy,
+  Check,
+  Calendar,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
-import { fetchFavorites, fetchMyReviews } from '@/lib/api';
+import {
+  fetchFavorites,
+  fetchMyReviews,
+  fetchMyRedemptions,
+} from '@/lib/api';
+import type { CouponRedemption } from '@/lib/types';
 
 export function ProfilePage() {
   const goToDetail = useAppStore((s) => s.goToDetail);
   const setView = useAppStore((s) => s.setView);
+  const addNotification = useAppStore((s) => s.addNotification);
   const { status } = useSession();
   const { toggle: toggleFavorite } = useFavoriteActions();
 
@@ -32,6 +43,13 @@ export function ProfilePage() {
   const { data: userReviews = [] } = useQuery({
     queryKey: ['my-reviews'],
     queryFn: fetchMyReviews,
+    enabled: status === 'authenticated',
+  });
+
+  // Server-backed coupon redemptions (Etapa 4) — drives the MIS CUPONES section.
+  const { data: redemptions = [] } = useQuery({
+    queryKey: ['my-redemptions'],
+    queryFn: fetchMyRedemptions,
     enabled: status === 'authenticated',
   });
 
@@ -85,26 +103,66 @@ export function ProfilePage() {
   return <ProfileContent
     favoriteEsts={favoriteEsts}
     userReviews={userReviews}
+    redemptions={redemptions}
     onLogout={handleLogout}
     onGoToDetail={goToDetail}
     onToggleFavorite={toggleFavorite}
+    onSetView={setView}
+    onNotify={addNotification}
   />;
 }
 
 function ProfileContent({
   favoriteEsts,
   userReviews,
+  redemptions,
   onLogout,
   onGoToDetail,
   onToggleFavorite,
+  onSetView,
+  onNotify,
 }: {
   favoriteEsts: import('@/lib/api').EstablishmentWithRelations[];
   userReviews: import('@/lib/api').ReviewWithEstablishment[];
+  redemptions: CouponRedemption[];
   onLogout: () => void;
   onGoToDetail: (slug: string) => void;
   onToggleFavorite: (slug: string, name?: string) => void;
+  onSetView: (view: 'home' | 'map' | 'detail' | 'profile') => void;
+  onNotify: (message: string, type?: 'success' | 'info') => void;
 }) {
   const user = useAppStore((s) => s.user);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const handleCopyCode = useCallback(
+    async (code: string) => {
+      let copied = false;
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(code);
+          copied = true;
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = code;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          copied = document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+      } catch {
+        copied = false;
+      }
+      setCopiedCode(code);
+      onNotify(
+        copied ? `Código copiado: ${code}` : `Código: ${code} (cópialo manualmente)`,
+        copied ? 'success' : 'info',
+      );
+      setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 2200);
+    },
+    [onNotify],
+  );
 
   // user can be null for a brief moment while the session resolves; guard.
   if (!user) {
@@ -169,6 +227,17 @@ function ProfileContent({
                 </div>
                 <div className="text-[10px] text-white/50 tracking-widest uppercase">
                   Reseñas
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Ticket size={18} className="text-gold" />
+              <div>
+                <div className="font-mono text-xl font-bold text-white tabular-nums">
+                  {redemptions.length}
+                </div>
+                <div className="text-[10px] text-white/50 tracking-widest uppercase">
+                  Cupones
                 </div>
               </div>
             </div>
@@ -311,6 +380,164 @@ function ProfileContent({
                 </p>
               </article>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Mis Cupones — Etapa 4 persistent coupon redemptions */}
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+            MIS CUPONES
+          </h2>
+          <span className="text-white/40 text-xs font-mono">
+            ({redemptions.length})
+          </span>
+        </div>
+
+        {redemptions.length === 0 ? (
+          <div className="glass-card rounded-2xl py-16 px-6 text-center text-white/40 space-y-5">
+            <Ticket size={36} className="mx-auto opacity-50" />
+            <p className="text-sm leading-relaxed max-w-md mx-auto">
+              Aún no has reclamado ningún cupón. Explora las promociones
+              disponibles en el directorio.
+            </p>
+            <button
+              onClick={() => onSetView('home')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-obsidian font-bold hover:bg-gold hover:text-obsidian active:scale-95 transition-all text-xs tracking-wider glow-gold"
+            >
+              <Sparkles size={14} /> EXPLORAR PROMOCIONES
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {redemptions.map((r) => {
+              const promo = r.promotion;
+              const endDateTs = promo.endDate
+                ? new Date(promo.endDate).getTime()
+                : null;
+              const isExpired =
+                endDateTs !== null && endDateTs < Date.now();
+              const daysLeft =
+                endDateTs !== null
+                  ? Math.max(
+                      0,
+                      Math.ceil((endDateTs - Date.now()) / 86_400_000),
+                    )
+                  : null;
+
+              // Status badge — drives the colored chip on top of the image.
+              // CLAIMED → ACTIVO (green), USED → USADO (blue), EXPIRED → EXPIRADO (grey).
+              const statusMeta =
+                r.status === 'CLAIMED' && !isExpired
+                  ? {
+                      label: 'ACTIVO',
+                      cls: 'bg-emerald-500/25 border-emerald-500/50 text-emerald-300',
+                    }
+                  : r.status === 'USED'
+                    ? {
+                        label: 'USADO',
+                        cls: 'bg-sky-500/25 border-sky-500/50 text-sky-300',
+                      }
+                    : {
+                        label: 'EXPIRADO',
+                        cls: 'bg-white/15 border-white/30 text-white/60',
+                      };
+              const canReserve = r.status === 'CLAIMED' && !isExpired;
+
+              return (
+                <article
+                  key={r.id}
+                  className="glass-card rounded-2xl overflow-hidden flex flex-col group"
+                >
+                  <div className="relative h-32 overflow-hidden">
+                    <img
+                      src={promo.image}
+                      alt={promo.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    <span
+                      className={`absolute top-3 left-3 px-2.5 py-1 rounded-full border text-[10px] font-black tracking-wider ${statusMeta.cls}`}
+                    >
+                      {statusMeta.label}
+                    </span>
+                    {promo.discount && !isExpired && (
+                      <span className="absolute top-3 right-3 px-2 py-1 bg-gold/20 backdrop-blur-md text-[9px] font-black tracking-wide rounded-full border border-gold/40 text-gold">
+                        {promo.discount}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-4 flex flex-col flex-1 gap-3">
+                    <div>
+                      <h3 className="font-serif text-base font-bold tracking-tight text-white leading-snug line-clamp-2">
+                        {promo.title}
+                      </h3>
+                      <button
+                        onClick={() => onGoToDetail(promo.business.slug)}
+                        className="mt-1 inline-flex items-center gap-1 text-xs text-gold hover:underline"
+                      >
+                        <MapPin size={11} /> {promo.business.name}
+                      </button>
+                    </div>
+
+                    {/* Coupon code — font-mono, dorado, con botón copiar */}
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode(promo.code)}
+                      aria-label={
+                        copiedCode === promo.code
+                          ? 'Código copiado'
+                          : `Copiar código ${promo.code}`
+                      }
+                      className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl bg-black/40 border border-dashed border-gold/40 hover:border-gold/80 hover:bg-black/60 transition-all"
+                    >
+                      <span className="text-[9px] text-white/50 font-bold tracking-wider uppercase">
+                        {copiedCode === promo.code ? 'Copiado' : 'Código'}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono font-black text-gold tracking-wider text-base">
+                          {promo.code}
+                        </span>
+                        <span className="shrink-0 w-6 h-6 rounded-lg bg-gold/15 border border-gold/40 flex items-center justify-center text-gold">
+                          {copiedCode === promo.code ? (
+                            <Check size={12} />
+                          ) : (
+                            <Copy size={11} />
+                          )}
+                        </span>
+                      </span>
+                    </button>
+
+                    {/* Countdown — "Válido hasta X" / "Expira en N días" / "Expirado" */}
+                    <div className="text-[10px] text-white/50 font-mono">
+                      {isExpired
+                        ? 'Expirado'
+                        : endDateTs !== null
+                          ? daysLeft !== null && daysLeft <= 7
+                            ? `Expira en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
+                            : `Válido hasta ${new Date(promo.endDate!).toLocaleDateString('es-VE', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}`
+                          : 'Válido sin fecha límite'}
+                    </div>
+
+                    {canReserve && (
+                      <button
+                        onClick={() => onGoToDetail(promo.business.slug)}
+                        className="mt-auto w-full py-2.5 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-[11px] tracking-wider transition-all flex items-center justify-center gap-2"
+                      >
+                        <Calendar size={13} /> RESERVAR CON ESTA OFERTA
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

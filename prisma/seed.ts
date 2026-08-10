@@ -265,7 +265,7 @@ async function main() {
 
   // ── 5. Promociones (42 — 2 por negocio) ────────────────────
   console.log('🎉 Creando promociones...');
-  for (const offer of offers) {
+  for (const [idx, offer] of offers.entries()) {
     const businessId = businessIdMap.get(offer.establishmentId);
     if (!businessId) {
       console.warn(`   ⚠ Negocio no encontrado para offer ${offer.id} (estId=${offer.establishmentId})`);
@@ -281,10 +281,18 @@ async function main() {
         image: offer.image,
         code: offer.code,
         status: 'ACTIVE',
+        // Etapa 4: fechas reales + límite de redenciones
+        // Patrón determinista por índice:
+        //   índice 0 (1ra promo de cada negocio): vigente con 30 días, maxRedemptions 50
+        //   índice 1 (2da promo): rotación (vigente/expirada/futura) según (i + businessIdx) % 3
+        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // -7 días
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),  // +30 días
+        maxRedemptions: 50,
+        redemptionCount: Math.floor((idx + 3) % 12), // 0-11 reclamados (algunas cerca del límite)
       },
     });
   }
-  console.log(`   ✓ ${offers.length} promociones creadas\n`);
+  console.log(`   ✓ ${offers.length} promociones creadas (con fechas + maxRedemptions)\n`);
 
   // ── 6. Reviews (84 — 4 por negocio) ────────────────────────
   console.log('⭐ Creando reviews...');
@@ -300,6 +308,9 @@ async function main() {
         businessId,
         userId,
         rating: review.rating,
+        ambienteRating: review.rating,
+        servicioRating: review.rating,
+        precioCalidadRating: review.rating,
         comment: review.comment,
         status: 'PUBLISHED',
       },

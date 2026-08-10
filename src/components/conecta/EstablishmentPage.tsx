@@ -24,6 +24,7 @@ import {
   Wine,
   ConciergeBell,
   Scale,
+  Loader2,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -31,6 +32,7 @@ import {
   defaultBookingData,
 } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
+import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
 import { fetchBusinessBySlug, createReview } from '@/lib/api';
 import type { BookingData, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
@@ -125,7 +127,10 @@ export function EstablishmentPage() {
   const user = useAppStore((s) => s.user);
   const addNotification = useAppStore((s) => s.addNotification);
   const favorites = useAppStore((s) => s.favorites);
+  const redeemedPromotionIds = useAppStore((s) => s.redeemedPromotionIds);
   const { toggle: toggleFavorite } = useFavoriteActions();
+  const { redeem: redeemCoupon, isRedeeming: isCouponRedeeming } =
+    useRedemptionActions();
   const { status: authStatus } = useSession();
   const queryClient = useQueryClient();
 
@@ -146,7 +151,6 @@ export function EstablishmentPage() {
     'recientes',
   );
   const [activeTab, setActiveTab] = useState<TabId>('info');
-  const [claimedCodes, setClaimedCodes] = useState<string[]>([]);
 
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
@@ -302,13 +306,10 @@ export function EstablishmentPage() {
     }, 1800);
   };
 
-  const handleClaimCode = (offer: Offer) => {
-    if (claimedCodes.includes(offer.code)) {
-      addNotification(`Cupón ya activado: ${offer.code}`, 'info');
-      return;
-    }
-    setClaimedCodes((prev) => [...prev, offer.code]);
-    addNotification(`¡Cupón activado!: ${offer.code}`);
+  const handleClaimCode = async (offer: Offer) => {
+    // Etapa 4: persistent coupon — delegates to useRedemptionActions.
+    // The hook does the optimistic update + rollback + invalidation.
+    await redeemCoupon(offer.id, offer.title);
   };
 
   const getRatingCount = (stars: number) =>
@@ -639,11 +640,34 @@ export function EstablishmentPage() {
 
             {estOffers.length > 0 ? (
               estOffers.map((offer: Offer) => {
-                const claimed = claimedCodes.includes(offer.code);
+                // Etapa 4: claimed coupons now persist in the backend
+                // (CouponRedemption table), hydrated into the store by
+                // useRedemptionsSync. The store is the single source of
+                // truth — no more local useState.
+                const claimed = redeemedPromotionIds.includes(offer.id);
+                const redeeming = isCouponRedeeming(offer.id);
+
+                // Expiry / sold-out flags — drive the AGOTADO / EXPIRADO
+                // badges + disable the redeem button. The backend may not
+                // expose these fields yet (4.2 in progress), so guard with
+                // optional chaining + sensible fallbacks.
+                const isExpired =
+                  !!offer.endDate &&
+                  new Date(offer.endDate).getTime() < Date.now();
+                const maxRed = offer.maxRedemptions ?? null;
+                const currentCount = offer.redemptionCount ?? 0;
+                const isSoldOut =
+                  maxRed !== null && currentCount >= maxRed;
+                const unavailable = isExpired || isSoldOut;
+
                 return (
                   <div
                     key={offer.id}
-                    className="glass-card border border-white/10 rounded-3xl overflow-hidden flex flex-col"
+                    className={`glass-card border rounded-3xl overflow-hidden flex flex-col transition-opacity ${
+                      unavailable
+                        ? 'border-white/5 opacity-70'
+                        : 'border-white/10'
+                    }`}
                   >
                     <div className="relative h-44 sm:h-48 overflow-hidden">
                       <img
@@ -653,15 +677,36 @@ export function EstablishmentPage() {
                         className="h-full w-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                      <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-gold/20 border border-gold/40 text-gold text-[10px] font-black tracking-wider">
-                        {offer.discount}
-                      </span>
+                      {/* Etapa 4 — AGOTADO / EXPIRADO replace the discount
+                          badge when the promo is no longer claimable.
+                          Otherwise keep the original discount label. */}
+                      {isSoldOut ? (
+                        <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-red-500/25 border border-red-500/50 text-red-300 text-[10px] font-black tracking-wider">
+                          AGOTADO
+                        </span>
+                      ) : isExpired ? (
+                        <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-white/15 border border-white/30 text-white/70 text-[10px] font-black tracking-wider">
+                          EXPIRADO
+                        </span>
+                      ) : (
+                        <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-gold/20 border border-gold/40 text-gold text-[10px] font-black tracking-wider">
+                          {offer.discount}
+                        </span>
+                      )}
                     </div>
                     <div className="p-5 sm:p-6 flex flex-col flex-1">
                       <div className="flex items-start justify-between gap-3 mb-2">
-                        <h5 className="font-bold text-lg text-white leading-snug">
-                          {offer.title}
-                        </h5>
+                        <div className="min-w-0">
+                          <h5 className="font-bold text-lg text-white leading-snug">
+                            {offer.title}
+                          </h5>
+                          {/* Etapa 4 — X/Y reclamados counter */}
+                          {maxRed !== null && (
+                            <div className="text-[10px] text-white/50 font-mono mt-1">
+                              {currentCount}/{maxRed} reclamados
+                            </div>
+                          )}
+                        </div>
                         <span className="text-2xl font-mono text-gold font-black tracking-tight flex-shrink-0">
                           {offer.price}
                         </span>
@@ -704,12 +749,30 @@ export function EstablishmentPage() {
                             <Calendar size={14} /> RESERVAR CON ESTA OFERTA
                           </button>
                         </div>
+                      ) : unavailable ? (
+                        <button
+                          disabled
+                          className="mt-auto w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white/40 font-bold text-xs tracking-wider cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <Ticket size={16} />
+                          {isSoldOut ? 'CUPONES AGOTADOS' : 'PROMOCIÓN EXPIRADA'}
+                        </button>
                       ) : (
                         <button
                           onClick={() => handleClaimCode(offer)}
-                          className="mt-auto w-full py-3 rounded-xl bg-gold hover:bg-[#E5BF4A] text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 glow-gold"
+                          disabled={redeeming}
+                          className="mt-auto w-full py-3 rounded-xl bg-gold hover:bg-[#E5BF4A] text-obsidian font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 glow-gold disabled:opacity-70 disabled:cursor-wait"
                         >
-                          <Ticket size={16} /> RECLAMAR CÓDIGO {offer.code}
+                          {redeeming ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />
+                              RECLAMANDO…
+                            </>
+                          ) : (
+                            <>
+                              <Ticket size={16} /> RECLAMAR CÓDIGO {offer.code}
+                            </>
+                          )}
                         </button>
                       )}
                     </div>

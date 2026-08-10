@@ -26,6 +26,13 @@ interface AppState {
   // and toggleFavorite() fires the API mutation.
   favorites: string[];
 
+  // Redeemed promotion IDs — Etapa 4 persistent coupons.
+  // Mirrors the user's CouponRedemption rows on the server (hydrated by
+  // useRedemptionsSync in the Navbar). Used by EstablishmentPage to mark
+  // an offer as already claimed without an extra round-trip, and to drive
+  // the optimistic update while the redeem() request is in flight.
+  redeemedPromotionIds: string[];
+
   // Notifications
   notifications: AppNotification[];
 
@@ -40,6 +47,11 @@ interface AppState {
   addFavoriteLocal: (slug: string) => void;
   removeFavoriteLocal: (slug: string) => void;
 
+  // Actions: coupon redemptions (Etapa 4) — same pattern as favorites.
+  setRedeemedPromotionIds: (ids: string[]) => void;
+  addRedeemedPromotionId: (id: string) => void;
+  removeRedeemedPromotionId: (id: string) => void;
+
   // Actions: notifications
   addNotification: (message: string, type?: 'success' | 'info') => void;
   dismissNotification: (id: number) => void;
@@ -51,6 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedMapEstablishment: null,
   user: null,
   favorites: [],
+  redeemedPromotionIds: [],
   notifications: [],
 
   setView: (view) => set({ view }),
@@ -65,9 +78,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (user) set({ user });
       return;
     }
-    // user changed (login/logout/switch) — clear local favorites so
-    // the Navbar's useQuery can re-hydrate from /api/favorites.
-    set({ user, favorites: [] });
+    // user changed (login/logout/switch) — clear local favorites AND
+    // redeemed promotion IDs so the Navbar's useQuery can re-hydrate
+    // from /api/favorites and /api/promotions/redeemed.
+    set({ user, favorites: [], redeemedPromotionIds: [] });
   },
   setFavorites: (slugs) => set({ favorites: slugs }),
   addFavoriteLocal: (slug) =>
@@ -78,6 +92,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     ),
   removeFavoriteLocal: (slug) =>
     set((s) => ({ favorites: s.favorites.filter((f) => f !== slug) })),
+
+  setRedeemedPromotionIds: (ids) => set({ redeemedPromotionIds: ids }),
+  addRedeemedPromotionId: (id) =>
+    set((s) =>
+      s.redeemedPromotionIds.includes(id)
+        ? s
+        : { redeemedPromotionIds: [...s.redeemedPromotionIds, id] },
+    ),
+  removeRedeemedPromotionId: (id) =>
+    set((s) => ({
+      redeemedPromotionIds: s.redeemedPromotionIds.filter((x) => x !== id),
+    })),
 
   addNotification: (message, type = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);

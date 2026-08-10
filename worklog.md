@@ -1534,3 +1534,198 @@ Stage Summary:
 - Comportamiento nuevo (Etapa 3): los 3 sub-ratings son promedios REALES de cada dimensión, calculados desde las reviews PUBLISHED
 - 0 errores de lint, 0 errores de TypeScript, 0 errores de runtime
 - Limpieza pendiente: el archivo `prisma/backfill-subratings.ts` puede eliminarse o mantenerse para documentación
+
+---
+Task ID: 4.3
+Agent: full-stack-developer
+Task: Frontend — Cupones persistentes (CouponRedemption) + sección MIS CUPONES en ProfilePage + badges AGOTADO/EXPIRADO + contador X/Y en EstablishmentPage
+
+Work Log:
+- Leído worklog.md (contexto Etapas 0/2.2/2.3/2.4/3.1/3.2/3.3/3.4 + 2-followup) y archivos relevantes:
+  * prisma/schema.prisma — confirmado: modelo `CouponRedemption` ya existe (Task 4.1) con campos `id, userId, promotionId, status (CLAIMED|USED|EXPIRED), claimedAt, usedAt, reservationId` + constraint único [userId, promotionId]. Modelo `Promotion` ya tiene `endDate, maxRedemptions, redemptionCount, status (DRAFT|ACTIVE|EXPIRED|PAUSED)`.
+  * src/lib/hooks/use-favorites-sync.ts + use-favorite-actions.ts — patrón a copiar (bootstrap singleton en Navbar + actions multi-instancia).
+  * src/lib/types.ts — `Offer` no tenía `endDate`/`maxRedemptions`/`redemptionCount`. Añadidos como opcionales.
+  * src/lib/store.ts — `favorites` ya limpiado en `setUser` al cambiar sesión; mismo patrón aplicado a `redeemedPromotionIds`.
+  * src/lib/api.ts — añadidos 3 helpers (`redeemPromotion`, `fetchMyRedemptions`, `checkRedemptions`).
+  * src/components/conecta/Navbar.tsx — ya llamaba `useFavoritesSync()`, añadida `useRedemptionsSync()` al lado.
+  * src/components/conecta/EstablishmentPage.tsx — tenía `claimedCodes` useState local + `handleClaimCode` local. Eliminados, reemplazados por `useRedemptionActions().redeem()`.
+  * src/components/conecta/ProfilePage.tsx — ya tenía MIS FAVORITOS + MIS RESEÑAS. Añadida MIS CUPONES entre ambos.
+
+- Actualizado `src/lib/types.ts`:
+  * `Offer` extendido con `endDate?: string`, `maxRedemptions?: number | null`, `redemptionCount?: number` (opcionales para no romper mocks de data.ts ni el transformer del backend 4.2).
+  * Nuevo `RedeemedPromotion extends Offer` con los mismos 3 campos (los 2 últimos required) + `business: { id, name, slug, address }`.
+  * Nuevo `CouponRedemption { id, status: 'CLAIMED'|'USED'|'EXPIRED', claimedAt: string, promotion: RedeemedPromotion }`.
+
+- Actualizado `src/lib/api.ts`:
+  * Import de `CouponRedemption, RedeemedPromotion` desde types.
+  * `redeemPromotion(promotionId)` → POST /api/promotions/[id]/redeem. 401 lanza 'NOT_AUTHENTICATED', otros errores lanzan `data.error` del server ("Ya has reclamado este cupón", "Esta promoción ya expiró", "está agotada").
+  * `fetchMyRedemptions()` → GET /api/promotions/redeemed. 401 devuelve `[]` (silencioso).
+  * `checkRedemptions(promotionIds)` → POST /api/promotions/check. 401 devuelve `{}`. Vacío devuelve `{}` sin fetch.
+
+- Actualizado `src/lib/store.ts`:
+  * Nuevo estado `redeemedPromotionIds: string[]` paralelo a `favorites`.
+  * 3 acciones: `setRedeemedPromotionIds(ids)`, `addRedeemedPromotionId(id)` (dedupe), `removeRedeemedPromotionId(id)`.
+  * `setUser` ahora limpia AMBOS `favorites` y `redeemedPromotionIds` cuando cambia la sesión.
+
+- Creado `src/lib/hooks/use-redemptions-sync.ts`:
+  * Singleton bootstrap, montado UNA vez en el Navbar (igual que useFavoritesSync).
+  * Mirror `session.user → store.user` (dedupe con useFavoritesSync, no-op si ya lo hidrato).
+  * `useQuery(['my-redemptions'])` con `enabled: status === 'authenticated'` y `staleTime: 30s`.
+  * Sync server redemption IDs → store. Comparación como string ordenado para evitar render loops.
+  * Si no autenticado: limpia el store.
+  * Exporta `REDEMPTIONS_QUERY_KEY = ['my-redemptions'] as const` para uso en use-redemption-actions.
+
+- Creado `src/lib/hooks/use-redemption-actions.ts`:
+  * Hook multi-instancia, sin effects (igual que useFavoriteActions).
+  * `redeem(promotionId, promoTitle): Promise<boolean>`:
+    - 401: notificación "Inicia sesión para reclamar cupones" + return false.
+    - Optimistic: `addRedeemedPromotionId(id)` + track en `pendingIds: Set<string>` local (useState).
+    - Llama `redeemPromotion(promotionId)`.
+    - On success: invalida `['businesses']`, `['business']`, `['my-redemptions']` + notificación `¡Cupón activado!: <code>`.
+    - On error: rollback (`removeRedeemedPromotionId(id)`) + notificación con `err.message` del server + return false.
+    - `finally`: limpia `pendingIds` para ese id.
+  * `isRedeemed(promotionId)` — lee del store (no reactivo, ok porque EstablishmentPage se suscribe directo al store).
+  * `isRedeeming(promotionId)` — reactivo vía `useState<Set<string>>` para que el botón muestre "RECLAMANDO…" + spinner.
+
+- Actualizado `src/components/conecta/Navbar.tsx`:
+  * Import de `useRedemptionsSync`.
+  * Llamada `useRedemptionsSync()` justo después de `useFavoritesSync()`.
+
+- Actualizado `src/components/conecta/EstablishmentPage.tsx`:
+  * Imports: añadido `Loader2` de lucide + `useRedemptionActions` hook.
+  * Estado: eliminado `claimedCodes` useState local. Añadido `redeemedPromotionIds = useAppStore((s) => s.redeemedPromotionIds)` (suscripción reactiva). Añadido `useRedemptionActions()` → `{ redeem: redeemCoupon, isRedeeming: isCouponRedeeming }`.
+  * `handleClaimCode(offer)` reescrito como `async (offer) => await redeemCoupon(offer.id, offer.title)`.
+  * Render de offers (cada card):
+    - `claimed = redeemedPromotionIds.includes(offer.id)` (antes: `claimedCodes.includes(offer.code)`).
+    - `isExpired = !!offer.endDate && new Date(offer.endDate).getTime() < Date.now()`.
+    - `maxRed = offer.maxRedemptions ?? null; currentCount = offer.redemptionCount ?? 0`.
+    - `isSoldOut = maxRed !== null && currentCount >= maxRed`.
+    - `unavailable = isExpired || isSoldOut`.
+    - **Badges** (donde estaba el badge `discount`, esquina superior izquierda de la imagen):
+      - Si `isSoldOut` → badge rojo "AGOTADO" (bg-red-500/25, border-red-500/50, text-red-300).
+      - Si `isExpired` → badge gris "EXPIRADO" (bg-white/15, border-white/30, text-white/70).
+      - Sino → badge dorado del `discount` (comportamiento original).
+    - **Contador X/Y**: debajo del título, `text-[10px] text-white/50 font-mono mt-1`, solo si `maxRed !== null`. Formato: `{currentCount}/{maxRed} reclamados`.
+    - **Botón**:
+      - Si `unavailable` → botón disabled con texto "CUPONES AGOTADOS" o "PROMOCIÓN EXPIRADA".
+      - Si `redeeming` → botón disabled + opacity-70 + spinner `Loader2 animate-spin` + texto "RECLAMANDO…".
+      - Sino → botón dorado normal "RECLAMAR CÓDIGO {offer.code}".
+    - Flujo visual de "Cupón activado" + código + "RESERVAR CON ESTA OFERTA" preservado sin cambios.
+    - Toda la lógica de endDate/maxRedemptions/redemptionCount usa optional chaining + fallbacks null/0 para no romper si el backend 4.2 aún no actualiza transformPromotion.
+
+- Actualizado `src/components/conecta/ProfilePage.tsx`:
+  * Imports: `useCallback`, `useState`, `Ticket`, `Copy`, `Check`, `Calendar` de lucide + `fetchMyRedemptions` de api + `CouponRedemption` type.
+  * `ProfilePage`: nuevo `useQuery(['my-redemptions'])` con `enabled: status === 'authenticated'`. Pasa `redemptions`, `onSetView` y `onNotify` a `ProfileContent`.
+  * `ProfileContent`: añade `redemptions: CouponRedemption[]`, `onSetView`, `onNotify` a props. `handleCopyCode` local (mismo patrón que EstablishmentPage) usando `navigator.clipboard` + fallback textarea + notificación + feedback visual 2.2s.
+  * Stats row: añadido tercer stat "Cupones" con count `redemptions.length` y icono Ticket dorado.
+  * Nueva sección **MIS CUPONES** entre MIS RESEÑAS y el cierre del motion.div:
+    - Título "MIS CUPONES" + count en font-mono (mismo estilo que MIS FAVORITOS/RESEÑAS).
+    - Empty state: icono Ticket grande + mensaje "Aún no has reclamado ningún cupón. Explora las promociones disponibles en el directorio." + botón "EXPLORAR PROMOCIONES" que llama `onSetView('home')`.
+    - Grid responsivo 1/2/3 cols (sm:grid-cols-2 lg:grid-cols-3) gap-5. Cards:
+      - Imagen de la promo (h-32) con overlay gradient.
+      - Badge de status en esquina superior izquierda:
+        - `CLAIMED && !isExpired` → "ACTIVO" (verde esmeralda).
+        - `USED` → "USADO" (azul cielo).
+        - `EXPIRED` (o `CLAIMED` pero promo expirada) → "EXPIRADO" (gris).
+      - Badge de discount en esquina superior derecha (si no expirado).
+      - Título de la promo (font-serif, line-clamp-2).
+      - Nombre del negocio como botón con icono MapPin → `onGoToDetail(promo.business.slug)`.
+      - Código en botón copiar (font-mono, dorado, dash border gold, click → handleCopyCode(promo.code) + feedback "Copiado").
+      - Countdown en `text-[10px] text-white/50 font-mono`:
+        - Si `isExpired` → "Expirado".
+        - Si `daysLeft <= 7` → "Expira en N día(s)".
+        - Sino → "Válido hasta DD MMM YYYY" (toLocaleDateString es-VE).
+        - Si no endDate → "Válido sin fecha límite".
+      - Botón "RESERVAR CON ESTA OFERTA" (solo si `canReserve = CLAIMED && !isExpired`) → navega al detalle del negocio.
+
+- Validación:
+  * `bun run lint` → 0 errores, 0 warnings.
+  * `npx tsc --noEmit` → 0 errores.
+  * Dev server: GET / → HTTP 200, compile 4.6s, render 217ms, sin errores.
+  * Work record detallado escrito en `/home/z/my-project/agent-ctx/4.3-full-stack-developer.md`.
+
+Stage Summary:
+- 8 archivos modificados/creados: types.ts, api.ts, store.ts, use-redemptions-sync.ts (nuevo), use-redemption-actions.ts (nuevo), Navbar.tsx, EstablishmentPage.tsx, ProfilePage.tsx.
+- Cupones reclamados ahora persisten en BD (tabla CouponRedemption) en vez de useState local. Hydrated al iniciar sesión, sincronizados server→store vía useRedemptionsSync (singleton en Navbar).
+- Pattern bootstrap (Navbar) + actions (multi-instancia) replicado exactamente del de favoritos — evita loop infinito de re-renders (lección aprendida del Task 2.3).
+- EstablishmentPage: badges visuales AGOTADO (rojo) / EXPIRADO (gris) reemplazan el badge `discount` cuando aplica. Contador "X/Y reclamados" debajo del título. Botón "RECLAMANDO…" + spinner Lucide `Loader2 animate-spin` mientras el API responde. Botón deshabilitado con texto "CUPONES AGOTADOS" / "PROMOCIÓN EXPIRADA" cuando aplica.
+- ProfilePage: nueva sección MIS CUPONES con grid responsivo de cards. Cada card muestra: imagen + badge de status (ACTIVO/USADO/EXPIRADO), título, negocio (link), código dorado copiable, countdown ("Expira en N días" / "Válido hasta DD MMM YYYY" / "Expirado"), botón "RESERVAR CON ESTA OFERTA" si vigente.
+- Stats row del ProfilePage añade "Cupones" como tercer stat (junto a Favoritos y Reseñas).
+- API contract del backend (Task 4.2 en paralelo): POST /api/promotions/[id]/redeem, GET /api/promotions/redeemed, POST /api/promotions/check. El frontend maneja gracefully el caso en que el transformer `transformPromotion` aún no exponga `endDate`/`maxRedemptions`/`redemptionCount` (todos los usos usan `?? null` / `?? 0` / `?`).
+- Cache de React Query: ['businesses'], ['business', slug], ['my-redemptions'] — todas invalidadas tras un redeem exitoso.
+- Sin tocar backend, schema.prisma, ni GET /api/businesses (per instrucciones).
+- 0 errores de lint + 0 errores de TypeScript + 0 errores de runtime.
+
+---
+Task ID: 4.2
+Agent: full-stack-developer
+Task: Backend — Promociones activas reales + Cupones persistentes (capa repository + service + 3 API routes para redimir cupones, listar mis cupones, batch-check; transformer del business separa promos activas vs expiradas/agotadas)
+
+Work Log:
+- Leído worklog.md (contexto Tasks 0/2.2/2-followup/3.1/3.2/3.3/3.4-verify/4.1) y archivos relevantes:
+  * `prisma/schema.prisma` — confirmado: `CouponRedemption` ya existe con constraint `@@unique([userId, promotionId])`, `Promotion` tiene `redemptionCount Int @default(0)` + `maxRedemptions Int?` + `startDate/endDate DateTime?` + `status PromotionStatus` (DRAFT/ACTIVE/EXPIRED/PAUSED)
+  * `src/server/repositories/favorite.repository.ts` y `review.repository.ts` — patrón confirmado: objeto exportado con métodos async, `DbOrTx = PrismaClient | Prisma.TransactionClient` para métodos en transacciones, tipos con `Prisma.XGetPayload<{...}>`
+  * `src/server/services/favorite.service.ts` y `review.service.ts` — patrón `jsonError(message, status)` que retorna `Response`, lanzado desde el service y retornado tal cual por el route handler (`if (e instanceof Response) return e`)
+  * `src/server/auth.ts` — `requireUser()` lanza `Response(401)` si no hay sesión
+  * `src/server/repositories/business.repository.ts` — `businessInclude` con `promotions: { where: { status: 'ACTIVE' as const }, ... }`
+  * `src/server/services/business.service.ts` — `transformBusiness` mapea todas las promos incluidas a `offers: Offer[]`
+- Creado `src/server/repositories/promotion.repository.ts`:
+  * 7 funciones: `findById(id, tx?)`, `findActiveByBusinessSlug(slug)`, `findAllByBusinessSlug(slug)`, `incrementRedemptionCount(promotionId, tx?)`, `findRedemptionByUser(userId, promotionId)`, `createRedemption(data, tx?)`, `listRedemptionsByUser(userId)` + helper extra `findClaimedPromotionIds(userId, promotionIds)` para batch check en 1 sola query
+  * Helper `isPromotionLive(promo, now)` exportado para que el business transformer reutilice la misma definición de "promo vigente"
+  * `findActiveByBusinessSlug` filtra SQL por `status: ACTIVE + startDate <= now + endDate >= now` y luego JS por `redemptionCount < maxRedemptions` (Prisma no soporta comparación column-vs-column en `where`)
+  * `incrementRedemptionCount` usa `{ increment: 1 }` para SQL UPDATE atómico (no race conditions entre concurrent redeem calls)
+  * Tipos `PromotionWithBusiness` y `CouponRedemptionWithPromotion` con `Prisma.XGetPayload<{include: ...}>`
+- Creado `src/server/services/promotion.service.ts`:
+  * 3 funciones: `redeemPromotion(userId, promotionId)`, `listMyRedemptions(userId)`, `checkRedemptions(userId, promotionIds)`
+  * `redeemPromotion`: 6 validaciones en orden (404 → 400 status≠ACTIVE → 400 endDate<now → 400 startDate>now → 400 sold out → 409 already claimed), luego `db.$transaction(async tx => { createRedemption + incrementRedemptionCount })`. Retorna `{ redemption, promotion, offer, code }` donde `code` es top-level convenience field (mirrored desde `promotion.code`) para que el frontend lo muestre sin nested access
+  * `listMyRedemptions`: trae redemptions con `promotion + promotion.business` (vía `businessInclude`), las mapea a `{ id, userId, promotionId, status, claimedAt, usedAt, offer, establishment }` donde `offer` es el `Offer` transformado y `establishment` es el `Establishment` completo (con offers/reviews/expiredPromotions embedded)
+  * `checkRedemptions`: llama a `findClaimedPromotionIds` (1 sola query IN-clause), mapea a `Record<string, boolean>`. Cap implícito a 200 IDs en el route handler
+- Creado `src/app/api/promotions/[id]/redeem/route.ts`:
+  * POST handler con `params: Promise<{ id: string }>` (Next.js 16 pattern)
+  * `requireUser()` → `promotionService.redeemPromotion(user.id, id)`
+  * Catch: si `e instanceof Response` retorna tal cual (401/404/400/409 del service)
+  * Catch adicional: `Prisma.PrismaClientKnownRequestError` P2002 (race condition: dos requests concurrentes pasan el pre-check de `findRedemptionByUser`, el INSERT del perdedor falla con unique constraint dentro de la tx → la tx se aborta) → retorna 409 limpio "Ya has reclamado este cupón"
+- Creado `src/app/api/promotions/redeemed/route.ts`:
+  * GET handler → `requireUser()` → `promotionService.listMyRedemptions(user.id)` → `Array<MyRedemptionEntry>`
+- Creado `src/app/api/promotions/check/route.ts`:
+  * POST handler con body `{ promotionIds: string[] }`
+  * Valida array, filtra strings no vacíos, dedupe con `Set`
+  * Cap `MAX_IDS = 200` (mismo límite que `/api/favorites/check`) → 400 si excede
+  * Retorna `Record<string, boolean>`
+- Modificado `src/server/repositories/business.repository.ts`:
+  * `businessInclude.promotions` ANTES: `{ where: { status: 'ACTIVE' as const }, orderBy: { createdAt: 'asc' } }`
+  * `businessInclude.promotions` DESPUÉS: `{ orderBy: { createdAt: 'asc' } }` (sin filtro de status) — el transformer ahora recibe TODAS las promos (ACTIVE + EXPIRED + PAUSED + DRAFT + sold-out + future-dated) y las separa en `offers` (live) vs `expiredPromotions` (resto)
+  * Comentario añadido explicando la decisión de Etapa 4
+- Modificado `src/server/services/business.service.ts`:
+  * Import añadido: `isPromotionLive` desde `@/server/repositories/promotion.repository`
+  * `EstablishmentWithRelations` ampliado con `expiredPromotions: Offer[]` (campo nuevo — NO se añadió a `Establishment` para no romper `src/lib/data.ts` que usa `Omit<Establishment, 'slug'>`)
+  * `transformBusiness` ahora: particiona `business.promotions` en `livePromos` (via `isPromotionLive`) y `expiredPromos`, mapea ambos a `Offer[]`, retorna `{ ...rest, offers, expiredPromotions, reviews }`
+- `src/lib/types.ts` NO MODIFICADO — `expiredPromotions` vive en `EstablishmentWithRelations` (tipo del transformer/API response), no en `Establishment` (tipo del frontend). Razón: añadirlo a `Establishment` rompería `src/lib/data.ts` (21 seed establishments) que debería añadir `expiredPromotions: []` a cada uno. Al mantenerlo en `EstablishmentWithRelations`, el API response lo incluye pero el seed data no lo requiere.
+- `bun run lint` → 0 errores, 0 warnings.
+- `npx tsc --noEmit` → 0 errores.
+- Smoke tests con curl (12 tests, TODOS PASARON):
+  1. Login demo vía NextAuth callback → 302 con Set-Cookie session-token (Ana Rodríguez, id=cmsmi7dhx0000mgjaqxoke86l)
+  2. GET /api/promotions/redeemed (vacío inicial) → 200 `[]`
+  3. GET /api/businesses/licoreria-don-sancho → 200 con 2 offers + 0 expiredPromotions
+  3b. GET /api/businesses → 200 con 21 negocios, 14 de ellos tienen 1 promo expiredPromotions cada uno (14 expired en total)
+  4. POST /api/promotions/check con 2 IDs (active + expired) → 200 `{"active_id":false,"expired_id":false}` (sin reclamar)
+  5. POST /api/promotions/{active_id}/redeem (Cata de Vinos, CATAVALLE) → 200 con redemption + promotion + offer + code="CATAVALLE", `redemptionCount` incrementado atómicamente de 3 → 4 dentro de la tx
+  6. POST /api/promotions/{active_id}/redeem (segunda vez) → 409 `{"error":"Ya has reclamado este cupón"}`
+  7. POST /api/promotions/{expired_id}/redeem (CAVA2X1) → 400 `{"error":"Esta promoción no está disponible"}` (el backfill de 4.1 ya marcó status=EXPIRED, así que el primer check `status !== 'ACTIVE'` lo captura; el mensaje "ya expiró" solo se dispararía para promos con status=ACTIVE pero endDate<now — caso de cron job pendiente)
+  8. GET /api/promotions/redeemed (después de reclamar) → 200 con 1 redemption, incluye `offer` + `establishment` completos (nombre, slug, ratings, reviews)
+  9. POST /api/promotions/check (después de reclamar) → 200 `{"active_id":true,"expired_id":false}` (la redención del TEST 5 ahora es visible)
+  10. POST /api/promotions/{non-existent-id}/redeem → 404 `{"error":"Promoción no encontrada"}`
+  11. POST /api/promotions/check sin auth → 401 `{"error":"No autenticado"}`
+  12. GET /api/promotions/redeemed sin auth → 401 `{"error":"No autenticado"}`
+- Work record detallado escrito en `/home/z/my-project/agent-ctx/4.2-full-stack-developer.md`.
+
+Stage Summary:
+- Capa backend completa para redimir cupones: 5 archivos creados (repository, service, 3 API routes), 2 modificados (business.repository + business.service).
+- API endpoints:
+  * `POST /api/promotions/[id]/redeem` → claim atómico (tx: createRedemption + incrementRedemptionCount). 6 validaciones en español con status codes correctos (404/400/409). Race condition handling via P2002 catch.
+  * `GET /api/promotions/redeemed` → lista mis cupones con `offer` + `establishment` para el ProfilePage.
+  * `POST /api/promotions/check` → batch check en 1 sola query IN-clause (cap 200 IDs), retorna `Record<promotionId, boolean>`.
+- Transacción atómica verificada en BD: `redemptionCount` pasó 3 → 4 atómicamente en la misma tx que insertó la `CouponRedemption` (no drift posible).
+- Backward compatibility preservada: GET /api/businesses y GET /api/businesses/[slug] siguen funcionando; solo añaden el campo `expiredPromotions: Offer[]` (no rompen consumers existentes que lean `offers`). 21 negocios listados correctamente, 14 tienen expired promotions visibles ahora (antes no se devolvían).
+- 0 errores lint, 0 errores tsc, 12/12 smoke tests curl pasados.
+- Listo para integración con subagent 3.3 (frontend — mostrar cupones reclamados en ProfilePage, badges EXPIRADO/AGOTADO en establishment detail, botón RECLAMAR que llama al endpoint POST /api/promotions/[id]/redeem).

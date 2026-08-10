@@ -3,7 +3,7 @@
 // Thin wrappers around fetch() for the public-facing endpoints.
 // ─────────────────────────────────────────────────────────────
 
-import type { Establishment, Review } from './types';
+import type { CouponRedemption, Establishment, RedeemedPromotion, Review } from './types';
 
 // The API returns an extended Establishment shape that also embeds
 // the establishment's offers and reviews (see transformBusiness).
@@ -114,5 +114,44 @@ export async function createReview(input: {
   const data = await res.json().catch(() => ({ error: 'Failed to create review' }));
   if (!res.ok) throw new Error(data.error ?? 'Failed to create review');
   return data;
+}
+
+// ─── Coupon Redemptions (Etapa 4) ──────────────────────────────
+// Persistent "claimed coupons" — backed by the CouponRedemption table.
+// Replaces the old `claimedCodes` useState in EstablishmentPage so that
+// a user who logs out and back in still sees the coupons they redeemed.
+
+export async function redeemPromotion(
+  promotionId: string,
+): Promise<{ redemption: CouponRedemption; promotion: RedeemedPromotion }> {
+  const res = await fetch(`/api/promotions/${promotionId}/redeem`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+  });
+  if (res.status === 401) throw new Error('NOT_AUTHENTICATED');
+  const data = await res.json().catch(() => ({ error: 'Failed to redeem promotion' }));
+  if (!res.ok) throw new Error(data.error ?? 'Failed to redeem promotion');
+  return data;
+}
+
+export async function fetchMyRedemptions(): Promise<CouponRedemption[]> {
+  const res = await fetch('/api/promotions/redeemed');
+  if (res.status === 401) return [];
+  if (!res.ok) throw new Error('Failed to fetch redemptions');
+  return res.json();
+}
+
+export async function checkRedemptions(
+  promotionIds: string[],
+): Promise<Record<string, boolean>> {
+  if (promotionIds.length === 0) return {};
+  const res = await fetch('/api/promotions/check', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ promotionIds }),
+  });
+  if (res.status === 401) return {};
+  if (!res.ok) throw new Error('Failed to check redemptions');
+  return res.json();
 }
 

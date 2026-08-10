@@ -71,6 +71,45 @@ export interface Offer {
   discount: string;
   image: string;
   code: string;
+  /** ISO date string — when the promotion expires. Optional because legacy
+   *  seeded offers may not have it (Etapa 4 backfill adds it to all 42). */
+  endDate?: string;
+  /** Max number of redemptions allowed for this promotion (null = unlimited). */
+  maxRedemptions?: number | null;
+  /** Running count of users who have claimed this promotion. */
+  redemptionCount?: number;
+}
+
+/**
+ * A Promotion returned by GET /api/promotions/redeemed — extends Offer with
+ * the extra fields needed for the "MIS CUPONES" UI (countdown, status, etc.)
+ * plus the business it belongs to (id/name/slug/address) for navigation.
+ */
+export interface RedeemedPromotion extends Offer {
+  endDate?: string;
+  maxRedemptions?: number | null;
+  redemptionCount: number;
+  business: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string;
+  };
+}
+
+/**
+ * A user's claimed coupon — the row in the `CouponRedemption` table.
+ * `status` drives the badge shown in MIS CUPONES:
+ *   - CLAIMED  → "ACTIVO"   (green, can be used)
+ *   - USED     → "USADO"    (blue, already redeemed at the venue)
+ *   - EXPIRED  → "EXPIRADO" (grey, promo ended before being used)
+ */
+export interface CouponRedemption {
+  id: string;
+  status: 'CLAIMED' | 'USED' | 'EXPIRED';
+  /** ISO timestamp of when the user clicked "RECLAMAR CÓDIGO". */
+  claimedAt: string;
+  promotion: RedeemedPromotion;
 }
 
 export interface Review {

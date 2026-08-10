@@ -4,6 +4,7 @@ import { LogOut, User } from 'lucide-react';
 import { signIn, signOut } from 'next-auth/react';
 import { useAppStore } from '@/lib/store';
 import { useFavoritesSync } from '@/lib/hooks/use-favorites-sync';
+import { useRedemptionsSync } from '@/lib/hooks/use-redemptions-sync';
 import { useAuthProviders } from '@/lib/hooks/use-auth-providers';
 import type { View } from '@/lib/types';
 
@@ -48,6 +49,11 @@ export function Navbar() {
   // Calling this here means every page has the favorites hydrated
   // as soon as the user logs in.
   useFavoritesSync();
+
+  // Hydrate redeemed promotion IDs (Etapa 4 persistent coupons).
+  // Same singleton pattern as useFavoritesSync — runs the
+  // ['my-redemptions'] query once per page tree.
+  useRedemptionsSync();
 
   const navItem = (label: string, target: View) => (
     <button

@@ -21,6 +21,7 @@ import type {
   PriceRange,
   SocialMedia,
 } from '@/lib/types';
+import { isPromotionLive } from '@/server/repositories/promotion.repository';
 
 // ─── Schedule helpers ──────────────────────────────────────
 
@@ -201,7 +202,14 @@ export type BusinessWithRelations = Business & {
 
 // The transformer output includes offers + reviews embedded on the Establishment
 export type EstablishmentWithRelations = Establishment & {
+  // Live promotions (status ACTIVE + within date range + not sold out).
+  // Frontend renders these as claimable coupon cards on the detail page.
   offers: Offer[];
+  // Non-live promotions (EXPIRED, PAUSED, DRAFT, sold-out, future-dated).
+  // Frontend renders these with "EXPIRADO" / "AGOTADO" / "PRÓXIMAMENTE"
+  // badges so the user can see what used to be available without being
+  // able to claim them.
+  expiredPromotions: Offer[];
   reviews: Review[];
 };
 
@@ -278,8 +286,24 @@ export function transformBusiness(
   const priceRange = business.priceRange as PriceRange;
 
   // ── Reviews + offers ──────────────────────────────────────
+  // Etapa 4: split promotions into `offers` (live — claimable) and
+  // `expiredPromotions` (everything else — EXPIRED, PAUSED, DRAFT,
+  // sold-out, future-dated). The frontend renders both lists but with
+  // different visual treatment (active = "RECLAMAR" button, expired =
+  // "EXPIRADO" / "AGOTADO" badge, no action).
+  const now = new Date();
   const reviews = business.reviews.map((r) => transformReview(r, business.id));
-  const offers = business.promotions.map((p) =>
+  const livePromos: Promotion[] = [];
+  const expiredPromos: Promotion[] = [];
+  for (const p of business.promotions) {
+    if (isPromotionLive(p, now)) {
+      livePromos.push(p);
+    } else {
+      expiredPromos.push(p);
+    }
+  }
+  const offers = livePromos.map((p) => transformPromotion(p, business.id));
+  const expiredPromotions = expiredPromos.map((p) =>
     transformPromotion(p, business.id),
   );
 
@@ -312,6 +336,7 @@ export function transformBusiness(
     socialMedia,
     activePromotion: undefined, // Etapa 3 feature
     offers,
+    expiredPromotions,
     reviews,
   };
 }

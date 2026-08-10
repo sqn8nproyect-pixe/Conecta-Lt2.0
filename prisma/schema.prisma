@@ -93,6 +93,7 @@ model User {
   notifications Notification[]
   analyticsEvents AnalyticsEvent[]
   ownedBusinesses Business[] @relation("BusinessOwner")
+  couponRedemptions CouponRedemption[]
 }
 
 // ── NextAuth Prisma Adapter (Etapa 2) ───────────────────────
@@ -305,6 +306,37 @@ model Promotion {
 
   @@index([businessId])
   @@index([status])
+  couponRedemptions CouponRedemption[]
+}
+
+// ── CUPONES RECLAMADOS (Etapa 4) ────────────────────────────
+// Persistencia real de los cupones que cada usuario ha reclamado.
+// Constraint único [userId, promotionId] → 1 usuario = 1 redención por promo.
+
+enum RedemptionStatus {
+  CLAIMED   // reclamado pero aún no usado
+  USED      // canjeado en una reserva
+  EXPIRED   // la promo expiró antes de ser usada
+}
+
+model CouponRedemption {
+  id           String          @id @default(cuid())
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  promotion    Promotion       @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  promotionId  String
+  status       RedemptionStatus @default(CLAIMED)
+  claimedAt    DateTime        @default(now())
+  usedAt       DateTime?
+
+  // Una redención puede estar linkeada a una reserva (cuando se canjee)
+  reservation  Reservation?    @relation(fields: [reservationId], references: [id])
+  reservationId String?        @unique
+
+  @@unique([userId, promotionId])
+  @@index([userId])
+  @@index([promotionId])
+  @@index([status])
 }
 
 // ── REVIEWS ─────────────────────────────────────────────────
@@ -381,6 +413,7 @@ model Reservation {
 
   @@index([businessId, date])
   @@index([userId])
+  couponRedemption CouponRedemption?
 }
 
 // ── ANALYTICS ───────────────────────────────────────────────
