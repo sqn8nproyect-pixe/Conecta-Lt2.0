@@ -918,3 +918,49 @@ Stage Summary:
 - El Matchmaker usa `calculateMatch` con los datos fetched (en vez del array estático).
 - ProfilePage funciona con favoritos reales; reseñas de usuario marcadas como "Etapa 2".
 - Sin errores de TypeScript en los archivos modificados; sin errores de ESLint; sin errores runtime.
+
+---
+Task ID: 1.7-verify
+Agent: main
+Task: Verificación end-to-end con Agent Browser de la integración completa (Neon PostgreSQL → API → Frontend React Query)
+
+Work Log:
+- Confirmado estado del proyecto: las 8 etapas del plan están implementadas
+  1. .env.local configurado con URL de Neon ✓
+  2. Prisma migrado de SQLite → PostgreSQL ✓ (migration 20260810000227_init)
+  3. Esquema con 14 modelos del dominio ✓ (Country, State, City, Zone, User, Category, Business, BusinessHours, SocialLink, BusinessImage, Promotion, Review, Favorite, Reservation, etc.)
+  4. Seed migrando 21 negocios + 42 promociones + 16 usuarios + 84 reviews ✓
+  5. Migración ejecutada en Neon ✓
+  6. Capa src/server/ (repositories + services) ✓
+  7. API routes (/api/businesses, /api/businesses/[slug], /api/categories) ✓
+  8. Frontend conectado a la API con React Query (6 componentes migrados) ✓
+- bun run lint: 0 errores
+- npx tsc --noEmit: 0 errores (los errores pre-existentes en data.ts y seed.ts fueron resueltos)
+- Dev server corriendo en puerto 3000, HTTP 200, sin errores de compilación
+- Verificación con Agent Browser:
+  * Página / carga HTTP 200, 0 errores de página, 0 errores de consola (solo HMR + React DevTools info)
+  * AgeGate aparece primero → click "SOY MAYOR DE EDAD" → entra al sitio
+  * Home: 21 cards renderizadas desde la API (Discoteca Glamour, Licorería Vinos del Valle, Licorería Don Sancho, etc.)
+  * Filtro "LICORERÍAS" → muestra exactamente 7 licorerías de la base de datos
+  * Click "Ver detalles de Licorería Don Sancho" → fetchBusinessBySlug('licoreria-don-sancho') → 200
+  * Detail page: galería 10 fotos, 3 tabs (Información / Promociones (2) / Reseñas (4)), action buttons (RESERVAR / WHATSAPP / INSTAGRAM / CÓMO LLEGAR)
+  * Datos reales confirmados: Instagram @licoreriadonsancho, WhatsApp +584242569762
+  * Tab Promociones: 2 ofertas con códigos reales (SANCHO18, SANCHO6)
+  * Tab Reseñas: 4 reseñas renderizadas con nombres reales (Sofía Castro, Francisco Herrera, Luisana Ramírez, Jean Gómez), fechas, ratings (★) y comentarios en español
+  * Click "Mapa" → Leaflet container + 21 markers + zoom controls CARTO
+  * Botón "Inicia sesión para ver opciones cercanas" [disabled] (login-gated correctamente)
+  * Click "ACCEDER CON GOOGLE" → login mock → navbar cambia a "Mi Perfil" + avatar + "Salir"
+  * Click "Mi Perfil" → ProfilePage renderiza "Ana Rodríguez" + secciones "MIS FAVORITOS" + "MIS RESEÑAS"
+  * Footer: wrapper con `min-h-screen flex flex-col`, footer al final del documento (gap=0, footerAtDocBottom=true)
+- Capturas guardadas en /home/z/my-project/public/screenshots/:
+  * don-sancho-detail-live-db.png (detail page con datos reales)
+  * profile-page-live.png (profile con user logueado)
+  * home-live-db.png (home con 21 locales)
+
+Stage Summary:
+- Integración completa verificada end-to-end: la app carga 21 establecimientos, 42 promociones y 84 reseñas desde PostgreSQL/Neon en vivo a través de las rutas API y React Query en el frontend
+- Flujos verificados: age gate → home con filtros → detalle con tabs (info/ofertas/resñas) → mapa con 21 markers → login → perfil
+- Datos reales intactos: Licorería Don Sancho mantiene coordenadas GPS, WhatsApp y Instagram reales
+- Sin errores de lint, sin errores de TypeScript, sin errores de runtime, sin errores de consola
+- Footer sticky funcionando correctamente (wrapper min-h-screen + flex-col + mt-auto)
+- La migración de CONECTA-LT 3.0 a stack completo Next.js 16 + Prisma + PostgreSQL + API REST + React Query está COMPLETA y verificada
