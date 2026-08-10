@@ -1819,3 +1819,57 @@ Stage Summary:
 - Comportamiento nuevo (Etapa 4): cupones persistentes en BD, hidratados al iniciar sesión, visibles en ProfilePage con countdown de vigencia
 - 0 errores de lint, 0 errores de TypeScript, 0 errores de runtime
 - 9 smoke tests curl: 9/9 pasaron
+
+---
+Task ID: 4.5-verify
+Agent: main
+Task: Verificación post-cortes de luz — revisar estado del proyecto tras varios cortes de energía, validar Etapa 4, arreglar bugs encontrados
+
+Work Log:
+- Revisado estado general tras cortes de luz:
+  * Dev server: caído (procesos matados entre comandos del sandbox)
+  * Git: local y remote SINCRONIZADOS en dc5643e (fetch confirmó que todo estaba pusheado)
+  * BD Neon: intacta — 42 promos (28 ACTIVE + 14 EXPIRED), 2 CouponRedemption, 19 users, fechas reales (startDate/endDate/maxRedemptions/redemptionCount)
+  * Worklog Etapa 4: ya documentado por subagents 4.1/4.2/4.3/4.4
+- Smoke tests API (curl): todos 200
+  * GET /api/businesses/licoreria-don-sancho → 200 con 2 offers live (SANCHO18 4/50, SANCHO6 26/30)
+  * GET /api/promotions/redeemed → 200
+  * GET /api/favorites → 200
+- Verificación con Agent Browser: descubrí BUG CRÍTICO
+  * Síntoma: "Application error: a client-side exception has occurred" al cargar la página con usuario autenticado que tiene redenciones
+  * Causa raíz: mismatch de tipos entre backend y frontend
+    - El tipo `MyRedemptionEntry` (promotion.service.ts) devolvía `{ offer: Offer, establishment: Establishment }` separados
+    - Pero el frontend esperaba `r.promotion` (CouponRedemption con `promotion: RedeemedPromotion`)
+    - Hook `useRedemptionsSync` línea 70: `serverRedemptions.map((r) => r.promotion.id)` → TypeError: Cannot read properties of undefined (reading 'id')
+    - ProfilePage línea 415: `const promo = r.promotion;` → mismo crash
+    - El crash solo ocurría cuando el usuario autenticado TENÍA redenciones (Ana tenía 2)
+- Fix aplicado en `src/server/services/promotion.service.ts`:
+  * `listMyRedemptions` ahora devuelve `{ id, status, claimedAt, promotion: { ...Offer, business: { id, name, slug, address } } }`
+  * Tipo `MyRedemptionEntry` actualizado para coincidir con `CouponRedemption` del frontend
+  * Imports limpiados: removidos `Establishment`, `transformBusiness`, `BusinessWithRelations` (ya no usados)
+  * Comentario del route handler `/api/promotions/redeemed/route.ts` actualizado
+- Verificación post-fix (lint + tsc + Agent Browser):
+  * `bun run lint` → 0 errores, 0 warnings
+  * `npx tsc --noEmit` → 0 errores
+  * Agent Browser — HomePage: renderiza sin crash, muestra "LOS TEQUES • MIRANDA / La vida nocturna, redescubierta / Explora los 21 locales"
+  * Agent Browser — Licolería Don Sancho: carga completa con sub-ratings Etapa 3 (Ambiente 4.8, Servicio 4.6, Precio-Calidad 4.4), pestaña Promociones (2) muestra:
+    - Whisky Premium 18 años: "4/50 reclamados" · SANCHO18 · "Cupón activado" · RESERVAR CON ESTA OFERTA
+    - Pack Cervezas Artesanales: "26/30 reclamados" · SANCHO6 · RECLAMAR CÓDIGO
+  * Agent Browser — ProfilePage (Ana Rodríguez): MIS CUPONES (2) con:
+    - Whisky Premium 18 años: badge ACTIVO · 20% OFF · Licorería Don Sancho · SANCHO18 · "Válido hasta 09 sept. 2026"
+    - Cata de Vinos: badge ACTIVO · EVENTO · Licorería Vinos del Valle · CATAVALLE · "Válido hasta 09 sept. 2026"
+    - Stats row: 2 FAVORITOS · 2 RESEÑAS · 2 CUPONES
+- Commit + push a GitHub:
+  * Commit 960e871: "fix(etapa-4): crash client-side al cargar cupones reclamados"
+  * Push exitoso: dc5643e..960e871 main -> main
+  * Vercel auto-deploy disparado
+
+Stage Summary:
+- Estado post-cortes: TODO INTACTO excepto un bug latente en Etapa 4 que se manifestó al verificar con navegador
+- Bug crítico encontrado y arreglado: crash client-side cuando usuario autenticado tiene cupones reclamados (mismatch de tipos backend/frontend en listMyRedemptions)
+- Etapa 4 verificada end-to-end con Agent Browser:
+  1. Schema: CouponRedemption + 42 promos con fechas reales (28 active + 14 expired)
+  2. Backend: 3 endpoints (redeem, redeemed, check) + transacción atómica
+  3. Frontend: store con redeemedPromotionIds, hooks (sync + actions), EstablishmentPage con contadores X/Y + badges, ProfilePage con MIS CUPONES + countdown
+  4. Producción: fix pusheado, Vercel desplegando
+- 0 errores lint, 0 errores tsc, verificación browser exitosa en home + establishment + profile
