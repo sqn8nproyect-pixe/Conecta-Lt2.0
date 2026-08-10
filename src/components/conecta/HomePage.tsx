@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Star, Heart, Clock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { fetchBusinesses } from '@/lib/api';
 import type { Category, Establishment, PriceRange } from '@/lib/types';
 import { Matchmaker } from './Matchmaker';
@@ -35,7 +36,7 @@ export function HomePage() {
 
   const goToDetail = useAppStore((s) => s.goToDetail);
   const favorites = useAppStore((s) => s.favorites);
-  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
+  const { toggle: toggleFavorite } = useFavoriteActions();
 
   const filtered = establishments
     .filter((est) => {
@@ -308,21 +309,21 @@ export function HomePage() {
 
                     {/* Favorite button */}
                     <button
-                      onClick={() => toggleFavorite(est.id, est.name)}
+                      onClick={() => toggleFavorite(est.slug, est.name)}
                       aria-label={
-                        favorites.includes(est.id)
+                        favorites.includes(est.slug)
                           ? `Quitar ${est.name} de favoritos`
                           : `Añadir ${est.name} a favoritos`
                       }
                       className={`absolute top-4 right-4 w-10 h-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 ${
-                        favorites.includes(est.id)
+                        favorites.includes(est.slug)
                           ? 'bg-gold text-obsidian border-gold glow-gold'
                           : 'bg-black/60 text-white border-white/20 hover:bg-black/90 hover:text-gold'
                       }`}
                     >
                       <Heart
                         size={16}
-                        fill={favorites.includes(est.id) ? 'currentColor' : 'none'}
+                        fill={favorites.includes(est.slug) ? 'currentColor' : 'none'}
                       />
                     </button>
 

@@ -964,3 +964,344 @@ Stage Summary:
 - Sin errores de lint, sin errores de TypeScript, sin errores de runtime, sin errores de consola
 - Footer sticky funcionando correctamente (wrapper min-h-screen + flex-col + mt-auto)
 - La migración de CONECTA-LT 3.0 a stack completo Next.js 16 + Prisma + PostgreSQL + API REST + React Query está COMPLETA y verificada
+
+---
+Task ID: 2.2
+Agent: full-stack-developer
+Task: Server layer para favoritos y reseñas
+
+Work Log:
+- Leído worklog.md completo (Etapa 1 + Tasks 1.4–1.7) y archivos de referencia:
+  `src/server/repositories/business.repository.ts`, `src/server/services/business.service.ts`,
+  `src/server/auth.ts`, `src/lib/auth.ts`, `src/lib/types.ts`, `src/lib/db.ts`,
+  `src/app/api/businesses/route.ts`, `src/app/api/businesses/[slug]/route.ts`,
+  `prisma/schema.prisma` (modelos Favorite, Review, Business confirmados).
+- Verificado estado inicial del dev server (corriendo en :3000) y del demo user
+  (Ana Rodríguez, `ana.rodriguez@gmail.com`) logueable vía `POST /api/auth/callback/demo`.
+- Confirmado que el slug `licoreria-don-sancho` existe en la BD (uno de los 21 businesses).
+  Antes de mis tests: `avgRating=4.5`, `reviewCount=12` (este último es una discrepancia
+  del seed: solo 4 reviews PUBLISHED existen en la BD, pero el campo denormalizado tenía 12).
+
+- Modificación mínima (permitida por regla 5 — no está en la lista de prohibidos):
+  `src/server/repositories/business.repository.ts` — añadido `export` a `const businessInclude`
+  para poder importarlo desde los nuevos repositorios sin duplicar el shape. Solo cambió
+  una línea: `const businessInclude =` → `export const businessInclude =`. El resto del
+  archivo intacto.
+
+- Creado `src/server/repositories/favorite.repository.ts`:
+  * Tipo `FavoriteWithBusiness = Prisma.FavoriteGetPayload<{ include: { business: { include: typeof businessInclude } } }>`
+  * `findByUser(userId)` → favorites con business completo (businessInclude), ordenados por createdAt desc.
+  * `exists(userId, businessId)` → `count() > 0` (sin transferir la row).
+  * `create(userId, businessId)` → `db.favorite.create`; atrapa `P2002` (unique [userId, businessId])
+    y devuelve la row existente en lugar de lanzar (idempotente).
+  * `delete(userId, businessId)` → `deleteMany` (idempotente, devuelve `Prisma.BatchPayload`).
+  * `deleteById(id, userId)` → `deleteMany({ where: { id, userId } })` (admin, scoped al user).
+
+- Creado `src/server/repositories/review.repository.ts`:
+  * Tipo `DbOrTx = PrismaClient | Prisma.TransactionClient` (acepta tx opcional).
+  * Tipos `ReviewWithUser`, `ReviewWithBusiness` (con `user: true` Y `business: { include: businessInclude }`).
+  * `findByBusiness(businessId, opts?)` → `findMany` con `include: { user: true }`, filter opcional por
+    `status`, orderBy createdAt desc.
+  * `findByUser(userId)` → `findMany` con `include: { user: true, business: { include: businessInclude } }`
+    (necesita user para `transformReview` y business para `transformBusiness`).
+  * `findExisting(businessId, userId)` → `findUnique` usando el compound unique `businessId_userId`.
+  * `create({ businessId, userId, rating, comment }, tx = db)` → `tx.review.upsert` con
+    `where: { businessId_userId: ... }`, `create` y `update` ambos fijan `status: 'PUBLISHED'`,
+    devuelve la row con `include: { user: true }`. Acepta tx para integrarse con la transacción
+    del service.
+  * `delete(businessId, userId)` → `deleteMany` (idempotente).
+
+- Creado `src/server/services/favorite.service.ts`:
+  * Helper `jsonError(message, status)` → devuelve un `Response` con JSON (para `throw` desde el service).
+  * `listForUser(userId)` → `Establishment[]` (transforma cada favorite.business con `transformBusiness`).
+  * `toggle(userId, businessSlug)` → busca business por slug (404 si no existe), hace toggle,
+    devuelve `{ favorited, business: Establishment }`.
+  * `isFavorite(userId, businessId)` → boolean (wrapper del repo).
+  * `checkSlugs(userId, slugs[])` → `Record<string, boolean>` (single query: trae todos los
+    favorites con business, construye Set de slugs, mapea. O(1) por slug).
+
+- Creado `src/server/services/review.service.ts`:
+  * Helper `jsonError` (mismo patrón que favorite.service).
+  * `recalculateBusinessRatings(businessId, tx = db)` (EXPORTADA) → trae reviews PUBLISHED con
+    `select: { rating: true }`, calcula `reviewCount` y `avgRating` (0 si no hay), asigna los
+    3 sub-ratings (`ambienteRating`, `servicioRating`, `precioCalidadRating`) = `avgRating`
+    (porque Review no tiene sub-dimensions todavía — Etapa 3 las añadirá). Devuelve el
+    `Business` actualizado.
+  * `listForBusiness(businessId)` → `Review[]` (frontend type, status PUBLISHED).
+  * `listForUser(userId)` → `Array<Review & { establishment: Establishment }>` — documento el
+    tipo limpio en JSDoc. Cada item lleva el review transformado + el establishment completo
+    (con offers + reviews embebidos).
+  * `create({ businessSlug, userId, rating, comment })` → busca business por slug (404 si no),
+    **`db.$transaction`** atómica que (a) upserta la review vía repo y (b) recalcula ratings,
+    luego re-fetch del business con `findById` para devolverlo con todas las relaciones
+    actualizadas. Devuelve `{ review: Review, business: Establishment }`.
+
+- Creado `src/app/api/favorites/route.ts`:
+  * `GET` → `requireUser()` + `favoriteService.listForUser()` → `Establishment[]`.
+  * `POST` → `requireUser()` + parse JSON (400 si no es JSON) + valida `businessSlug: string`
+    (400 si falta o no es string) + `favoriteService.toggle()` → `{ favorited, business }`.
+  * Try/catch: si `e instanceof Response` lo retorna tal cual (propaga 401/404). Otros errores → 500.
+
+- Creado `src/app/api/favorites/check/route.ts` (batch check — opcional implementado):
+  * `POST` → `requireUser()` + valida `businessSlugs: string[]` (400 si falta, dedupe, cap 200)
+    + `favoriteService.checkSlugs()` → `Record<string, boolean>`. Documentado en este worklog.
+
+- Creado `src/app/api/reviews/route.ts`:
+  * Helper `validateReviewBody(body)` → valida `businessSlug` (string no vacío), `rating`
+    (entero 1-5), `comment` (string, trim, 10-1000 chars). Devuelve `{ ok, error } | { ok, businessSlug, rating, comment }`.
+  * `GET` → `requireUser()` + solo acepta `?userId=me` (403 si es otro — guard de seguridad)
+    + `reviewService.listForUser()` → `Array<Review & { establishment: Establishment }>`.
+  * `POST` → `requireUser()` + parse JSON + `validateReviewBody` (400 con mensajes en español)
+    + `reviewService.create()` → `{ review, business }`. Try/catch especial para
+    `Prisma.PrismaClientKnownRequestError` con `code === 'P2002'` → 409 con mensaje de
+    "reintenta" (race condition entre el SELECT y INSERT del upsert).
+
+- Validación:
+  * `bun run lint` → **0 errores, 0 warnings**. (Tuve 2 errores iniciales por usar
+    `Prisma.*GetPayload<{}>` que el linter rechaza como empty-object type; cambié a
+    `type Favorite` / `type Business` directos y pasó.)
+  * `npx tsc --noEmit` → **0 errores**. (Tuve 1 error inicial porque `ReviewWithBusiness`
+    no incluía `user: true`, así que `transformReview` no podía recibirlo. Lo añadí al
+    tipo y al query — fix limpio.)
+
+- Smoke tests con curl (todos documentados abajo, todos pasaron):
+  * Login demo: `POST /api/auth/callback/demo` con `email=ana.rodriguez@gmail.com` → 200, cookie guardada en /tmp/c.txt.
+  * `GET /api/favorites` (sin sesión) → 401 `{"error":"No autenticado"}`.
+  * `POST /api/favorites` con body inválido (sin JSON) → 400 `{"error":"Cuerpo de la petición inválido..."}`.
+  * `POST /api/favorites` con slug inexistente → 404 `{"error":"Negocio no encontrado"}`.
+  * `POST /api/favorites` con `{"businessSlug":"licoreria-don-sancho"}` → 200 `{"favorited":true,"business":{...}}`.
+  * `GET /api/favorites` → 1 item, slug `licoreria-don-sancho`.
+  * Toggle de nuevo → `{"favorited":false}` → `GET /api/favorites` → `[]` (removido).
+  * `POST /api/favorites/check` con 3 slugs → `{"licoreria-don-sancho":true,"discoteca-glamour":false,"tasca-el-sabor":false}`.
+  * Tras toggle OFF, batch check refleja el cambio: `{"licoreria-don-sancho":false,...}`.
+  * `POST /api/reviews` sin sesión → 401.
+  * `POST /api/reviews` con `rating:10` → 400 `{"error":"rating debe ser un número entero entre 1 y 5"}`.
+  * `POST /api/reviews` con `comment:"corto"` → 400 `{"error":"El comentario debe tener al menos 10 caracteres"}`.
+  * `POST /api/reviews` con slug inexistente → 404 `{"error":"Negocio no encontrado"}`.
+  * `POST /api/reviews` con `{"businessSlug":"licoreria-don-sancho","rating":5,"comment":"Excelente atención y surtido de whiskies."}` → 200 con `{review, business}`. El `review.id` es un cuid nuevo. `business.avgRating` pasó de 4.5 → 4.8 (24/5=4.8), `business.reviewCount` 12 → 5 (corrige la discrepancia del seed: ahora cuenta solo las PUBLISHED).
+  * Verificación: `GET /api/businesses/licoreria-don-sancho` → 5 reviews PUBLISHED (incluyendo la nueva de Ana Rodríguez con rating 5).
+  * **UPDATE (no duplicado)**: `POST /api/reviews` de nuevo con `rating:3` y comment distinto → 200 con el MISMO `review.id` (confirmado: upsert actualizó, no creó). `business.avgRating` 4.8 → 4.4 (22/5=4.4). `business.reviewCount` sigue en 5 (no 6).
+  * `GET /api/reviews?userId=me` → 1 review (no 2) con `establishment.slug = licoreria-don-sancho`, `establishment.name = Licorería Don Sancho`, `establishment.avgRating = 4.4`.
+  * `GET /api/reviews?userId=other` → 403 `{"error":"Solo se permite listar las reseñas del usuario actual (userId=me)"}` (guard de seguridad).
+  * `POST /api/favorites/check` con `{"businessSlugs":[]}` → 200 `{}`.
+  * Dev log: 0 errores runtime; todas las responses con status correctos (200/400/401/403/404).
+
+- Importante — estado final dejado en la BD (para que el usuario lo vea):
+  * La reseña de Ana Rodríguez (rating 3) sobre `licoreria-don-sancho` QUEDÓ PERSISTIDA.
+  * El `avgRating` y `reviewCount` del business ahora reflejan correctamente las 5 reviews
+    PUBLISHED (en vez de los 12 hardcodeados en el seed, que eran inconsistentes con el
+    filtro `status: PUBLISHED` que ya aplica la API en `businessInclude`). Si se quiere
+    restaurar el estado original, correr `bun run db:seed` de nuevo.
+
+Stage Summary:
+- 7 archivos creados:
+  * `src/server/repositories/favorite.repository.ts`
+  * `src/server/repositories/review.repository.ts`
+  * `src/server/services/favorite.service.ts`
+  * `src/server/services/review.service.ts`
+  * `src/app/api/favorites/route.ts`
+  * `src/app/api/favorites/check/route.ts`
+  * `src/app/api/reviews/route.ts`
+- 1 archivo modificado (1 línea): `src/server/repositories/business.repository.ts` para exportar `businessInclude`.
+- API endpoints:
+  * `POST /api/favorites` (toggle), `GET /api/favorites` (list), `POST /api/favorites/check` (batch).
+  * `POST /api/reviews` (upsert + recalc), `GET /api/reviews?userId=me` (list own).
+- Transacciones Prisma: la creación/actualización de review + recálculo de ratings van en
+  `db.$transaction(async (tx) => {...})` atómica; el recalc reusa el mismo `tx`.
+- Sub-ratings: mientras el modelo `Review` no tenga dimensiones separadas (Etapa 3),
+  `ambienteRating` / `servicioRating` / `precioCalidadRating` se asignan todas al `avgRating`.
+- Tipado estricto, sin `any`; usa `Prisma.*GetPayload<{...}>` para los tipos de include;
+  `DbOrTx = PrismaClient | Prisma.TransactionClient` para repo functions que aceptan tx.
+- Validaciones (en español, status 400): rating entero 1-5, comment trim 10-1000 chars,
+  businessSlug string no vacío, body debe ser JSON parseable.
+- Auth: `requireUser()` ya lanza `Response(401)`; los route handlers lo propagan con
+  `if (e instanceof Response) return e;`. Service lanza `Response(404)` para slugs inválidos
+  y se propaga igual.
+- Seguridad extra: `GET /api/reviews?userId=...` solo acepta `me` (403 si es otro);
+  `POST /api/favorites/check` con cap de 200 slugs para evitar scans in-bounded.
+- `bun run lint`: 0 errores. `npx tsc --noEmit`: 0 errores. Sin errores runtime en dev log.
+
+---
+Task ID: 2.1
+Agent: main
+Task: Configurar NextAuth.js v4 (Google OAuth + Credentials demo fallback) con Prisma Adapter
+
+Work Log:
+- Añadidos al schema.prisma los modelos requeridos por @auth/prisma-adapter:
+  * Account (provider, providerAccountId, refresh_token, access_token, id_token, expires_at, etc.)
+  * Session (sessionToken, userId, expires)
+  * VerificationToken (identifier, token, expires)
+- Añadidas relaciones `accounts Account[]` y `sessions Session[]` al modelo User
+- Instalado @auth/prisma-adapter@2.11.3 (bun add)
+- Ejecutado `bun run db:push` — Neon actualizado con las 3 tablas nuevas
+- Generado NEXTAUTH_SECRET con `openssl rand -base64 32`
+- Actualizado .env.local y .env con NEXTAUTH_SECRET, NEXTAUTH_URL, GOOGLE_CLIENT_ID (vacío), GOOGLE_CLIENT_SECRET (vacío)
+- Creado src/lib/auth.ts con authOptions:
+  * PrismaAdapter(db) como adapter
+  * session.strategy = 'jwt' (no requiere tabla Session para el flujo principal)
+  * GoogleProvider condicional: solo se registra si GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET están presentes
+  * CredentialsProvider con id='demo' que hace upsert del usuario demo (Ana Rodríguez, ana.rodriguez@gmail.com, avatar pravatar) en la BD
+  * Callbacks jwt + session para persistir user.id en el token y exponerlo en session.user.id
+- Creado src/app/api/auth/[...nextauth]/route.ts (handler GET/POST de NextAuth)
+- Creado src/types/next-auth.d.ts (augmentation para exponer session.user.id con tipos)
+- Creado src/server/auth.ts con helpers getCurrentUser() y requireUser() (lanza Response 401 si no authed)
+- Creado src/components/session-provider.tsx (wrapper client-side de next-auth/react SessionProvider)
+- Actualizado src/app/layout.tsx para envolver la app en <SessionProvider>
+- bun run lint: 0 errores
+- npx tsc --noEmit: 0 errores
+- Smoke test con curl del flujo demo completo:
+  * GET /api/auth/csrf → 200 con csrfToken
+  * POST /api/auth/callback/demo (email=ana.rodriguez@gmail.com) → 200 (login exitoso, cookie de sesión setada)
+  * GET /api/auth/session → 200 con { user: { name: "Ana Rodríguez", email, image, id: "cmsmi7dhx0000mgjaqxoke86l" } }
+  * Verificado en BD: el upsert creó el usuario una sola vez (idempotente)
+
+Stage Summary:
+- NextAuth.js v4 configurado y funcional con JWT strategy + Prisma Adapter
+- Doble provider: Google (cuando hay creds) + Credentials demo (siempre disponible para sandbox)
+- session.user.id disponible tanto en server (getServerSession) como en client (useSession)
+- Helpers requireUser() listos para usar en API routes que necesiten auth
+- Tablas Account, Session, VerificationToken creadas en Neon
+- Demo user "Ana Rodríguez" persistido en la BD con id estable (cmsmi7dhx0000mgjaqxoke86l)
+
+---
+Task ID: 2.3
+Agent: main
+Task: Integración del frontend con NextAuth + API de favoritos/reseñas (React Query + Zustand)
+
+Work Log:
+- Extendido src/lib/api.ts con 5 nuevos helpers:
+  * fetchFavorites() → GET /api/favorites (devuelve Establishment[])
+  * toggleFavorite(slug) → POST /api/favorites (devuelve { favorited, business })
+  * checkFavorites(slugs[]) → POST /api/favorites/check (batch check, devuelve Record<slug, boolean>)
+  * fetchMyReviews() → GET /api/reviews?userId=me (devuelve ReviewWithEstablishment[])
+  * createReview({ businessSlug, rating, comment }) → POST /api/reviews (devuelve { review, business })
+- Añadido tipo ReviewWithEstablishment = Review & { establishment: EstablishmentWithRelations }
+- Reescrito src/lib/store.ts:
+  * Eliminadas acciones mock loginWithGoogle, logout, toggleFavorite, isFavorite
+  * Añadidas acciones: setUser, setFavorites, addFavoriteLocal, removeFavoriteLocal
+  * setUser ahora detecta cambios de usuario y vacía favorites al cambiar sesión
+  * favorites ahora se keyed por business SLUG (estable entre re-seeds)
+- Creado src/lib/hooks/use-favorites-sync.ts (hook Singleton bootstrap):
+  * Se monta UNA vez en el Navbar
+  * useSession() para leer el estado de auth
+  * useQuery(['favorites']) para hidratar desde el server
+  * Mirror session.user → store.user (incluye avatar)
+  * Sync serverFavorites → store.favorites (con comparación estable sorted-string para evitar loops infinitos)
+  * useMutation para toggle con optimistic update + rollback en error
+  * Invalida queries ['businesses'] tras toggle para refrescar avgRating
+- Creado src/lib/hooks/use-favorite-actions.ts (hook ligero sin effects):
+  * toggle(slug, name) — actualización optimista local + llamada directa a toggleFavorite()
+  * Reconcilia cache de React Query tras éxito
+  * Muestra notificación de login si no autenticado
+  * Safe para montar en múltiples componentes (sin loops)
+- Reescrito src/components/conecta/Navbar.tsx:
+  * Importa signIn, signOut de next-auth/react
+  * Llama useFavoritesSync() (bootstrap global)
+  * handleLogin: signIn('demo', { callbackUrl: '/' }) + notificación
+  * handleLogout: signOut({ redirect: false }) + setView('home') + notificación
+  * Avatar y "Mi Perfil" ahora derivan del store.user (sincronizado por useFavoritesSync)
+- Actualizado src/components/conecta/HomePage.tsx:
+  * toggleFavorite viene de useFavoriteActions() en vez del store
+  * Heart usa est.slug (estable) en lugar de est.id (cambia entre re-seeds)
+- Actualizado src/components/conecta/EstablishmentPage.tsx:
+  * Añadidos imports: useMutation, useQueryClient, useSession
+  * toggleFavorite viene de useFavoriteActions()
+  * isFav ahora lee favorites.includes(est.slug)
+  * reviewMutation (useMutation) declarado ANTES de early returns (rules of hooks)
+    - mutationFn recibe { businessSlug, rating, comment } como arg (no captura est del closure)
+    - onSuccess: actualiza cache ['business', slug] con data.business, invalida ['businesses'], ['favorites'], ['my-reviews']
+    - onError: muestra notificación con mensaje del server
+  * handleSubmitReview: valida auth + longitud mínima (10 chars) + dispara mutation
+  * Botón "ENVIAR VALORACIÓN" muestra "PUBLICANDO…" + disabled durante la mutación
+- Reescrito src/components/conecta/ProfilePage.tsx:
+  * Usa useSession() para detectar auth (loading/authenticated/unauthenticated)
+  * Estados: loading ("Cargando…"), unauthenticated (CTA "EXPLORAR DIRECTORIO"), authenticated (perfil completo)
+  * fetchFavorites() via useQuery(['favorites']) — data canónica del server
+  * fetchMyReviews() via useQuery(['my-reviews']) — reseñas reales del usuario
+  * Componente ProfileContent separado para respetar rules-of-hooks (no conditional hooks)
+  * Stats row muestra favoriteEsts.length y userReviews.length (datos reales del server)
+  * Lista "MIS FAVORITOS" renderizada desde favoriteEsts (con toggle heart activo)
+  * Lista "MIS RESEÑAS" renderizada desde userReviews (con nombre del establecimiento + fecha + estrellas + comentario)
+  * Logout usa signOut({ redirect: false })
+- bun run lint: 0 errores
+- npx tsc --noEmit: 0 errores
+
+Stage Summary:
+- Frontend totalmente integrado con NextAuth + API REST:
+  * Login real con el provider demo (Ana Rodríguez, id estable en BD)
+  * Logout limpia sesión + vacía favoritos locales
+  * Favoritos persistidos en BD (tabla Favorite), hidratados al iniciar sesión
+  * Toggle optimista: actualización inmediata + reconciliación con server
+  * Reseñas: upsert con constraint [businessId, userId], recálculo automático de avgRating
+  * ProfilePage muestra favoritos y reseñas reales del usuario autenticado
+- Arquitectura de hooks:
+  * useFavoritesSync (singleton, Navbar) — bootstrap + sync server→store
+  * useFavoriteActions (multi-instancia, HomePage/EstablishmentPage/ProfilePage) — toggle sin effects
+- Fix crítico: loop infinito "Maximum update depth exceeded" resuelto separando bootstrap (1 instancia) de actions (N instancias)
+- Cache de React Query: ['businesses'], ['business', slug], ['favorites'], ['my-reviews'] — todas invalidadas correctamente tras mutaciones
+
+---
+Task ID: 2.4-verify
+Agent: main
+Task: Verificación E2E con Agent Browser de la Etapa 2 (auth real + favoritos + reseñas persistentes)
+
+Work Log:
+- Dev server: HTTP 200 en /, sin errores de compilación
+- bun run lint: 0 errores
+- npx tsc --noEmit: 0 errores
+- Verificación con Agent Browser (flujo completo):
+  1. Carga inicial: AgeGate aparece, 0 errores de consola
+  2. Click "SOY MAYOR DE EDAD" → entra al Home
+  3. Click "ACCEDER CON GOOGLE" → dispara signIn('demo') → redirige a callback → vuelve a /
+  4. Navbar actualizado: muestra "Mi Perfil" + avatar + "Salir" (sesión real activa)
+  5. AgeGate reaparece (porque la página se recargó tras login) → click "SOY MAYOR" → entra al Home autenticado
+  6. Click heart en "Licorería Don Sancho":
+     * aria-label cambia de "Añadir" → "Quitar"
+     * Notificación: "¡Añadido a favoritos!: Licorería Don Sancho"
+     * Verificado en BD: Favorite { userId: Ana, businessId: Don Sancho } persistido
+  7. Click "Ver detalles de Licorería Don Sancho":
+     * Tab "Reseñas (5)" — count correcto (4 seed + 1 subagent)
+     * Botón "Quitar Licorería Don Sancho de favoritos" (favorito persiste desde Home)
+  8. Click tab "Reseñas":
+     * Form visible (autenticado): 5 estrellas + textarea + botón "ENVIAR VALORACIÓN"
+  9. Llenar form (rating=5, comment="Excelente servicio y variedad de whiskies..."):
+     * Click "ENVIAR VALORACIÓN" → botón cambia a "PUBLICANDO…"
+     * Notificación: "¡Reseña publicada con éxito!"
+  10. Verificación en BD:
+      * Review de Ana en Don Sancho: 1 sola (upsert actualizó la existente del subagent)
+      * Rating: 5 (antes era 3)
+      * Comment: "Excelente servicio y variedad de whiskies. El sommelier me recomendó un tinto espectacular. Muy recomendado."
+      * avgRating recalculado: 4.5 → 4.8 (recálculo atómico en transaction)
+      * reviewCount: 5 (sin cambio, porque es upsert no insert)
+  11. Click "Mi Perfil" → ProfilePage:
+      * Header: "Ana Rodríguez" + email + avatar real
+      * Stats: 1 favorito, 1 reseña
+      * MIS FAVORITOS: card de Licorería Don Sancho con heart activo
+      * MIS RESEÑAS: review con nombre del establecimiento + fecha + 5 estrellas + comentario completo
+  12. Click "Salir" → logout:
+      * Navbar vuelve a "ACCEDER CON GOOGLE"
+      * Notificación: "Sesión cerrada correctamente."
+      * Todos los hearts vuelven a "Añadir" (favoritos vaciados del store local)
+  13. Footer sticky verificado: gap=0, footerAtDocBottom=true
+- 0 errores de página en todo el flujo
+- 0 errores de consola (solo HMR/DevTools info normales)
+- Capturas guardadas en /home/z/my-project/public/screenshots/:
+  * stage2-profile-real-data.png (perfil con favorito + reseña real)
+  * stage2-home-logged-in.png (home con usuario autenticado)
+  * stage2-logged-out.png (home tras logout)
+
+Stage Summary:
+- Etapa 2 COMPLETA y verificada end-to-end:
+  1. Autenticación real con NextAuth.js v4 (provider demo funcional, Google listo para cuando el usuario añada creds)
+  2. Persistencia de favoritos en PostgreSQL (tabla Favorite, constraint único [userId, businessId])
+  3. Persistencia de reseñas en PostgreSQL (tabla Review, constraint único [businessId, userId] → upsert)
+  4. Recálculo atómico de avgRating + reviewCount + subRatings del Business tras cada reseña
+  5. ProfilePage muestra favoritos y reseñas reales del usuario autenticado
+  6. Logout limpia sesión y estado local correctamente
+- Fix crítico aplicado: separación de hooks bootstrap (singleton) vs actions (multi-instancia) para evitar loop infinito de re-renders
+- Datos verificados en BD Neon:
+  * User: Ana Rodríguez (id: cmsmi7dhx0000mgjaqxoke86l)
+  * Favorite: Ana → Licorería Don Sancho
+  * Review: Ana → Don Sancho (rating 5, comment "Excelente servicio...")
+  * Business.avgRating: 4.8 (recalculado desde 4.5)
+- Para habilitar Google OAuth real: el usuario solo necesita añadir GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET a .env.local (el provider se registra automáticamente)

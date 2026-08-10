@@ -6,8 +6,10 @@
 import { db } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 
-// Shared include object — keeps the relation shape consistent across queries
-const businessInclude = {
+// Shared include object — keeps the relation shape consistent across queries.
+// Exported so other repositories (favorite, review) can reuse the same shape
+// when they need to include a Business with all its relations.
+export const businessInclude = {
   category: true,
   hours: true,
   socials: true,

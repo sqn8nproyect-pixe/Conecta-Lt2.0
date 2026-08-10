@@ -1,15 +1,21 @@
 'use client';
 
 import { LogOut, User } from 'lucide-react';
+import { signIn, signOut } from 'next-auth/react';
 import { useAppStore } from '@/lib/store';
+import { useFavoritesSync } from '@/lib/hooks/use-favorites-sync';
 import type { View } from '@/lib/types';
 
 export function Navbar() {
   const view = useAppStore((s) => s.view);
   const user = useAppStore((s) => s.user);
   const setView = useAppStore((s) => s.setView);
-  const loginWithGoogle = useAppStore((s) => s.loginWithGoogle);
-  const logout = useAppStore((s) => s.logout);
+  const addNotification = useAppStore((s) => s.addNotification);
+
+  // Hydrate favorites + expose toggle() to children via the store.
+  // Calling this here means every page has the favorites hydrated
+  // as soon as the user logs in.
+  useFavoritesSync();
 
   const navItem = (label: string, target: View) => (
     <button
@@ -21,6 +27,22 @@ export function Navbar() {
       {label}
     </button>
   );
+
+  const handleLogin = () => {
+    // Uses the "demo" credentials provider (configured in src/lib/auth.ts)
+    // so the app is fully functional without real Google OAuth creds.
+    // When GOOGLE_CLIENT_ID/SECRET are set, you can pass 'google' instead.
+    void signIn('demo', { callbackUrl: '/' }).then(() => {
+      addNotification('¡Sesión iniciada con éxito!');
+    });
+  };
+
+  const handleLogout = () => {
+    void signOut({ redirect: false }).then(() => {
+      setView('home');
+      addNotification('Sesión cerrada correctamente.', 'info');
+    });
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-nav">
@@ -69,7 +91,7 @@ export function Navbar() {
                 </span>
               </div>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="flex items-center gap-1.5 text-xs px-3 sm:px-4 py-2 rounded-full border border-white/20 hover:bg-white/5 hover:border-white/40 transition-all font-medium text-white"
               >
                 <LogOut size={14} /> <span className="hidden sm:inline">Salir</span>
@@ -77,7 +99,7 @@ export function Navbar() {
             </div>
           ) : (
             <button
-              onClick={loginWithGoogle}
+              onClick={handleLogin}
               className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full bg-white text-obsidian font-semibold hover:bg-gold hover:text-obsidian active:scale-95 transition-all text-xs tracking-wider glow-gold"
             >
               <User size={15} /> <span className="hidden sm:inline">ACCEDER CON GOOGLE</span>

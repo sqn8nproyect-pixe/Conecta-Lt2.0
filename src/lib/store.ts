@@ -9,7 +9,6 @@ import type {
   User,
   View,
 } from './types';
-import { mockGoogleUser } from './data';
 
 interface AppState {
   // Navigation
@@ -17,10 +16,14 @@ interface AppState {
   selectedEstablishmentSlug: string | null;
   selectedMapEstablishment: Establishment | null;
 
-  // Auth (mock — Etapa 2 reemplaza con Auth.js + Google OAuth)
+  // Auth — hydrated from NextAuth useSession() in the Navbar.
+  // `authUserId` is set when logged in; null when logged out.
   user: User | null;
 
-  // Favorites (local state — Etapa 2 persiste en DB)
+  // Favorites — keyed by business SLUG (stable across re-seeds).
+  // When logged out, this is session-only memory.
+  // When logged in, the Navbar hydrates it from /api/favorites on mount
+  // and toggleFavorite() fires the API mutation.
   favorites: string[];
 
   // Notifications
@@ -31,13 +34,11 @@ interface AppState {
   goToDetail: (slug: string) => void;
   setSelectedMapEstablishment: (est: Establishment | null) => void;
 
-  // Actions: auth
-  loginWithGoogle: () => void;
-  logout: () => void;
-
-  // Actions: favorites
-  toggleFavorite: (id: string, name?: string) => void;
-  isFavorite: (id: string) => boolean;
+  // Actions: auth — called by the Navbar after useSession resolves.
+  setUser: (user: User | null) => void;
+  setFavorites: (slugs: string[]) => void;
+  addFavoriteLocal: (slug: string) => void;
+  removeFavoriteLocal: (slug: string) => void;
 
   // Actions: notifications
   addNotification: (message: string, type?: 'success' | 'info') => void;
@@ -57,34 +58,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ view: 'detail', selectedEstablishmentSlug: slug }),
   setSelectedMapEstablishment: (est) => set({ selectedMapEstablishment: est }),
 
-  loginWithGoogle: () => {
-    set({ user: mockGoogleUser });
-    get().addNotification('¡Sesión iniciada con éxito via Google!');
-  },
-  logout: () => {
-    set({ user: null });
-    get().addNotification('Sesión cerrada correctamente.', 'info');
-  },
-
-  toggleFavorite: (id, name) => {
-    const { favorites, addNotification } = get();
-    const isFav = favorites.includes(id);
-    set({
-      favorites: isFav
-        ? favorites.filter((f) => f !== id)
-        : [...favorites, id],
-    });
-    if (name) {
-      addNotification(
-        isFav
-          ? `Eliminado de favoritos: ${name}`
-          : `¡Añadido a favoritos!: ${name}`,
-        isFav ? 'info' : 'success',
-      );
+  setUser: (user) => {
+    const prev = get().user;
+    if (prev?.id === user?.id) {
+      // same user — just update fields (e.g. avatar refresh)
+      if (user) set({ user });
+      return;
     }
+    // user changed (login/logout/switch) — clear local favorites so
+    // the Navbar's useQuery can re-hydrate from /api/favorites.
+    set({ user, favorites: [] });
   },
-
-  isFavorite: (id) => get().favorites.includes(id),
+  setFavorites: (slugs) => set({ favorites: slugs }),
+  addFavoriteLocal: (slug) =>
+    set((s) =>
+      s.favorites.includes(slug)
+        ? s
+        : { favorites: [...s.favorites, slug] },
+    ),
+  removeFavoriteLocal: (slug) =>
+    set((s) => ({ favorites: s.favorites.filter((f) => f !== slug) })),
 
   addNotification: (message, type = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -101,6 +94,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   dismissNotification: (id) =>
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
 }));
+
+// ── Favorites selector (used by cards) ──────────────────────
+// Components call useAppStore(isFavorite(slug)) to read the heart state.
+
+export function isFavorite(slug: string): (s: AppState) => boolean {
+  return (s) => s.favorites.includes(slug);
+}
 
 // ── Matchmaker helpers (pure functions) ─────────────────────
 // Etapa 5.2 reemplazará esto con scoring real basado en datos.

@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { useSession, signOut } from 'next-auth/react';
 import {
   Heart,
   Star,
@@ -12,33 +12,38 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { fetchBusinesses } from '@/lib/api';
-import type { Review } from '@/lib/types';
+import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
+import { fetchFavorites, fetchMyReviews } from '@/lib/api';
 
 export function ProfilePage() {
-  const user = useAppStore((s) => s.user);
-  const favorites = useAppStore((s) => s.favorites);
   const goToDetail = useAppStore((s) => s.goToDetail);
   const setView = useAppStore((s) => s.setView);
-  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
-  const logout = useAppStore((s) => s.logout);
-  const loginWithGoogle = useAppStore((s) => s.loginWithGoogle);
+  const { status } = useSession();
+  const { toggle: toggleFavorite } = useFavoriteActions();
 
-  const { data: allBusinesses = [] } = useQuery({
-    queryKey: ['businesses'],
-    queryFn: () => fetchBusinesses(),
+  // Server-backed favorites (canonical) — same query the rest of the app uses
+  const { data: favoriteEsts = [] } = useQuery({
+    queryKey: ['favorites'],
+    queryFn: fetchFavorites,
+    enabled: status === 'authenticated',
   });
 
-  // Etapa 2: reviews persistentes (aún no implementado en el store)
-  const userReviews: Review[] = [];
-
-  const favoriteEsts = useMemo(
-    () => allBusinesses.filter((est) => favorites.includes(est.id)),
-    [allBusinesses, favorites],
-  );
+  // Server-backed reviews written by the current user
+  const { data: userReviews = [] } = useQuery({
+    queryKey: ['my-reviews'],
+    queryFn: fetchMyReviews,
+    enabled: status === 'authenticated',
+  });
 
   // Not-logged-in empty state
-  if (!user) {
+  if (status === 'loading') {
+    return (
+      <div className="max-w-md mx-auto px-4 sm:px-6 py-32 text-center text-white/40 text-sm">
+        Cargando…
+      </div>
+    );
+  }
+  if (status !== 'authenticated') {
     return (
       <motion.div
         initial={{ opacity: 0, y: 15 }}
@@ -59,10 +64,10 @@ export function ProfilePage() {
               y personalizar tu experiencia nocturna en Los Teques.
             </p>
             <button
-              onClick={loginWithGoogle}
+              onClick={() => setView('home')}
               className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-obsidian font-bold hover:bg-gold hover:text-obsidian active:scale-95 transition-all text-sm tracking-wider glow-gold"
             >
-              <Sparkles size={16} /> ACCEDER CON GOOGLE
+              <Sparkles size={16} /> EXPLORAR DIRECTORIO
             </button>
           </div>
         </section>
@@ -71,9 +76,44 @@ export function ProfilePage() {
   }
 
   const handleLogout = () => {
-    logout();
-    setView('home');
+    void signOut({ redirect: false }).then(() => setView('home'));
   };
+
+  // Pull the user from the first favorite's avatar OR from the session via the store
+  // (the store is hydrated by useFavoritesSync). For simplicity, read it from the store.
+  // We can't call useAppStore conditionally, so this component reads it via a child.
+  return <ProfileContent
+    favoriteEsts={favoriteEsts}
+    userReviews={userReviews}
+    onLogout={handleLogout}
+    onGoToDetail={goToDetail}
+    onToggleFavorite={toggleFavorite}
+  />;
+}
+
+function ProfileContent({
+  favoriteEsts,
+  userReviews,
+  onLogout,
+  onGoToDetail,
+  onToggleFavorite,
+}: {
+  favoriteEsts: import('@/lib/api').EstablishmentWithRelations[];
+  userReviews: import('@/lib/api').ReviewWithEstablishment[];
+  onLogout: () => void;
+  onGoToDetail: (slug: string) => void;
+  onToggleFavorite: (slug: string, name?: string) => void;
+}) {
+  const user = useAppStore((s) => s.user);
+
+  // user can be null for a brief moment while the session resolves; guard.
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto px-4 sm:px-6 py-32 text-center text-white/40 text-sm">
+        Cargando perfil…
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -100,7 +140,7 @@ export function ProfilePage() {
               </h1>
               <p className="text-white/60 text-sm mb-4">{user.email}</p>
               <button
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/15 text-white hover:border-gold hover:text-gold transition-all text-xs font-semibold tracking-wider"
               >
                 <LogOut size={14} /> CERRAR SESIÓN
@@ -114,7 +154,7 @@ export function ProfilePage() {
               <Heart size={18} className="text-gold" fill="#d4af37" />
               <div>
                 <div className="font-mono text-xl font-bold text-white tabular-nums">
-                  {favorites.length}
+                  {favoriteEsts.length}
                 </div>
                 <div className="text-[10px] text-white/50 tracking-widest uppercase">
                   Favoritos
@@ -166,7 +206,7 @@ export function ProfilePage() {
                   className={`glass-card rounded-2xl overflow-hidden ${cardClass} group relative`}
                 >
                   <button
-                    onClick={() => goToDetail(est.slug)}
+                    onClick={() => onGoToDetail(est.slug)}
                     className="block w-full text-left"
                     aria-label={`Ver detalles de ${est.name}`}
                   >
@@ -207,7 +247,7 @@ export function ProfilePage() {
 
                   {/* Favorite heart (active) */}
                   <button
-                    onClick={() => toggleFavorite(est.id, est.name)}
+                    onClick={() => onToggleFavorite(est.slug, est.name)}
                     aria-label={`Quitar ${est.name} de favoritos`}
                     className="absolute top-3 right-3 w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 bg-gold text-obsidian border-gold glow-gold"
                   >
@@ -238,42 +278,39 @@ export function ProfilePage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {userReviews.map((r: Review) => {
-              const est = allBusinesses.find((e) => e.id === r.establishmentId);
-              return (
-                <article key={r.id} className="glass-card rounded-2xl p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <button
-                      onClick={() => est && goToDetail(est.slug)}
-                      className="font-serif text-lg font-bold text-gold hover:underline transition-all text-left"
-                    >
-                      {est ? est.name : 'Local eliminado'}
-                    </button>
-                    <div
-                      className="flex items-center gap-0.5"
-                      aria-label={`Tu calificación: ${r.rating} de 5 estrellas`}
-                    >
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          size={14}
-                          className={
-                            i < r.rating ? 'text-gold' : 'text-white/20'
-                          }
-                          fill={i < r.rating ? '#d4af37' : 'none'}
-                        />
-                      ))}
-                    </div>
+            {userReviews.map((r) => (
+              <article key={r.id} className="glass-card rounded-2xl p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                  <button
+                    onClick={() => onGoToDetail(r.establishment.slug)}
+                    className="font-serif text-lg font-bold text-gold hover:underline transition-all text-left"
+                  >
+                    {r.establishment.name}
+                  </button>
+                  <div
+                    className="flex items-center gap-0.5"
+                    aria-label={`Tu calificación: ${r.rating} de 5 estrellas`}
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        className={
+                          i < r.rating ? 'text-gold' : 'text-white/20'
+                        }
+                        fill={i < r.rating ? '#d4af37' : 'none'}
+                      />
+                    ))}
                   </div>
-                  <div className="text-xs text-white/40 font-mono mb-2">
-                    {r.date}
-                  </div>
-                  <p className="text-white/80 text-sm leading-relaxed">
-                    {r.comment}
-                  </p>
-                </article>
-              );
-            })}
+                </div>
+                <div className="text-xs text-white/40 font-mono mb-2">
+                  {r.date}
+                </div>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  {r.comment}
+                </p>
+              </article>
+            ))}
           </div>
         )}
       </section>

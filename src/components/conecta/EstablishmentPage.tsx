@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -26,7 +27,8 @@ import {
   generateReservationCode,
   defaultBookingData,
 } from '@/lib/store';
-import { fetchBusinessBySlug } from '@/lib/api';
+import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
+import { fetchBusinessBySlug, createReview } from '@/lib/api';
 import type { BookingData, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
@@ -68,7 +70,9 @@ export function EstablishmentPage() {
   const user = useAppStore((s) => s.user);
   const addNotification = useAppStore((s) => s.addNotification);
   const favorites = useAppStore((s) => s.favorites);
-  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
+  const { toggle: toggleFavorite } = useFavoriteActions();
+  const { status: authStatus } = useSession();
+  const queryClient = useQueryClient();
 
   const { data: est, isLoading } = useQuery({
     queryKey: ['business', slug],
@@ -124,6 +128,32 @@ export function EstablishmentPage() {
     setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 2200);
   }, [addNotification]);
 
+  // Review mutation — declared BEFORE any early return so the rules of hooks hold.
+  // The slug is passed in via mutate(slug) so we don't capture `est` in the closure.
+  const reviewMutation = useMutation({
+    mutationFn: (input: { businessSlug: string; rating: number; comment: string }) =>
+      createReview(input),
+    onSuccess: (data) => {
+      addNotification('¡Reseña publicada con éxito!');
+      // Update the business query cache so the new review + recalculated
+      // avgRating/reviewCount show up instantly.
+      queryClient.setQueryData(['business', slug], data.business);
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ['my-reviews'] });
+      setComment('');
+      setRating(5);
+      setActiveTab('reviews');
+    },
+    onError: (err: Error) => {
+      if (err.message === 'NOT_AUTHENTICATED') {
+        addNotification('Debes iniciar sesión para dejar una reseña.', 'info');
+      } else {
+        addNotification(err.message || 'No se pudo publicar la reseña.', 'info');
+      }
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-32 text-center text-white/60">
@@ -150,7 +180,7 @@ export function EstablishmentPage() {
   const estReviews = est.reviews ?? [];
   const avg = est.avgRating;
   const count = est.reviewCount;
-  const isFav = favorites.includes(est.id);
+  const isFav = favorites.includes(est.slug);
 
   const handleNextPhoto = () =>
     setActivePhotoIndex((p) => (p + 1) % est.images.length);
@@ -159,13 +189,19 @@ export function EstablishmentPage() {
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (authStatus !== 'authenticated') {
       addNotification('Debes iniciar sesión para dejar una reseña.', 'info');
       return;
     }
-    addNotification('Las reseñas persistentes estarán disponibles pronto.', 'info');
-    setComment('');
-    setActiveTab('reviews');
+    if (comment.trim().length < 10) {
+      addNotification('El comentario debe tener al menos 10 caracteres.', 'info');
+      return;
+    }
+    reviewMutation.mutate({
+      businessSlug: est.slug,
+      rating,
+      comment: comment.trim(),
+    });
   };
 
   const handleStartBooking = (dealId: string = '') => {
@@ -304,7 +340,7 @@ export function EstablishmentPage() {
 
         {/* Favorite button */}
         <button
-          onClick={() => toggleFavorite(est.id, est.name)}
+          onClick={() => toggleFavorite(est.slug, est.name)}
           aria-label={isFav ? `Quitar ${est.name} de favoritos` : `Añadir ${est.name} a favoritos`}
           className={`absolute top-5 right-5 w-12 h-12 rounded-2xl backdrop-blur-md border flex items-center justify-center transition-all active:scale-90 ${
             isFav
@@ -679,10 +715,10 @@ export function EstablishmentPage() {
 
                   <button
                     type="submit"
-                    disabled={!comment.trim()}
-                    className="disabled:opacity-40 w-full bg-gold hover:bg-[#C5A13A] active:scale-95 text-obsidian font-bold h-12 rounded-xl text-xs tracking-wider transition-all glow-gold"
+                    disabled={!comment.trim() || reviewMutation.isPending}
+                    className="disabled:opacity-40 disabled:cursor-not-allowed w-full bg-gold hover:bg-[#C5A13A] active:scale-95 text-obsidian font-bold h-12 rounded-xl text-xs tracking-wider transition-all glow-gold flex items-center justify-center gap-2"
                   >
-                    ENVIAR VALORACIÓN
+                    {reviewMutation.isPending ? 'PUBLICANDO…' : 'ENVIAR VALORACIÓN'}
                   </button>
                 </form>
               ) : (
