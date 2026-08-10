@@ -1996,3 +1996,40 @@ Stage Summary:
 - Vinculación de cupones 1:1 transaccional: crear reserva + linkear cupón (CLAIMED→USED) en una sola $transaction; cancelar reserva + deslinkear cupón (USED→CLAIMED) en otra. El unique constraint en CouponRedemption.reservationId garantiza que un cupón solo pueda linkearse a UNA reserva; si dos peticiones concurrentes compiten, el perdedor recibe 400 "Este cupón ya fue usado".
 - Lint 0 errores, tsc 0 errores, 15/15 smoke tests OK (incluyendo cancelación con revierto de cupón).
 - Listo para que el frontend Etapa 5.1 (ya implementado por el agente 5.1) hidrate MIS RESERVAS desde GET /api/reservations y dispare POST /api/reservations + POST /api/reservations/[id]/cancel.
+
+---
+Task ID: 5.4-verify
+Agent: main
+Task: Verificación E2E Etapa 5 + push a producción
+
+Work Log:
+- Verificación lint + tsc tras integrar 5.2 (backend) + 5.3 (frontend): 0 errores ambos
+- Arrancado dev server con todas las env vars exportadas
+- Agent Browser — HomePage: renderiza sin crash, usuario Ana autenticado, 21 locales visibles
+- Agent Browser — Licolería Don Sancho: página de detalle carga con sub-ratings (4.8/4.6/4.4), botón RESERVAR MESA visible
+- Agent Browser — Modal de reserva abierto: campos NOMBRE COMPLETO, TELÉFONO DE CONTACTO (nuevo), FECHA, HORA, NÚMERO DE PERSONAS, NOTAS (OPCIONAL)
+- Formulario llenado (Carlos Prueba, +58 412 1234567, 2026-12-25, 20:30) y enviado
+- Verificación BD Neon directa: reserva LT-1429-A creada con status PENDING, 3 personas, cupón CATAVALLE vinculado (status CLAIMED → USED, reservationId seteado)
+- Agent Browser — ProfilePage: MIS RESERVAS (4) renderizado con:
+  * Stats row 4 stats: 2 FAVORITOS · 2 RESEÑAS · 2 CUPONES · 4 RESERVAS
+  * MIS CUPONES: CATAVALLE ahora muestra badge USADO (vinculado a reserva)
+  * MIS RESERVAS: 4 cards con confirmationCode dorado, badges de estado (PENDIENTE/CANCELADA), fechas, countdown, chip de cupón, botón CANCELAR
+- Estado final BD verificado:
+  * 4 reservas: LT-1429-A PENDING (con cupón), 3 CANCELLED (smoke tests subagente)
+  * CATAVALLE: USED + reservationId seteado (vinculado)
+  * SANCHO18: CLAIMED (sin reserva, disponible para usar)
+- Commit + push a GitHub:
+  * Commit 30968ae: feat(etapa-5): reservas reales persistentes + vinculación de cupones
+  * Push exitoso: fc63f16..30968ae main -> main
+  * Vercel auto-deploy disparado
+
+Stage Summary:
+- Etapa 5 COMPLETA y verificada end-to-end:
+  1. Backend: 4 archivos creados (repository + service + 2 API routes), 0 modificaciones al schema (Reservation ya existía)
+  2. Frontend: 2 hooks nuevos + 6 archivos modificados (types, api, store, Navbar, EstablishmentPage, ProfilePage)
+  3. Modal de reserva conectado al backend: código LT-XXXX-X generado en servidor, persiste en BD
+  4. Vinculación de cupones: reservar con oferta → cupón CLAIMED → USED + reservationId; cancelar revierte a CLAIMED
+  5. ProfilePage: nueva sección MIS RESERVAS con 4 cards, stats row ampliado a 4 stats
+- Flujo completo descubierto → opinar → reclamar cupón → reservar mesa (con cupón) → canjear: IMPLEMENTADO
+- 0 errores lint, 0 errores tsc, verificación browser exitosa
+- Producción: fix pusheado, Vercel desplegando
