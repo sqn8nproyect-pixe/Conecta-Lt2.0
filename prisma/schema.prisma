@@ -10,9 +10,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider  = "sqlite"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // ── GEOGRAFÍA ───────────────────────────────────────────────
@@ -322,7 +321,10 @@ model Review {
   businessId    String
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
-  rating        Int // 1-5
+  rating        Int // 1-5 (promedio de las 3 dimensiones, calculado en el servicio)
+  ambienteRating     Int     // 1-5 — sub-rating Ambiente
+  servicioRating     Int     // 1-5 — sub-rating Servicio
+  precioCalidadRating Int    // 1-5 — sub-rating Precio-Calidad
   comment       String       @db.Text
   status        ReviewStatus @default(PUBLISHED)
   createdAt     DateTime     @default(now())
