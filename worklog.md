@@ -4088,3 +4088,23 @@ Stage Summary:
 - 4 additional resilience fixes applied (try/catch on 2 API routes, slowLoad on 2 pages, signIn error handling).
 - All code verified working via Agent Browser: home renders 29 cards, age gate works, API returns 21 businesses, zero console errors.
 - The Vercel deployment issue (separate from local) still requires migrating off SQLite for serverless.
+
+---
+Task ID: fix-login-1
+Agent: main
+Task: User reported "no me puedo logear, no sale la pagina de verificacion de edad". Diagnosed and fixed login bug.
+
+Work Log:
+- Found dev server was DOWN (sandbox killed background processes between tool calls). Created start-dev.sh with setsid+disown to properly daemonize — server now persists with PPID=1 (init).
+- Verified age gate works correctly: shows on fresh visit, hides after "SOY MAYOR DE EDAD" click. The user's "no sale" was because sessionStorage already had age-verified=true from a previous visit (by design — asks once per session).
+- ROOT CAUSE of login failure: my previous fix (Task resilience-1/review-fix-all-1) changed handleLogin to use `window.location.href = res.url` after signIn with redirect:false. But `res.url` comes from NEXTAUTH_URL=http://localhost:3000, while the browser may be at 127.0.0.1:3000 or the gateway domain. This cross-origin navigation (localhost ≠ 127.0.0.1) caused:
+  * Session cookie lost (cookies are per-domain)
+  * sessionStorage lost (age-verified flag gone → age gate reappeared)
+  * User appeared "not logged in" after the redirect
+- FIX: Changed `window.location.href = res.url` to `window.location.reload()` in Navbar.tsx handleLogin. This stays same-origin, preserving the session cookie set by the POST to /api/auth/callback/demo, and picks up the new session on reload.
+- Verified end-to-end: fresh browser → age gate shows → pass → click CUENTA DEMO → session = {user: "Ana Rodríguez", role: BUSINESS_OWNER} → navbar shows Mi Perfil/Mis Locales/Salir. Zero console errors.
+
+Stage Summary:
+- Login now works: signIn(redirect:false) + window.location.reload() keeps everything same-origin.
+- Age gate works correctly (shows once per session, then sessionStorage remembers).
+- Dev server persists via start-dev.sh (setsid + disown, PPID=1).

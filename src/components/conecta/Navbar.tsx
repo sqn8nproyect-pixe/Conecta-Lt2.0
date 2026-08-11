@@ -385,32 +385,38 @@ export function Navbar() {
 
   const handleLogin = () => {
     if (googleEnabled) {
-      // Real Google OAuth — redirect: false keeps it a client-side
-      // navigation so we can surface success/error as a toast.
+      // Real Google OAuth — redirect: false so we can surface
+      // success/error as a toast. Google OAuth requires a full redirect
+      // to Google's consent screen, so redirect:false only affects the
+      // RETURN from the callback, not the outbound redirect.
       void signIn('google', { callbackUrl: '/', redirect: false })
         .then((res) => {
           if (res?.error) {
             addNotification('No se pudo iniciar sesión con Google. Intenta de nuevo.', 'info');
           } else {
             addNotification('¡Sesión iniciada con Google!');
-            // If redirect:false and no error, NextAuth returns a URL we
-            // can navigate to — but for callbackUrl:'/' a full reload is
-            // simplest and avoids stale session-cache issues.
-            if (res?.url) window.location.href = res.url;
+            // IMPORTANT: use reload(), NOT window.location.href = res.url.
+            // res.url comes from NEXTAUTH_URL which may differ from the
+            // browser's current origin (e.g. localhost vs 127.0.0.1 vs
+            // the gateway domain). Navigating cross-origin would lose
+            // the just-set session cookie and sessionStorage. A simple
+            // reload stays same-origin and picks up the new cookie.
+            window.location.reload();
           }
         })
         .catch(() => {
           addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
         });
     } else {
-      // Fallback Demo — entra directo como Ana Rodríguez sin redirect.
+      // Fallback Demo — entra directo como Ana Rodríguez.
+      // redirect: false + reload() keeps everything same-origin.
       void signIn('demo', { callbackUrl: '/', redirect: false })
         .then((res) => {
           if (res?.error) {
             addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
           } else {
             addNotification('¡Sesión iniciada con éxito!');
-            if (res?.url) window.location.href = res.url;
+            window.location.reload();
           }
         })
         .catch(() => {
