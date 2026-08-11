@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Conecta-LT 3.0 — Esquema Prisma (PostgreSQL / Neon)
+// Conecta-LT 3.0 — Esquema Prisma (SQLite)
 // ─────────────────────────────────────────────────────────────
 // Diseñado en Etapa 1 con todos los modelos del dominio real.
 // Las tablas que no se usan todavía (Event, FlashDeal, etc.)
@@ -10,9 +10,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // ── GEOGRAFÍA ───────────────────────────────────────────────
@@ -105,12 +104,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -171,7 +170,7 @@ model Business {
   id              String         @id @default(cuid())
   name            String
   slug            String         @unique
-  description     String         @db.Text
+  description     String
   address         String
   lat             Float
   lng             Float
@@ -188,7 +187,7 @@ model Business {
 
   // Ficha enriquecida
   specialty       String?
-  valueProposition String?       @db.Text
+  valueProposition String?
 
   // Estado y operación
   status          BusinessStatus @default(ACTIVE)
@@ -291,7 +290,7 @@ model Promotion {
   business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
   businessId     String
   title          String
-  description    String          @db.Text
+  description    String
   price          String? // "$89" (precio display)
   discount       String? // "20% OFF", "2x1"
   image          String?
@@ -358,7 +357,7 @@ model Review {
   ambienteRating     Int     @default(0) // 1-5 — sub-rating Ambiente
   servicioRating     Int     @default(0) // 1-5 — sub-rating Servicio
   precioCalidadRating Int    @default(0) // 1-5 — sub-rating Precio-Calidad
-  comment       String       @db.Text
+  comment       String
   status        ReviewStatus @default(PUBLISHED)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -424,7 +423,7 @@ model AnalyticsEvent {
   user        User?    @relation(fields: [userId], references: [id])
   userId      String?
   businessId  String? // se guarda como string suelto (sin FK) para flexibilidad
-  metadata    Json     @default("{}")
+  metadata    Json
   createdAt   DateTime @default(now())
 
   @@index([type, createdAt])

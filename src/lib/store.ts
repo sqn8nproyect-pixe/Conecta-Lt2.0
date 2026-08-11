@@ -102,8 +102,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUser: (user) => {
     const prev = get().user;
     if (prev?.id === user?.id) {
-      // same user — just update fields (e.g. avatar refresh)
-      if (user) set({ user });
+      // same user — just update fields (e.g. avatar refresh).
+      // Preserve `role` if the incoming user object omitted it
+      // (defensive: multiple hooks mirror the session into the store
+      // and not all of them remember to pass `role` — see Etapa 7.C
+      // where this race caused the "Mis Locales" nav item to disappear).
+      if (user) {
+        const merged = prev?.role && !user.role ? { ...user, role: prev.role } : user;
+        set({ user: merged });
+      }
       return;
     }
     // user changed (login/logout/switch) — clear local favorites AND

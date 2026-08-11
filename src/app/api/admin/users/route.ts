@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     if (role) where.role = role as UserRole;
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search } },
+        { email: { contains: search } },
       ];
     }
 

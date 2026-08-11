@@ -43,6 +43,7 @@ export function useRedemptionsSync() {
         name: u.name ?? '',
         email: u.email ?? '',
         avatar: u.image ?? '',
+        role: u.role ?? 'USER',
       });
     } else {
       setUser(null);
