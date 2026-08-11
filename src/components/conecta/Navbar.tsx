@@ -386,31 +386,39 @@ export function Navbar() {
   const handleLogin = () => {
     // Two different flows depending on provider:
     //
-    // GOOGLE (OAuth): signIn with redirect:false returns `{ url }` where
-    //   url is Google's authorization URL (https://accounts.google.com/...).
-    //   We must navigate to it — Google authenticates the user, then
-    //   redirects back to /api/auth/callback/google on our origin. With
-    //   trustHost:true (no hardcoded NEXTAUTH_URL), NextAuth infers the
-    //   callback URL from the request's Host header → stays same-origin.
+    // GOOGLE (OAuth): en Vercel usamos redirect:true (default) — signIn
+    //   hace un form POST que termina en 302 redirect del navegador a
+    //   Google. Esto funciona mejor que redirect:false (fetch) en
+    //   NextAuth v4 + Next.js 16, donde el flujo fetch falla con
+    //   OAuthCallback error (probable issue de cookies/state entre
+    //   el POST inicial y el callback de Google).
+    //   En localhost usamos redirect:false porque el sandbox puede
+    //   tener issues cross-origin (localhost vs 127.0.0.1).
     //
-    // DEMO (Credentials): signIn with redirect:false actually calls
-    //   authorize() server-side and sets the session cookie via fetch.
-    //   No `url` in the response — we just reload() to pick up the cookie.
-    //
-    // ERROR DETECTION: when signIn fails, NextAuth returns
-    //   `{ url: "/api/auth/error?error=OAuthCallback" }` (or similar)
-    //   instead of the provider URL. We detect that pattern and show
-    //   a helpful toast instead of navigating to the error page.
+    // DEMO (Credentials): siempre redirect:false porque authorize()
+    //   corre server-side via fetch y setea la cookie. Necesitamos
+    //   reload() para que el cliente lea la nueva cookie.
     const provider = googleEnabled ? 'google' : 'demo';
+    const isVercel = typeof window !== 'undefined'
+      && window.location.hostname.includes('vercel.app');
+
+    if (provider === 'google' && isVercel) {
+      // Flujo OAuth tradicional: form POST + 302 redirect.
+      // No manejamos la promesa porque el navegador navegará a Google.
+      void signIn(provider, { callbackUrl: '/' }).catch(() => {
+        addNotification('Error de conexión al iniciar sesión con Google.', 'info');
+      });
+      return;
+    }
+
+    // Flujo fetch (redirect:false) — para demo en cualquier entorno,
+    // o para Google en localhost/dev.
     void signIn(provider, { callbackUrl: '/', redirect: false })
       .then((res) => {
         if (res?.error) {
           addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
         } else if (res?.url && res.url.includes('/api/auth/error')) {
-          // NextAuth returns the error URL when the OAuth flow fails
-          // (e.g., redirect_uri_mismatch, invalid client_secret, state
-          // mismatch). Show a clear message instead of navigating to
-          // the generic error page.
+          // NextAuth returns the error URL when the OAuth flow fails.
           const errorMatch = res.url.match(/[?&]error=([^&]+)/);
           const errorCode = errorMatch ? decodeURIComponent(errorMatch[1]) : 'unknown';
           console.error('[auth] OAuth provider error:', errorCode, res.url);
