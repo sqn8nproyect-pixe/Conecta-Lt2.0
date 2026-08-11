@@ -1,17 +1,25 @@
 // ─────────────────────────────────────────────────────────────
-// Conecta-LT 3.0 — Esquema Prisma (SQLite)
+// Conecta-LT 3.0 — Esquema Prisma (PostgreSQL / Neon)
 // ─────────────────────────────────────────────────────────────
 // Diseñado en Etapa 1 con todos los modelos del dominio real.
 // Las tablas que no se usan todavía (Event, FlashDeal, etc.)
 // se añadirán en sus respectivas etapas con migraciones.
+//
+// Usamos Neon (https://neon.tech) como proveedor PostgreSQL serverless:
+//   - DATABASE_URL: connection pooler (-pooler en el host) → para la app
+//   - DIRECT_URL:   conexión directa → para migraciones (prisma migrate)
+//
+// En desarrollo local también funciona con SQLite cambiando `provider`
+// a "sqlite" y usando DATABASE_URL="file:./dev.db" (sin DIRECT_URL).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ── GEOGRAFÍA ───────────────────────────────────────────────

@@ -19,7 +19,8 @@
     "db:seed-roles": "bun run prisma/seed-roles.ts",
     "prisma": {
       "seed": "bun run prisma/seed.ts"
-    }
+    },
+    "db:verify-neon": "bun run prisma/verify-neon.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
