@@ -4477,3 +4477,55 @@ Stage Summary:
   end-to-end con su cuenta real, remover el debug capture code
   (logger override, redirect callback, route wrapper) y dejar solo
   el patch script como fix definitivo.
+
+---
+Task ID: fix-google-oauth-4
+Agent: main
+Task: Usuario confirmó que Google OAuth funciona end-to-end. Limpiar todo el debug code.
+
+Work Log:
+- Removido de src/lib/auth.ts:
+  * _lastAuthError module-level state (44-60)
+  * _getLastAuthError() export
+  * redirect callback que apegaba ?debug_error= al URL (250-269)
+  * Simplificado logger.error: ahora solo loggea code + message
+    (no captura en estado module-level)
+  * debug: process.env.NODE_ENV !== 'production' (era true siempre)
+  * logger.debug ahora respeta NODE_ENV (era siempre console.log)
+- Revertido src/app/api/auth/[...nextauth]/route.ts a versión simple
+  (NextAuth(authOptions) as GET/POST). Removido debug wrapper que
+  post-procesaba redirects para apegar debug_error.
+- Eliminado src/app/api/diagnose-auth/route.ts (exponía env vars)
+- Eliminado src/app/api/diagnose-auth/google-url/route.ts
+- Lint PASS. TypeScript: trustHost error pre-existente (no de cleanup).
+- Verificación post-deploy:
+  * GET / → HTTP 200
+  * GET /api/auth/session → HTTP 200 (vacío hasta login)
+  * GET /api/auth/providers → HTTP 200 (google + demo registrados)
+  * GET /api/diagnose-auth → HTTP 404 (eliminado correctamente)
+- Verificación Agent Browser end-to-end:
+  * AgeGate → "SOY MAYOR DE EDAD" → entra al sitio
+  * Click "CONTINUAR CON GOOGLE" → navega a
+    https://accounts.google.com/v3/signin/identifier con parámetros
+    OAuth correctos (client_id, redirect_uri, state, code_challenge)
+  * Google muestra página de sign-in
+- Verificación Demo login end-to-end:
+  * POST /api/auth/callback/demo → 200 + session cookie seteada
+  * GET /api/auth/session → {user: Ana Rodríguez, role: BUSINESS_OWNER}
+
+Stage Summary:
+- 🎉 CLEANUP COMPLETO — Google OAuth fixeado y verificado, debug code removido
+- El fix definitivo (scripts/patch-openid-client.js + postinstall hook)
+  se mantiene intacto
+- Archivos finales:
+  * scripts/patch-openid-client.js — patch script (EL FIX)
+  * package.json — postinstall: 'node scripts/patch-openid-client.js && prisma generate'
+  * src/lib/auth.ts — limpio, sin debug code, logger simplificado
+  * src/app/api/auth/[...nextauth]/route.ts — versión simple
+- 1 commit pusheado a origin/main (0450fb5):
+  cleanup(auth): remover debug code de Google OAuth
+- Producción https://conecta-lt2-0.vercel.app 100% operativa:
+  * Google OAuth funciona (navega a accounts.google.com correctamente)
+  * Demo login funciona (Ana Rodríguez, BUSINESS_OWNER)
+  * Endpoints de debug eliminados (404)
+  * 0 errores de consola
