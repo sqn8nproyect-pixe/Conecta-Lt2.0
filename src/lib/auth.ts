@@ -129,18 +129,35 @@ export const authOptions: NextAuthOptions = {
       // error message via the URL (otherwise NextAuth only returns the
       // generic "OAuthCallback" code).
       const [code, error] = args;
-      const err = error as { message?: string; stack?: string; name?: string };
+      // openid-client errors are often class instances with non-enumerable
+      // props. We use a safe stringify that captures as much as possible.
+      let message: string;
+      try {
+        if (error instanceof Error) {
+          message = JSON.stringify({
+            name: error.name,
+            message: error.message,
+            stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+            ...(error as Record<string, unknown>),
+          }, Object.getOwnPropertyNames(error));
+        } else if (typeof error === 'string') {
+          message = error;
+        } else {
+          message = JSON.stringify(error, null, 2);
+        }
+      } catch {
+        message = String(error);
+      }
       _lastAuthError = {
-        message: err?.message ?? String(error ?? code),
-        stack: err?.stack,
-        code: typeof code === 'string' ? code : err?.name,
+        message: message.slice(0, 1200),
+        code: typeof code === 'string' ? code : undefined,
       };
       // Surface NextAuth errors with full context — by default they
       // are silenced in production which makes OAuthCallback impossible
       // to diagnose. We always log errors regardless of NODE_ENV.
       console.error(
         '[next-auth][error]',
-        JSON.stringify({ code, error: error ?? null }, null, 2),
+        JSON.stringify({ code, error: message }, null, 2),
       );
     },
     warn(code: string) {
