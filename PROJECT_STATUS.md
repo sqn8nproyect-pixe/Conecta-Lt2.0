@@ -84,6 +84,16 @@ El schema fue migrado de SQLite a PostgreSQL (commit 9e70c6e). NO volver a `prov
 ### 6. start-dev.sh
 `start-dev.sh` hace `unset DATABASE_URL` antes de cargar `.env` porque el shell del sandbox tiene un override persistente de SQLite que rompería la conexión a Neon.
 
+### 7. Admin access control (CRÍTICO)
+El acceso al panel admin está controlado por **email allowlist** en `src/lib/admin-config.ts`, NO por el rol en la DB. Solo `sqn8nproyect@gmail.com` puede acceder.
+
+3 capas de verificación:
+1. **JWT callback** (`src/lib/auth.ts`): fuerza `role=ADMIN` si el email está en `ADMIN_EMAILS`, fuerza `role=USER` si no está (incluso si la DB dice ADMIN)
+2. **`requireRole`** (`src/server/auth.ts`): defense in depth — verifica email además del rol en cada request admin
+3. **Frontend** (`Navbar.tsx`, `AdminDashboard.tsx`): verifica email antes de mostrar el botón/renderizar el panel
+
+Para cambiar quién tiene acceso admin, editar `ADMIN_EMAILS` en `src/lib/admin-config.ts` — ese es el único lugar.
+
 ## 📝 Tareas pendientes
 
 ### Alta prioridad (seguridad)
