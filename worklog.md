@@ -4266,3 +4266,57 @@ Stage Summary:
   2. Configurar env vars en Vercel dashboard (DATABASE_URL, DIRECT_URL,
      NEXTAUTH_SECRET, NEXTAUTH_URL, AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET)
   3. Vercel redeploy → verificar que /api/* ya responden 200
+
+---
+Task ID: fix-vercel-postgres-3
+Agent: main
+Task: Usuario proporcionó GitHub PAT. Push commits, verificar Vercel auto-redeploy y test end-to-end en producción.
+
+Work Log:
+- Recibido GitHub PAT (ghp_[REDACTED-GITHUB-PAT-REVOKED]...) con scope repo.
+- Configurado via credential.helper store en ~/.git-credentials (chmod 600).
+- Verificado PAT con `git ls-remote origin main` → 2086c28 (origin) ✓
+- Ejecutado `git push origin main`:
+    To https://github.com/sqn8nproyect-pixe/Conecta-Lt2.0.git
+       2086c28..da92de4  main -> main
+  9 commits pusheados exitosamente.
+- Verificado en GitHub API (auth con PAT):
+    SHA: da92de44
+    Message: docs(worklog): registro Task fix-vercel-postgres-2
+    Date: 2026-08-11T13:23:26Z
+- Vercel auto-redeploy triggered por push webhook.
+- Esperé 30s para que complete el build (Next.js standalone + prisma generate).
+- Verificación post-deploy en https://conecta-lt2-0.vercel.app:
+    GET /                                    → HTTP 200 | 24316 bytes ✓
+    GET /api/businesses                      → HTTP 200 | 73807 bytes ✓ (21 negocios)
+    GET /api/businesses/licoreria-don-sancho → HTTP 200 | 4114 bytes  ✓ (detalle)
+    GET /api/categories                      → HTTP 200 | 345 bytes   ✓
+    GET /api/analytics/popular               → HTTP 200 | 28406 bytes ✓
+    GET /api/auth/session                    → HTTP 200 | 2 bytes     ✓ (vacío hasta login)
+- Verificación Agent Browser en producción:
+    * AgeGate renderiza → click "SOY MAYOR DE EDAD" → entra al sitio
+    * Home: 21 cards + 8 populares con view counts (Tasca La Cava 348 vistas)
+    * Click "Licorería Don Sancho" → detalle con 10 fotos, 2 promos, 5 reviews,
+      AFORO EN TIEMPO REAL (3 botones), WhatsApp/Instagram/Cómo llegar
+    * 0 errores de consola, 0 errores de página
+- Verificación login demo en producción:
+    * POST /api/auth/callback/demo → HTTP 200 + set-cookie session-token
+    * GET /api/auth/session → {"user":{"name":"Ana Rodríguez",
+      "email":"ana.rodriguez@gmail.com","role":"BUSINESS_OWNER",
+      "id":"cmsmi7dhx0000mgjaqxoke86l"}}
+- Descubierto: las env vars de Vercel YA estaban configuradas de antes
+  (Etapa 2 — el worklog documentaba que el usuario las había seteado cuando
+  intentamos Vercel la primera vez). El único problema era el schema SQLite
+  que rompía todo. Ahora con schema postgresql + las env vars existentes,
+  todo funciona sin necesidad de reconfigurar nada en el dashboard.
+
+Stage Summary:
+- 🎉 VERCEL FUNCIONANDO END-TO-END EN PRODUCCIÓN:
+    https://conecta-lt2-0.vercel.app
+- 9 commits pusheados a origin/main (da92de4)
+- Todas las APIs responden 200 con datos reales de Neon
+- Login demo funciona en producción (Ana Rodríguez, BUSINESS_OWNER)
+- AgeGate, Home, Detalle verificados en browser
+- 0 errores de consola
+- La cuenta Neon (org-damp-breeze-85043324) sigue activa y con todos los datos
+- No fue necesario reconfigurar env vars en Vercel — ya estaban de Etapa 2
