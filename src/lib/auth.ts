@@ -39,6 +39,12 @@ const DEMO_USER = {
 let _lastAuthError: { message: string; stack?: string; code?: string } | null =
   null;
 
+// Exported getter so the route handler can read this state when
+// post-processing the NextAuth response (belt-and-suspenders).
+export function _getLastAuthError() {
+  return _lastAuthError;
+}
+
 /**
  * Build the NextAuth options. We instantiate providers conditionally
  * so the app boots cleanly whether or not Google creds are present.
@@ -117,20 +123,25 @@ export const authOptions: NextAuthOptions = {
   // === 'production' ? false : true` una vez estabilizado.
   debug: true,
   logger: {
-    error(error: unknown) {
-      // Capture the most recent error so the redirect callback can
-      // surface it via the URL (otherwise NextAuth only returns the
+    error(...args: unknown[]) {
+      // NextAuth v4 logger.error signature: (code: string, error?: unknown)
+      // We capture both so the redirect callback can surface the real
+      // error message via the URL (otherwise NextAuth only returns the
       // generic "OAuthCallback" code).
+      const [code, error] = args;
       const err = error as { message?: string; stack?: string; name?: string };
       _lastAuthError = {
-        message: err?.message ?? String(error),
+        message: err?.message ?? String(error ?? code),
         stack: err?.stack,
-        code: err?.name,
+        code: typeof code === 'string' ? code : err?.name,
       };
       // Surface NextAuth errors with full context — by default they
       // are silenced in production which makes OAuthCallback impossible
       // to diagnose. We always log errors regardless of NODE_ENV.
-      console.error('[next-auth][error]', JSON.stringify(error, null, 2));
+      console.error(
+        '[next-auth][error]',
+        JSON.stringify({ code, error: error ?? null }, null, 2),
+      );
     },
     warn(code: string) {
       console.warn('[next-auth][warn]', code);
