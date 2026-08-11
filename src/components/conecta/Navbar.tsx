@@ -384,26 +384,32 @@ export function Navbar() {
   );
 
   const handleLogin = () => {
-    // Use redirect: false so signIn() uses fetch (not a form submit +
-    // 302 redirect). This is CRITICAL because NextAuth's redirect
-    // resolves to NEXTAUTH_URL (localhost:3000), which may differ from
-    // the browser's current origin (127.0.0.1:3000 or the gateway
-    // domain). A cross-origin redirect would lose the session cookie.
+    // Two different flows depending on provider:
     //
-    // With redirect: false:
-    //   1. fetch POSTs to /api/auth/callback/<provider> (same origin)
-    //   2. Response sets the session cookie for the current origin
-    //   3. We reload() — stays same-origin, cookie is sent, session
-    //      is read by useSession() → store populates → navbar updates
+    // GOOGLE (OAuth): signIn with redirect:false returns `{ url }` where
+    //   url is Google's authorization URL (https://accounts.google.com/...).
+    //   We must navigate to it — Google authenticates the user, then
+    //   redirects back to /api/auth/callback/google on our origin. With
+    //   trustHost:true (no hardcoded NEXTAUTH_URL), NextAuth infers the
+    //   callback URL from the request's Host header → stays same-origin.
+    //
+    // DEMO (Credentials): signIn with redirect:false actually calls
+    //   authorize() server-side and sets the session cookie via fetch.
+    //   No `url` in the response — we just reload() to pick up the cookie.
+    //
+    // The previous bug (Task fix-login-cookie-1) conflated these two and
+    // always called reload(), which broke Google OAuth (the browser never
+    // navigated to Google, so no session was created).
     const provider = googleEnabled ? 'google' : 'demo';
     void signIn(provider, { callbackUrl: '/', redirect: false })
       .then((res) => {
         if (res?.error) {
           addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
+        } else if (res?.url) {
+          // OAuth provider — navigate to provider's authorization URL
+          window.location.href = res.url;
         } else {
-          // reload() picks up the new session cookie. We must NOT use
-          // window.location.href = res.url because res.url may be
-          // cross-origin (localhost vs 127.0.0.1 vs gateway domain).
+          // Credentials provider — cookie already set, just reload
           window.location.reload();
         }
       })
