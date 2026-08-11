@@ -29,6 +29,16 @@ const DEMO_USER = {
   image: 'https://i.pravatar.cc/150?img=47',
 };
 
+// DEBUG: capture the last NextAuth error so we can surface it via the
+// redirect URL (the default NextAuth behavior only returns a generic
+// "OAuthCallback" error code without the underlying error message).
+// This is module-level state — it persists within a single request
+// (the OAuth callback is processed in a single GET to /api/auth/callback).
+// In serverless each request is a fresh lambda, but the logger.error
+// and the redirect happen in the SAME request so this works.
+let _lastAuthError: { message: string; stack?: string; code?: string } | null =
+  null;
+
 /**
  * Build the NextAuth options. We instantiate providers conditionally
  * so the app boots cleanly whether or not Google creds are present.
@@ -108,6 +118,15 @@ export const authOptions: NextAuthOptions = {
   debug: true,
   logger: {
     error(error: unknown) {
+      // Capture the most recent error so the redirect callback can
+      // surface it via the URL (otherwise NextAuth only returns the
+      // generic "OAuthCallback" code).
+      const err = error as { message?: string; stack?: string; name?: string };
+      _lastAuthError = {
+        message: err?.message ?? String(error),
+        stack: err?.stack,
+        code: err?.name,
+      };
       // Surface NextAuth errors with full context — by default they
       // are silenced in production which makes OAuthCallback impossible
       // to diagnose. We always log errors regardless of NODE_ENV.
@@ -175,6 +194,26 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    // ── Redirect ──────────────────────────────────────────
+    // DEBUG: when NextAuth redirects with ?error=..., it only includes
+    // a generic error code (OAuthCallback, OAuthStateMismatch, etc.).
+    // We append the actual error message captured by our custom logger
+    // so we can see WHY the OAuth flow failed. This is temporary
+    // diagnostic code — remove once the OAuth issue is resolved.
+    async redirect({ url, baseUrl }) {
+      try {
+        if (url.includes('error=') && _lastAuthError) {
+          const sep = url.includes('?') ? '&' : '?';
+          const encoded = encodeURIComponent(
+            JSON.stringify(_lastAuthError).slice(0, 1500),
+          );
+          url = `${url}${sep}debug_error=${encoded}`;
+        }
+      } catch {
+        // ignore — never let the debug capture break the redirect
+      }
+      return url;
+    },
     // ── JWT ────────────────────────────────────────────────
     // Persist the user id AND role on the token so the session can
     // expose them. The `user` argument is only present on the FIRST
