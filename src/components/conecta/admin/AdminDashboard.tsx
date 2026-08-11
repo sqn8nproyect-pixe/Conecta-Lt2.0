@@ -55,6 +55,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { isAdminEmail } from '@/lib/admin-config';
 import {
   fetchAdminStats,
   fetchAdminBusinesses,
@@ -1335,12 +1336,15 @@ export function AdminDashboard() {
 
   // Defense-in-depth: the Navbar hides the Admin entry for non-admin
   // users, but if one lands here via store mutation we render the
-  // AccessDenied card.
-  if (user?.role !== 'ADMIN' && user?.role !== 'MODERATOR') {
+  // AccessDenied card. Admin access is granted SOLELY by email
+  // allowlist (src/lib/admin-config.ts) — the role in the store is
+  // ignored for admin access purposes.
+  if (!user || !isAdminEmail(user.email)) {
     return <AccessDenied />;
   }
 
-  const isAdmin = user?.role === 'ADMIN';
+  // All admin users have full access (no more MODERATOR role distinction).
+  const isAdmin = true;
 
   // Navigate to a tab with an optional filter pre-applied. Used by
   // the Resumen tab's "Pendientes" cards.

@@ -24,6 +24,7 @@ import {
   useNotificationActions,
 } from '@/lib/hooks/use-notifications-sync';
 import { useAuthProviders } from '@/lib/hooks/use-auth-providers';
+import { isAdminEmail } from '@/lib/admin-config';
 import { formatRelativeTime } from '@/lib/utils';
 import type { View } from '@/lib/types';
 
@@ -478,8 +479,7 @@ export function Navbar() {
             {navItem('Mapa', 'map')}
             {user && navItem('Mi Perfil', 'profile')}
             {user?.role === 'BUSINESS_OWNER' && ownerNavItem()}
-            {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') &&
-              adminNavItem()}
+            {user && isAdminEmail(user.email) && adminNavItem()}
           </div>
 
           {user ? (
@@ -538,8 +538,7 @@ export function Navbar() {
         {navItem('Mapa', 'map')}
         {user && navItem('Mi Perfil', 'profile')}
         {user?.role === 'BUSINESS_OWNER' && ownerNavItem()}
-        {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') &&
-          adminNavItem()}
+        {user && isAdminEmail(user.email) && adminNavItem()}
       </div>
     </nav>
   );

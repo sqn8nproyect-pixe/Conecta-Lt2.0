@@ -20,6 +20,7 @@ import type { Adapter } from 'next-auth/adapters';
 import type { UserRole } from '@prisma/client';
 
 import { db } from '@/lib/db';
+import { isAdminEmail } from '@/lib/admin-config';
 
 // ─────────────────────────────────────────────────────────────
 // NOTE: openid-client's strict `iss` parameter check (RFC 9207)
@@ -207,6 +208,12 @@ export const authOptions: NextAuthOptions = {
     // JWT rotations just carry `token.role` forward (no DB hit).
     //
     // Etapa 7.B — added `role` for RBAC.
+    //
+    // ADMIN ACCESS: only the emails in ADMIN_EMAILS (src/lib/admin-config.ts)
+    // can have role=ADMIN. The DB role is OVERRIDDEN based on email —
+    // this means promoting a user in the DB to ADMIN has NO effect
+    // unless their email is in ADMIN_EMAILS. This is the single source
+    // of truth for admin access.
     async jwt({ token, user }) {
       if (user) {
         token.id = (user as { id?: string }).id ?? token.sub;
@@ -220,7 +227,25 @@ export const authOptions: NextAuthOptions = {
           where: { id: (user as { id?: string }).id ?? token.sub ?? '' },
           select: { role: true },
         });
-        token.role = (dbUser?.role ?? 'USER') as UserRole;
+        let role = (dbUser?.role ?? 'USER') as UserRole;
+        // ADMIN access is granted SOLELY by email allowlist. The DB
+        // role is ignored for admin purposes — even if the DB says
+        // ADMIN, the user won't get admin unless their email is in
+        // ADMIN_EMAILS. Conversely, an email in ADMIN_EMAILS always
+        // gets ADMIN even if the DB says USER.
+        const userEmail = (user as { email?: string }).email ?? token.email;
+        if (isAdminEmail(userEmail)) {
+          role = 'ADMIN';
+        } else if (role === 'ADMIN' || role === 'MODERATOR') {
+          // Strip admin role from any email not in the allowlist.
+          // This prevents admin@conecta.lt or moderator@conecta.lt
+          // (legacy demo users) from accessing the panel.
+          role = 'USER';
+        }
+        token.role = role;
+        // Persist the email on the token so server-side checks can
+        // verify admin access by email (defense in depth).
+        token.email = userEmail;
       }
       return token;
     },

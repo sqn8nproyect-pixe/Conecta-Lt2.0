@@ -13,6 +13,7 @@
 import { getServerSession } from 'next-auth';
 import type { UserRole } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
+import { isAdminEmail } from '@/lib/admin-config';
 
 export type SessionUser = {
   id: string;
@@ -107,6 +108,11 @@ export async function getCurrentUserWithRole(): Promise<
  *
  * The returned user object includes `role` so the caller can branch on
  * it (e.g. an admin claim vs. an owner claim).
+ *
+ * DEFENSE IN DEPTH: even if the JWT role is 'ADMIN', we re-verify the
+ * email is in ADMIN_EMAILS before granting admin access. This catches
+ * the case where the DB role was changed but the JWT hasn't been
+ * refreshed yet, or any other edge case.
  */
 export async function requireRole(
   ...allowedRoles: UserRole[]
@@ -115,6 +121,19 @@ export async function requireRole(
   if (!user) {
     throw new Response(JSON.stringify({ error: 'No autenticado' }), {
       status: 401,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  // Defense in depth: if ADMIN is being required, the email MUST be
+  // in ADMIN_EMAILS. This is checked here (server-side, on every
+  // request) in addition to the JWT callback (which only runs on
+  // sign-in). This prevents any stale JWT from granting admin access.
+  if (
+    allowedRoles.includes('ADMIN') &&
+    !isAdminEmail(user.email)
+  ) {
+    throw new Response(JSON.stringify({ error: 'Acceso denegado' }), {
+      status: 403,
       headers: { 'content-type': 'application/json' },
     });
   }
