@@ -39,6 +39,24 @@ export const authOptions: NextAuthOptions = {
   // Trust the Host header so the app works behind the Caddy gateway
   // (the browser sees the gateway domain, not localhost:3000).
   trustHost: true,
+  // Debug: TEMPORALMENTE habilitado en producción para diagnosticar
+  // el error OAuthCallback de Google. Cambiar a `process.env.NODE_ENV
+  // === 'production' ? false : true` una vez estabilizado.
+  debug: true,
+  logger: {
+    error(error: unknown) {
+      // Surface NextAuth errors with full context — by default they
+      // are silenced in production which makes OAuthCallback impossible
+      // to diagnose. We always log errors regardless of NODE_ENV.
+      console.error('[next-auth][error]', JSON.stringify(error, null, 2));
+    },
+    warn(code: string) {
+      console.warn('[next-auth][warn]', code);
+    },
+    debug(message: string) {
+      console.log('[next-auth][debug]', message);
+    },
+  },
   pages: {
     // We don't ship a custom sign-in page; the navbar triggers
     // signIn('google') or signIn('credentials') directly.
