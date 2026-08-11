@@ -4774,3 +4774,69 @@ Stage Summary:
 - Próximo sprint: implementar las 4 funciones puras del planner
   (isBusinessOpenAt, calculateDistanceKm, calculateScore, buildReasons)
   sin tocar DB todavía — testeable de forma aislada
+
+---
+Task ID: planner-sprint-2
+Agent: main (claude)
+Task: Sprint 2 — Motor puro del planner (availability, distance, scoring, reasons) — 4 funciones puras sin DB
+
+Work Log:
+- Leído Prisma schema para BusinessHours (dayOfWeek Int 0-6, openTime/closeTime String "HH:mm", isClosed Boolean)
+- Leído CapacityLevel enum (QUIET/MODERATE/FULL) y Business.priceRange (String "$"/"$$"/"$$$")
+- Creado src/server/planner/planner.availability.ts (~190 líneas):
+  * parseTimeToMinutes(time) → minutos desde medianoche
+  * getDayOfWeek(date) → 0-6 usando UTC noon (evita DST issues)
+  * findHoursForDate(hours, date) → Busca hours row por dayOfWeek
+  * isBusinessOpenAt(hours, date, time) → maneja 4 casos:
+    - isClosed=true → false
+    - closeTime > openTime (normal) → open <= req < close
+    - closeTime < openTime (medianoche) → req >= open OR req < close
+    - closeTime === openTime → 24h (true)
+  * buildScheduleLabel → "Abierto de 22:00 a 02:00" / "Cerrado este día"
+  * getRemainingOpenMinutes → para scoring de schedule
+- Creado src/server/planner/planner.distance.ts (~140 líneas):
+  * isValidCoord (defensivo: lat -90..90, lng -180..180)
+  * calculateDistanceKm (Haversine, R=6371km)
+  * DISTANCE_CEILING_KM (nearby=2km, 10_min=5km, 20_min=10km, any=∞)
+  * scoreDistance (lineal: 0km→1.0, ceiling→0.0, null→0.5 neutral)
+  * formatDistance (1 decimal: "2.4 km")
+- Creado src/server/planner/planner.scoring.ts (~310 líneas):
+  * PlannerScoringInput interface (business + preferences + context)
+  * SCORE_WEIGHTS centralizado (suma=1.0)
+  * 9 funciones de scoring, cada una normaliza a 0-1:
+    - scoreMood: MAX sobre moods seleccionados, matriz mood×category
+    - scoreBudget: matriz priceRange × budget (del blueprint)
+    - scoreSchedule: rampa (0 si cerrado, 0.2 si <30min, 1.0 si 4h+)
+    - scoreCapacity: contextual (relax→QUIET=1.0, party→MODERATE=0.9)
+    - scoreDistance: lineal dentro del ceiling
+    - scoreCompany: matriz company × category
+    - scoreAvailability: 4 estados (AVAILABLE=1.0, UNAVAILABLE=0.0)
+    - scorePromotion: binario (1.0 si hay promo activa)
+    - scoreRating: sub-lineal con penalty por pocos reviews
+  * calculateScore(input) → PlannerScoreBreakdown con total 0-100
+- Creado src/server/planner/planner.reasons.ts (~200 líneas):
+  * buildReasons(input, breakdown) → max 5 razones ordenadas por contribución
+  * 3 tiers: strong (≥0.8), mild (0.5-0.8), warning (<0.5)
+  * Etiquetas en español (Excelente para rumba, Abierto a la hora elegida, etc.)
+  * Solo incluye 1 warning si ya hay ≥2 positivos
+  * Fallback: "Opción compatible con tu búsqueda"
+- Verificación:
+  * bun run lint → PASS (0 errores, 0 warnings)
+  * bunx tsc --noEmit → planner files sin errores
+    (errores preexistentes en Navbar/AdminMetricsTab/auth.ts NO tocados)
+  * Dev server HTTP 200 en /
+  * Matchmaker.tsx NO modificado (legacy sigue funcionando)
+- Commit c0d0cc1 pusheado a origin/main
+
+Stage Summary:
+- 🎉 SPRINT 2 COMPLETADO Y PUSHEADO
+- 4 archivos nuevos, 947 insertions
+- Motor puro del planner listo para integrarse con DB en Sprint 3
+- Todas las funciones son puras (sin DB, sin side effects) → testeables
+- Sin slugs hardcodeados (regla del blueprint cumplida)
+- Scoring explicable: cada resultado tiene razones humanas
+- Commits en origin/main:
+  * bd73d34 — Sprint 1 (Foundation)
+  * c0d0cc1 — Sprint 2 (Motor puro)
+- Próximo sprint: planner.repository + planner.service + endpoint
+  POST /api/planner/recommend que conecta el motor puro con la DB
