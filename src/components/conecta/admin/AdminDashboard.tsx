@@ -53,6 +53,7 @@ import {
   TrendingUp,
   KeyRound,
   AlertCircle,
+  BarChart3,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -110,6 +111,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AdminMetricsTab } from '@/components/conecta/admin/AdminMetricsTab';
 
 // Query keys — kept here (rather than in a dedicated hooks file)
 // because they're only consumed by this component. If a future
@@ -1434,6 +1436,13 @@ export function AdminDashboard() {
           >
             Usuarios
           </TabsTrigger>
+          <TabsTrigger
+            value="metrics"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+          >
+            <BarChart3 size={14} className="mr-1.5" />
+            Métricas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen" className="mt-6">
@@ -1447,6 +1456,9 @@ export function AdminDashboard() {
         </TabsContent>
         <TabsContent value="users" className="mt-6">
           <UsuariosTab isAdmin={isAdmin} />
+        </TabsContent>
+        <TabsContent value="metrics" className="mt-6">
+          <AdminMetricsTab />
         </TabsContent>
       </Tabs>
     </motion.div>

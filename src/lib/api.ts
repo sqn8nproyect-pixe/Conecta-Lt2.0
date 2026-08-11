@@ -4,10 +4,12 @@
 // ─────────────────────────────────────────────────────────────
 
 import type {
+  AdminAnalyticsOverview,
   AdminBusiness,
   AdminReview,
   AdminStats,
   AdminUser,
+  AnalyticsRange,
   BusinessStatus,
   BusinessViewCount,
   CapacityLevel,
@@ -502,6 +504,14 @@ export async function fetchAdminUsers(opts?: {
     search: opts?.search,
   });
   const res = await fetch(`/api/admin/users${qs}`);
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function fetchAdminAnalytics(
+  range: AnalyticsRange = '7d',
+): Promise<AdminAnalyticsOverview> {
+  const res = await fetch(`/api/admin/analytics/overview?range=${range}`);
   if (!res.ok) await throwAdminError(res);
   return res.json();
 }

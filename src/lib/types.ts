@@ -349,6 +349,51 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// ─── Etapa 8.A — Admin Metrics types ────────────────────────────
+//
+// `AdminAnalyticsOverview` is the payload of
+// GET /api/admin/analytics/overview?range=7d. Drives the "Métricas"
+// tab of the AdminDashboard.
+export type AnalyticsRange = '1d' | '7d' | '30d' | '90d';
+
+export interface AdminAnalyticsOverview {
+  range: { days: number; label: AnalyticsRange };
+  // Count by event type for the window. Keys are event type names
+  // (BUSINESS_VIEW, WHATSAPP_CLICK, …). Missing keys = 0.
+  kpis: Record<string, number>;
+  // Daily time series for the line chart. One entry per (day, type)
+  // pair, zero-filled for days/types with no events.
+  timeSeries: Array<{ date: string; type: string; count: number }>;
+  // Top 10 businesses by WHATSAPP_CLICK in the window.
+  topWhatsApp: Array<{
+    businessId: string;
+    businessName: string;
+    slug: string;
+    count: number;
+  }>;
+  // Top 10 businesses by BUSINESS_VIEW in the window.
+  topViews: Array<{
+    businessId: string;
+    businessName: string;
+    slug: string;
+    count: number;
+  }>;
+  // Top 10 search queries (lowercased, trimmed) in the window.
+  topSearches: Array<{ query: string; count: number }>;
+  // Last 50 events with resolved business + user info.
+  recentEvents: Array<{
+    id: string;
+    type: string;
+    businessId: string | null;
+    businessName: string | null;
+    slug: string | null;
+    userId: string | null;
+    userName: string | null;
+    userEmail: string | null;
+    createdAt: string;
+  }>;
+}
+
 // ─── Etapa 7.C.2 — Owner Dashboard types ───────────────────────
 //
 // The owner dashboard ("Mis Locales") surfaces a BUSINESS_OWNER's
