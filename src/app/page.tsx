@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import { Navbar } from '@/components/conecta/Navbar';
@@ -13,35 +13,67 @@ import { AdminDashboard } from '@/components/conecta/admin/AdminDashboard';
 import { OwnerDashboard } from '@/components/conecta/owner/OwnerDashboard';
 import { AgeGate } from '@/components/conecta/AgeGate';
 
+// ── Age verification external store ───────────────────────────
+// We use `useSyncExternalStore` to read sessionStorage without
+// causing a hydration mismatch. The pattern:
+//   - `getServerSnapshot` always returns `false` (server has no
+//     sessionStorage → renders the AgeGate).
+//   - `getSnapshot` on the client reads sessionStorage AFTER
+//     hydration, so the server HTML and the first client render
+//     match. React then re-renders with the client snapshot.
+//   - `confirmAge` writes to sessionStorage AND notifies listeners
+//     so the component re-renders without AgeGate.
+//
+// sessionStorage (not localStorage) ensures the check resets when
+// the browser closes — keeps the intent of "ask once per session"
+// for alcohol regulations while not breaking the Google OAuth
+// callback flow (which does a full page reload back to /).
+
+let ageVerifiedInMemory = false;
+const ageVerifiedListeners = new Set<() => void>();
+
+function emitAgeVerifiedChange() {
+  for (const listener of ageVerifiedListeners) listener();
+}
+
+function subscribeAgeVerified(listener: () => void) {
+  ageVerifiedListeners.add(listener);
+  return () => {
+    ageVerifiedListeners.delete(listener);
+  };
+}
+
+function getAgeVerifiedSnapshot() {
+  if (ageVerifiedInMemory) return true;
+  try {
+    return sessionStorage.getItem('age-verified') === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function getAgeVerifiedServerSnapshot() {
+  return false;
+}
+
 export default function Home() {
   const view = useAppStore((s) => s.view);
-  // Age verification: persisted in sessionStorage so the gate doesn't re-show
-  // after the Google OAuth redirect (which does a full page reload back to /).
-  // sessionStorage (not localStorage) ensures the check resets when the
-  // browser closes — keeps the intent of "ask once per session" for alcohol
-  // regulations while not breaking the OAuth callback flow.
-  //
-  // Lazy initial state reads sessionStorage synchronously on first render
-  // (avoids the gate flashing on mount and the setState-in-effect lint rule).
-  const [ageVerified, setAgeVerified] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return sessionStorage.getItem('age-verified') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const ageVerified = useSyncExternalStore(
+    subscribeAgeVerified,
+    getAgeVerifiedSnapshot,
+    getAgeVerifiedServerSnapshot,
+  );
 
-  const confirmAge = () => {
-    setAgeVerified(true);
+  const confirmAge = useCallback(() => {
+    ageVerifiedInMemory = true;
     try {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('age-verified', 'true');
-      }
+      sessionStorage.setItem('age-verified', 'true');
     } catch {
-      // ignore write failure (private mode / blocked storage)
+      // sessionStorage may throw in private mode / blocked storage —
+      // the in-memory flag above is enough for this tab.
     }
-  };
+    emitAgeVerifiedChange();
+  }, []);
 
   // Scroll to top when view changes
   useEffect(() => {
