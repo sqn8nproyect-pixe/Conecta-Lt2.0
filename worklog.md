@@ -4529,3 +4529,53 @@ Stage Summary:
   * Demo login funciona (Ana Rodríguez, BUSINESS_OWNER)
   * Endpoints de debug eliminados (404)
   * 0 errores de consola
+
+---
+Task ID: context-recovery-1
+Agent: main
+Task: Usuario pregunta cómo comenzar el proyecto en futuras sesiones sin alucinar por la ventana de contexto.
+
+Work Log:
+- Creado PROJECT_STATUS.md (~150 líneas) con estado actual conciso:
+  * Stack REAL (PostgreSQL/Neon, no SQLite; Vercel deploy; NextAuth)
+  * URLs de producción, Neon, GitHub, Google Cloud
+  * Dónde están las credenciales (no los valores)
+  * Features funcionales verificadas en producción
+  * 6 gotchas críticos (openid-client patch, cookies sin __Host-,
+    trustHost, Neon pooler vs direct, SQLite descontinuado,
+    start-dev.sh unset DATABASE_URL)
+  * Tareas pendientes (alta/media/baja prioridad)
+  * Estructura de carpetas clave
+  * Comandos útiles
+  * Protocolo de recuperación de contexto
+  * Convenciones del proyecto
+  * Enlaces rápidos
+- Creado CLAUDE.md (guía para agentes AI):
+  * Pasos OBLIGATORIOS al inicio de sesión (leer PROJECT_STATUS.md,
+    tail worklog.md, git log, health check)
+  * Lo que NO se debe hacer (no SQLite, no server actions, no remover
+    patch script, no alucinar)
+  * Lo que SÍ se debe hacer (shadcn/ui, API routes, Bun, worklog)
+  * Formato de worklog
+  * Gotchas críticos
+  * Stack de UI
+  * Verificación post-cambios
+- Actualizado README.md:
+  * Stack corregido (PostgreSQL en Neon, no SQLite)
+  * Agregado NextAuth, TanStack Query, Vercel deploy
+  * URLs de producción y repo
+  * Comando ./start-dev.sh en vez de bun run dev directo
+  * Estructura de carpetas real (api/, server/, scripts/)
+  * Sección de documentación (PROJECT_STATUS.md, CLAUDE.md, worklog.md)
+- Lint PASS. 1 commit pusheado (74d9caf).
+
+Stage Summary:
+- 🎉 SISTEMA DE RECUPERACIÓN DE CONTEXTO CREADO
+- 3 archivos: PROJECT_STATUS.md, CLAUDE.md, README.md actualizado
+- Protocolo: al iniciar sesión, el usuario dice
+  "Lee PROJECT_STATUS.md y el tail de worklog.md para recuperar contexto"
+  y el agente debe leer esos archivos + git log + health check antes
+  de proceder con cualquier task
+- El worklog.md sigue siendo el historial detallado (4500+ líneas)
+- PROJECT_STATUS.md es el resumen conciso del estado ACTUAL
+- CLAUDE.md son las instrucciones para el agente
