@@ -29,6 +29,10 @@ import type {
   TrackEventPayload,
   UserRole,
 } from './types';
+import type {
+  NightPlannerPreferences,
+  NightPlannerResponse,
+} from '@/server/planner/types';
 
 // The API returns an extended Establishment shape that also embeds
 // the establishment's offers and reviews (see transformBusiness).
@@ -287,6 +291,46 @@ export async function fetchBulkBusinessViews(
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Error' }));
     throw new Error(data.error ?? 'Error');
+  }
+  return res.json();
+}
+
+// ─── Night Planner v2 (Sprint 3) ──────────────────────────────
+//
+// POST /api/planner/recommend — generates a Top 3 night-plan
+// recommendation based on the user's preferences (mood, budget,
+// company, date/time, guests, distance). Public endpoint, rate-
+// limited to 10 req/min per IP.
+//
+// The response is either a success (with `recommendations` array)
+// or an empty result (with `reason` + `suggestion`). The caller
+// distinguishes by checking `recommendations.length > 0` or the
+// presence of `reason`.
+//
+// The types are imported at the top of this file (from
+// @/server/planner/types) — they're shared between client and server.
+
+export async function fetchPlannerRecommend(
+  preferences: NightPlannerPreferences,
+): Promise<NightPlannerResponse> {
+  const res = await fetch('/api/planner/recommend', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
+  // 429 — rate limited (let the caller show a friendly message)
+  if (res.status === 429) {
+    throw new Error('Demasiadas búsquedas. Espera un minuto e intenta de nuevo.');
+  }
+  // 400 — validation error (Zod rejected the body)
+  if (res.status === 400) {
+    const data = await res.json().catch(() => ({ error: 'Datos inválidos' }));
+    const detail = data.details?.[0]?.message ?? data.error ?? 'Datos inválidos';
+    throw new Error(detail);
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Error' }));
+    throw new Error(data.error ?? 'Error al generar recomendaciones');
   }
   return res.json();
 }
