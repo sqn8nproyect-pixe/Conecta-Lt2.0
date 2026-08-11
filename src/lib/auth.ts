@@ -18,8 +18,53 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
 import type { Adapter } from 'next-auth/adapters';
 import type { UserRole } from '@prisma/client';
+import { Issuer } from 'openid-client';
 
 import { db } from '@/lib/db';
+
+// ─────────────────────────────────────────────────────────────
+// WORKAROUND: openid-client v5.4+ (used by NextAuth v4) enforces
+// RFC 9207 strictly. Google's OIDC discovery document declares
+// `authorization_response_iss_parameter_supported: true`, but
+// Google does NOT actually send `iss` in the authorization
+// response. This causes openid-client to throw
+// `RPError: iss missing from the response` on every Google login.
+//
+// We patch `Issuer.discover` to flip this flag to false for Google
+// after the discovery document is fetched, so openid-client skips
+// the iss check. This is the same fix used by Auth.js v5
+// (which migrated off openid-client to oauth4webapi for this
+// exact reason).
+//
+// See: https://github.com/panva/node-openid-client/issues/...
+//      https://github.com/nextauthjs/next-auth/issues/...
+// ─────────────────────────────────────────────────────────────
+const _originalDiscover = Issuer.discover.bind(Issuer);
+(Issuer as unknown as { discover: (uri: string) => Promise<unknown> }).discover =
+  async function (uri: string) {
+    const issuer = (await _originalDiscover(uri)) as {
+      issuer?: string;
+      authorization_response_iss_parameter_supported?: unknown;
+    };
+    if (issuer.issuer === 'https://accounts.google.com') {
+      // Override the getter-based property with a plain data property
+      // set to false. Without this, openid-client throws
+      // "iss missing from the response" for every Google login because
+      // Google's discovery claims iss support but Google does not send
+      // iss in the authorization response.
+      Object.defineProperty(
+        issuer,
+        'authorization_response_iss_parameter_supported',
+        {
+          value: false,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        },
+      );
+    }
+    return issuer;
+  };
 
 // Demo user used by the Credentials provider fallback so the app
 // is fully functional in the sandbox without real Google creds.
@@ -36,6 +81,8 @@ const DEMO_USER = {
 // (the OAuth callback is processed in a single GET to /api/auth/callback).
 // In serverless each request is a fresh lambda, but the logger.error
 // and the redirect happen in the SAME request so this works.
+// NOTE: Kept active until we confirm the openid-client iss fix works
+// end-to-end. Once confirmed, this debug capture can be removed.
 let _lastAuthError: { message: string; stack?: string; code?: string } | null =
   null;
 
@@ -134,12 +181,23 @@ export const authOptions: NextAuthOptions = {
       let message: string;
       try {
         if (error instanceof Error) {
-          message = JSON.stringify({
-            name: error.name,
-            message: error.message,
-            stack: error.stack?.split('\n').slice(0, 5).join('\n'),
-            ...(error as Record<string, unknown>),
-          }, Object.getOwnPropertyNames(error));
+          const errorProps = Object.getOwnPropertyNames(error).reduce(
+            (acc, key) => {
+              acc[key] = (error as unknown as Record<string, unknown>)[key];
+              return acc;
+            },
+            {} as Record<string, unknown>,
+          );
+          message = JSON.stringify(
+            {
+              name: error.name,
+              message: error.message,
+              stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+              ...errorProps,
+            },
+            null,
+            2,
+          );
         } else if (typeof error === 'string') {
           message = error;
         } else {
