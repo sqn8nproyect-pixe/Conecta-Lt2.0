@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useSession, signOut } from 'next-auth/react';
@@ -21,6 +21,8 @@ import {
   CalendarX,
   Store,
   ArrowRight,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
@@ -83,11 +85,30 @@ export function ProfilePage() {
     enabled: status === 'authenticated',
   });
 
+  // Safety net: if /api/auth/session takes unusually long (e.g. a
+  // serverless cold start or hung request), surface a retry hint after
+  // 8s instead of leaving the user staring at "Cargando…" forever.
+  const [sessionSlow, setSessionSlow] = useState(false);
+  useEffect(() => {
+    if (status !== 'loading') return;
+    const t = setTimeout(() => setSessionSlow(true), 8000);
+    return () => clearTimeout(t);
+  }, [status]);
+
   // Not-logged-in empty state
   if (status === 'loading') {
     return (
-      <div className="max-w-md mx-auto px-4 sm:px-6 py-32 text-center text-white/40 text-sm">
-        Cargando…
+      <div className="max-w-md mx-auto px-4 sm:px-6 py-32 text-center">
+        <div className="flex flex-col items-center gap-3 text-white/40">
+          <div className="w-10 h-10 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+          <div className="text-xs tracking-[4px] font-mono">CARGANDO…</div>
+          {sessionSlow && (
+            <p className="mt-3 text-xs text-white/40 max-w-xs">
+              Está tardando más de lo habitual. Si no carga, recarga la
+              página o vuelve a intentar.
+            </p>
+          )}
+        </div>
       </div>
     );
   }

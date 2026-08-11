@@ -12,9 +12,19 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const business = await businessRepository.findBySlug(slug);
-  if (!business) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  try {
+    const business = await businessRepository.findBySlug(slug);
+    if (!business) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    return NextResponse.json(transformBusiness(business));
+  } catch (err) {
+    // Graceful JSON error so the client's res.json() never throws on
+    // a serverless DB failure (returns clean 503 instead of HTML 500).
+    console.error(`[GET /api/businesses/${slug}] DB query failed:`, err);
+    return NextResponse.json(
+      { error: 'DATABASE_UNAVAILABLE', message: 'No se pudo obtener el local.' },
+      { status: 503 },
+    );
   }
-  return NextResponse.json(transformBusiness(business));
 }

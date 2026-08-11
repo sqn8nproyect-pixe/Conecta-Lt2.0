@@ -385,15 +385,37 @@ export function Navbar() {
 
   const handleLogin = () => {
     if (googleEnabled) {
-      // Real Google OAuth — redirige a Google y vuelve al callbackUrl.
-      void signIn('google', { callbackUrl: '/' }).then(() => {
-        addNotification('¡Sesión iniciada con Google!');
-      });
+      // Real Google OAuth — redirect: false keeps it a client-side
+      // navigation so we can surface success/error as a toast.
+      void signIn('google', { callbackUrl: '/', redirect: false })
+        .then((res) => {
+          if (res?.error) {
+            addNotification('No se pudo iniciar sesión con Google. Intenta de nuevo.', 'info');
+          } else {
+            addNotification('¡Sesión iniciada con Google!');
+            // If redirect:false and no error, NextAuth returns a URL we
+            // can navigate to — but for callbackUrl:'/' a full reload is
+            // simplest and avoids stale session-cache issues.
+            if (res?.url) window.location.href = res.url;
+          }
+        })
+        .catch(() => {
+          addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
+        });
     } else {
       // Fallback Demo — entra directo como Ana Rodríguez sin redirect.
-      void signIn('demo', { callbackUrl: '/' }).then(() => {
-        addNotification('¡Sesión iniciada con éxito!');
-      });
+      void signIn('demo', { callbackUrl: '/', redirect: false })
+        .then((res) => {
+          if (res?.error) {
+            addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
+          } else {
+            addNotification('¡Sesión iniciada con éxito!');
+            if (res?.url) window.location.href = res.url;
+          }
+        })
+        .catch(() => {
+          addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
+        });
     }
   };
 

@@ -28,6 +28,8 @@ import {
   Eye,
   CheckCircle2,
   KeyRound,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -140,11 +142,22 @@ export function EstablishmentPage() {
   const { status: authStatus } = useSession();
   const queryClient = useQueryClient();
 
-  const { data: est, isLoading } = useQuery({
+  const { data: est, isLoading, isError, refetch } = useQuery({
     queryKey: ['business', slug],
     queryFn: () => fetchBusinessBySlug(slug!),
     enabled: !!slug,
+    retry: 1,
   });
+
+  // Safety net: if the detail endpoint takes unusually long (e.g. a
+  // serverless cold start or hung DB query), surface a retry hint
+  // after 8s instead of leaving the user on "Cargando..." forever.
+  const [detailSlow, setDetailSlow] = useState(false);
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setTimeout(() => setDetailSlow(true), 8000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   // Etapa 6 — analytics hook. trackPageView is deduped per-mount so we
   // only fire ONE BUSINESS_VIEW per page open even if React re-renders.
@@ -283,10 +296,43 @@ export function EstablishmentPage() {
     },
   });
 
+  if (isError) {
+    return (
+      <div className="max-w-md mx-auto px-6 py-32 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-400" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-white">No pudimos cargar este local</h2>
+            <p className="text-sm text-white/50">
+              Revisa tu conexión e inténtalo de nuevo.
+            </p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gold text-obsidian text-sm font-semibold hover:bg-gold/90 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-32 text-center text-white/60">
-        Cargando...
+      <div className="max-w-md mx-auto px-6 py-32 text-center">
+        <div className="flex flex-col items-center gap-3 text-white/40">
+          <div className="w-10 h-10 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+          <div className="text-xs tracking-[4px] font-mono">CARGANDO…</div>
+          {detailSlow && (
+            <p className="mt-3 text-xs text-white/40 max-w-xs">
+              Está tardando más de lo habitual. Si no carga, puedes reintentar.
+            </p>
+          )}
+        </div>
       </div>
     );
   }

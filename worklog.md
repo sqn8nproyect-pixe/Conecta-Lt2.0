@@ -3300,3 +3300,791 @@ Stage Summary:
 - Local preview (what the user sees in the Preview Panel) is fully functional.
 - Frontend is now resilient: a failed/hung businesses API shows a Spanish error+retry UI after retries instead of an infinite "CARGANDO" spinner.
 - The Vercel deployment issue is environmental, NOT a code bug: (1) SQLite cannot run on Vercel serverless — must migrate to a real DB (Vercel Postgres / Neon / Turso) or keep running on a persistent-host server; (2) Google OAuth needs NEXTAUTH_URL + NEXTAUTH_SECRET + Google client ID/secret set in Vercel env vars, and the Google Cloud OAuth redirect URI must include the Vercel domain. These are deployment-config tasks the user must do on Vercel; the code now degrades gracefully if they are not set.
+
+---
+Task ID: review-structure-1
+Agent: Explore
+Task: Thorough project-structure exploration to find obvious issues — user reports "site won't load".
+
+Work Log:
+- Leído worklog.md (incluye Task resilience-1 que ya diagnosticó un
+  caso similar: Vercel + SQLite = hang; local dev saludable).
+- Listado árbol completo de src/ (ver sección "src/ tree" abajo).
+- package.json revisado: stack completo y coherente
+  (Next 16.1.1, React 19, Prisma 6, next-auth 4, framer-motion 12,
+  zustand 5, leaflet, shadcn/ui completo). Sin dependencias obvias
+  faltantes.
+- `bunx tsc --noEmit` → exit code 0, SIN errores de TypeScript.
+- dev.log (167 líneas): SIN errores, warnings, stack traces ni
+  excepciones. Solo respuestas 200. Última línea truncada
+  ("in 47ms (compile: 3ms, render: 43ms)") — artefacto de pipe
+  tee, no es un error real.
+- mini-services/ folder: VACÍO (solo .gitkeep). No hay servicios
+  que deban estar corriendo.
+- middleware.ts: NO EXISTE (ni en raíz ni en src/). Nada bloquea
+  requests.
+- next.config.ts: `output: "standalone"`, `reactStrictMode: false`,
+  `typescript.ignoreBuildErrors: true` ← code-smell (esconde errores
+  TS en build) pero actualmente tsc pasa limpio, sin impacto real.
+- .next/ folder: existe, solo contiene `dev/` (cache de desarrollo).
+  No hay build de producción. Esperado en modo dev.
+- Proceso dev server: saludable. PIDs activos:
+    6796 bun run dev
+    6799 next dev -p 3000
+    6812 next-server (v16.1.3)
+    7094 postcss.js (worker)
+- curl http://localhost:3000/ → HTTP 200, 41,343 bytes, 50ms.
+  El HTML contiene contenido REAL (no es página de error):
+    - AgeGate renderizada con texto "¿Eres mayor de 18 años?"
+    - Branding CONECTA-LT
+    - Footer con disclaimer de alcohol
+    - Referencias a chunks de LeafletMap, EstablishmentPage, layout
+  Las únicas ocurrencias de "Error" en el HTML son referencias al
+  chunk builtin `node_modules_next_dist_client_components_builtin
+  _global-error_*.js` (runtime estándar de Next.js, SIEMPRE presente,
+  NO es un error real).
+- Static assets sirven correctamente:
+    /images/logo.png → 200, 968 KB
+    /images/hero.png  → 200, 163 KB
+- API sana: GET /api/businesses → 200, 72 KB (21 locales).
+- error.tsx / not-found.tsx / loading.tsx: NO existen a nivel de
+  app router. Solo el global-error builtin de Next.js. No es
+  blocker pero conviene añadir error.tsx para mejor UX.
+- src/components/conecta/: 11 componentes presentes
+  (AgeGate, EstablishmentPage, HomePage, LeafletMap, MapPage,
+  Matchmaker, Navbar, Notifications, ProfilePage, admin/
+  AdminDashboard, owner/OwnerDashboard). Todos los imports `@/...`
+  en estos componentes resuelven a archivos existentes
+  (verificado con tsc + checklist manual de 17 módulos).
+- Database: /home/z/my-project/db/dev.db EXISTE (SQLite sembrada en
+  resilience-1). .env presente con DATABASE_URL, NEXTAUTH_SECRET,
+  NEXTAUTH_URL, AUTH_SECRET, AUTH_URL.
+
+src/ tree (full):
+  src/app/
+    globals.css, layout.tsx, page.tsx
+    api/ (36 route handlers: admin/*, analytics/*, auth/[...nextauth],
+          businesses/*, categories, favorites/*, notifications/*,
+          owner/businesses/[slug]/*, promotions/*, reservations/*,
+          reviews, route.ts)
+  src/components/
+    providers.tsx, session-provider.tsx
+    conecta/ (AgeGate, EstablishmentPage, HomePage, LeafletMap,
+              MapPage, Matchmaker, Navbar, Notifications, ProfilePage,
+              admin/AdminDashboard, owner/OwnerDashboard)
+    establishment/ (ActivePromotionsBadge, CapacityBadge, PhotoGallery,
+                    SocialContactPanel, ValuePropositionBanner)
+    ui/ (44 componentes shadcn: accordion, alert, alert-dialog,
+         aspect-ratio, avatar, badge, breadcrumb, button, calendar,
+         card, carousel, chart, checkbox, collapsible, command,
+         context-menu, dialog, drawer, dropdown-menu, form, hover-card,
+         input, input-otp, label, menubar, navigation-menu, pagination,
+         popover, progress, radio-group, resizable, scroll-area, select,
+         separator, sheet, sidebar, skeleton, slider, sonner, switch,
+         table, tabs, textarea, toast, toaster, toggle, toggle-group,
+         tooltip)
+  src/hooks/ (use-mobile.ts, use-toast.ts)
+  src/lib/
+    api.ts, auth.ts, data.ts, db.ts, store.ts, types.ts, utils.ts
+    hooks/ (use-analytics, use-auth-providers, use-favorite-actions,
+            use-favorites-sync, use-notifications-sync,
+            use-redemption-actions, use-redemptions-sync,
+            use-reservation-actions, use-reservations-sync)
+  src/server/
+    auth.ts
+    repositories/ (analytics, business, favorite, notification,
+                   promotion, reservation, review)
+    services/ (analytics, business, favorite, notification,
+               promotion, reservation, review)
+  src/types/next-auth.d.ts
+
+Stage Summary:
+- **No se encontró ningún issue que explique "site won't load".**
+  El dev server local está 100% saludable: HTTP 200, HTML con
+  contenido real (AgeGate + branding + footer), API y assets
+  sirviendo correctamente, 0 errores TypeScript, 0 errores en
+  dev.log, 0 imports rotos, sin middleware bloqueante.
+- Hallazgos menores (NO blockers):
+    1. `next.config.ts` tiene `typescript.ignoreBuildErrors: true`
+       — esconde errores TS en `next build`. Recomendar quitarlo.
+    2. No hay `error.tsx` / `not-found.tsx` / `loading.tsx` a nivel
+       app router — solo el global-error builtin. Recomendar añadir
+       `src/app/error.tsx` para mejor UX en errores de cliente.
+    3. AgeGate usa framer-motion con `initial={{opacity:0}}` y el
+       HTML SSR sale con `style="opacity:0"`. Si la hidratación JS
+       fallara en el navegador del usuario (sin JS, bloqueador de
+       JS, o error de hidratación no reportado a dev.log), verían
+       una página oscura en blanco. Posible explicación del reporte
+       "no carga" si el usuario tiene JS deshabilitado o un plugin
+       que rompe la hidratación. NO es un bug de código.
+- Conclusión: el reporte "site won't load" probablemente se refiere
+  a (a) el despliegue de Vercel (ya diagnosticado en resilience-1:
+  SQLite no corre en serverless), (b) un problema transitorio del
+  navegador del usuario (caché, JS deshabilitado, plugin), o
+  (c) el primer compile en frío de Turbopack (5.8s para el primer
+  GET / — si el usuario abortó antes, vería timeout). El código y
+  el dev server local están sanos.
+- Próximos pasos sugeridos:
+    * Confirmar con el usuario dónde ve el problema (¿localhost:3000
+      en Preview Panel? ¿Vercel? ¿móvil?).
+    * Si es Vercel: aplicar fix de resilience-1 (migrar DB a
+      Postgres/Neon/Turso + configurar OAuth).
+    * Si es local: pedir screenshot + console del navegador.
+    * Quitar `typescript.ignoreBuildErrors` de next.config.ts.
+    * Añadir `src/app/error.tsx` y `src/app/not-found.tsx`.
+
+---
+Task ID: review-auth-1
+Agent: auth-reviewer (general-purpose)
+Task: Auditar la capa de AUTENTICACIÓN (NextAuth) en busca de bugs que puedan causar "page won't load", hang o crash.
+
+Work Log:
+- Leído worklog.md (3302 líneas) — contexto: etapa 7.C.2 completa, resilience-1 ya mitigó el hang del HomePage añadiendo error UI + slowLoad 8s. El usuario reporta "no carga" + screenshot previo mostraba `?error=Callback` en URL de Vercel.
+- Leídos íntegramente:
+  * src/lib/auth.ts (137 líneas) — authOptions: PrismaAdapter + JWT + Google condicional + Credentials(demo) + callbacks jwt/session
+  * src/server/auth.ts (129 líneas) — wrappers getCurrentUser / requireUser / requireRole
+  * src/types/next-auth.d.ts (35 líneas) — augmentación de Session.user.id/role y JWT.id/role
+  * src/components/session-provider.tsx (13 líneas) — wrapper delgado sobre next-auth/react SessionProvider
+  * src/app/api/auth/[...nextauth]/route.ts (18 líneas) — handler GET/POST con logger silenciado
+  * .env (5 vars, 241 bytes) — solo DATABASE_URL + NEXTAUTH_SECRET + NEXTAUTH_URL + AUTH_SECRET + AUTH_URL. NO hay GOOGLE_CLIENT_ID ni NEXT_PUBLIC_GOOGLE_CLIENT_ID ni GOOGLE_CLIENT_SECRET.
+  * .env.example (60 líneas) — documenta GOOGLE_CLIENT_ID/SECRET + R2 + Resend + WhatsApp + Gemini
+  * src/components/conecta/Navbar.tsx (503 líneas) — botón "CONTINUAR CON GOOGLE" / "CUENTA DEMO", handleLogin/handleLogout, 4 sync hooks montados
+  * src/lib/hooks/use-auth-providers.ts (21 líneas) — lee NEXT_PUBLIC_GOOGLE_CLIENT_ID para decidir qué botón mostrar
+  * src/app/layout.tsx (117 líneas) — SessionProvider envuelve children dentro de QueryProvider ✓
+  * src/components/providers.tsx (21 líneas) — QueryClient con staleTime 5min, retry 1
+  * src/app/page.tsx (137 líneas) — SPA con AgeGate + Navbar + AnimatePresence de vistas, sin gating de auth
+  * src/lib/store.ts (248 líneas) — setUser con defense-in-depth para preservar role
+  * src/lib/hooks/use-favorites-sync.ts, use-redemptions-sync.ts, use-reservations-sync.ts, use-notifications-sync.ts — todos usan `if (status === 'loading') return` en effects (correcto, NO bloquean render)
+  * src/components/conecta/HomePage.tsx (564 líneas) — ya tiene error UI + slowLoad 8s (resilience-1) ✓
+  * src/components/conecta/ProfilePage.tsx (939 líneas) — `if (status === 'loading') return <Cargando…>` SIN timeout (líneas 87-93)
+  * src/components/conecta/EstablishmentPage.tsx (1635 líneas) — `if (isLoading) return <Cargando...>` SIN timeout ni isError (líneas 286-292)
+  * src/components/conecta/admin/AdminDashboard.tsx (1477 líneas) — isLoading gates con Skeleton, maneja isError por tab
+  * src/components/conecta/owner/OwnerDashboard.tsx (1552 líneas) — isLoading gates con Skeleton, maneja isError por tab
+  * src/components/conecta/MapPage.tsx (463 líneas) — useQuery sin gating de auth (default [] vacío)
+  * prisma/schema.prisma — provider=sqlite, modelos Account/Session/VerificationToken correctamente definidos para @auth/prisma-adapter
+  * package.json — next-auth 4.24.11 + @auth/prisma-adapter 2.11.3 + @prisma/client 6.11.1 (compatibles)
+  * next.config.ts — output standalone, sin middleware
+  * src/lib/db.ts — PrismaClient singleton estándar
+  * Verificado: NO existe middleware.ts ni src/middleware.ts — no hay riesgo de redirect loops a nivel middleware.
+
+Findings (bugs / issues):
+
+**[HIGH] Hang risk — ProfilePage**
+  - File: src/components/conecta/ProfilePage.tsx:87-93
+  - Código: `if (status === 'loading') { return <div>Cargando…</div> }`
+  - SIN timeout de seguridad. Si `/api/auth/session` se cuelga (serverless cold start, DB caído, cookie corrupta), el ProfilePage muestra "Cargando…" indefinidamente.
+  - Solo afecta a la vista "Mi Perfil", no a la home. Pero si el usuario hace click en "Mi Perfil" tras login y la sesión no resuelve, se cuelga.
+  - Confianza: ALTA de que es un hang risk real. MEDIANA de que sea la causa del reporte actual del usuario (porque la home no está auth-gateada).
+  - Fix sugerido: replicar el patrón slowLoad 8s + error UI + retry del HomePage.tsx.
+
+**[HIGH] Hang risk — EstablishmentPage**
+  - File: src/components/conecta/EstablishmentPage.tsx:286-292
+  - Código: `if (isLoading) return <div>Cargando...</div>` para useQuery(['business', slug])
+  - SIN timeout ni isError handling. Si `/api/businesses/[slug]` se cuelga, la página de detalle queda en "Cargando..." para siempre.
+  - Bonus: si la query entra en error, `isLoading` es false y `est` es undefined → muestra "Local no encontrado." (engañoso: el local sí existe, fue un error de red/DB).
+  - Confianza: ALTA de que es un hang risk real. MEDIANA de que sea la causa del reporte (depende de si el usuario estaba viendo el detalle de un local).
+  - Fix sugerido: añadir `isError` al destructure + slowLoad safety net + error UI con retry, igual que HomePage.
+
+**[HIGH] Demo provider depende de escritura a DB en cada sign-in**
+  - File: src/lib/auth.ts:72-77 (db.user.upsert en authorize) + líneas 106-109 (db.user.findUnique en jwt callback)
+  - El flujo "CUENTA DEMO" llama `db.user.upsert` en cada login. Si Prisma no puede escribir (Vercel serverless con SQLite ephemeral FS — caso ya documentado en resilience-1), authorize() lanza → NextAuth retorna error → el `signIn('demo', ...)` Promise rechaza silenciosamente (no hay .catch).
+  - En local funciona (dev.db escribible). En Vercel falla.
+  - Confianza: ALTA de que esto falla en Vercel. Ya fue diagnosticado en resilience-1 como "SQLite + Vercel serverless = DB read-only".
+  - Fix sugerido: migrar a Postgres/Neon/Turso O evitar el upsert si el usuario demo ya existe (read-only fallback).
+
+**[MEDIUM] signIn() sin `redirect: false` en Navbar**
+  - File: src/components/conecta/Navbar.tsx:389, 394
+  - `signIn('google', { callbackUrl: '/' })` y `signIn('demo', { callbackUrl: '/' })` SIN `redirect: false`.
+  - Por defecto NextAuth hace full-page redirect. El `.then(() => addNotification('¡Sesión iniciada!'))` puede NO ejecutarse porque la página navega antes de que la Promise resuelva.
+  - Síntoma: el usuario se loguea pero NO ve el toast de éxito. No es un hang, es UX roto.
+  - Confianza: ALTA de que el toast no se muestra consistentemente.
+  - Fix sugerido: usar `redirect: false` y manejar el resultado (`error` vs `ok` vs `url`) en `.then()`.
+
+**[MEDIUM] signIn() sin .catch() en Navbar**
+  - File: src/components/conecta/Navbar.tsx:389, 394
+  - `void signIn(...).then(...)` — sin `.catch()`. Si authorize() falla (DB caído), la Promise rechaza y el error se traga (unhandled rejection en consola).
+  - Síntoma: usuario hace click en "CUENTA DEMO" y no pasa nada visible (o solo un redirect a `/?error=CredentialsSignin`).
+  - Confianza: ALTA de que errores de auth fallan silenciosamente.
+  - Fix sugerido: añadir `.catch((err) => addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info'))`.
+
+**[MEDIUM] Hang risk en dashboards (Admin/Owner)**
+  - Files: src/components/conecta/admin/AdminDashboard.tsx:350, 675, 928, 1178; src/components/conecta/owner/OwnerDashboard.tsx:342, 707, 1111, 1412
+  - Cada tab usa `if (isLoading) return <Skeleton>...</Skeleton>` SIN slowLoad safety net. Si el endpoint admin/owner se cuelga, el dashboard queda en skeleton para siempre.
+  - Manejan `isError` con mensaje "Error al cargar…", pero solo si el request responde con error — un hang silencioso no dispara isError.
+  - Confianza: MEDIA de que esto afecte al usuario actual (requiere que haya navegado a admin/owner panel).
+  - Fix sugerido: mismo slowLoad 8s pattern que HomePage.
+
+**[LOW] NEXTAUTH_URL = "http://localhost:3000" hardcodeado en .env committed**
+  - File: .env:3, 5
+  - Si este .env se deploya a Vercel sin override, los callbacks OAuth redirect a localhost:3000.
+  - Confianza: ALTA de que es un deployment-config issue. El usuario DEBE setear NEXTAUTH_URL y AUTH_URL en Vercel env vars al dominio real.
+  - Fix sugerido: documentar en README + .env.example que NEXTAUTH_URL debe setearse por ambiente.
+
+**[LOW] Google OAuth creds ausentes del .env committed**
+  - File: .env (solo 5 vars, sin GOOGLE_CLIENT_ID/SECRET ni NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+  - Localmente: el Navbar muestra "CUENTA DEMO" (useAuthProviders devuelve googleEnabled=false). Demo provider funciona en local.
+  - En Vercel: si el usuario seteó GOOGLE_CLIENT_ID/SECRET pero NO actualizó el redirect URI en Google Cloud Console para incluir `https://conecta-lt2-0.vercel.app/api/auth/callback/google`, el callback OAuth falla con `?error=Callback` — EXACTAMENTE lo que el screenshot del usuario mostraba en resilience-1.
+  - Confianza: ALTA de que el `?error=Callback` del screenshot previo viene de aquí.
+  - Fix sugerido: en Google Cloud Console, añadir `https://conecta-lt2-0.vercel.app/api/auth/callback/google` a Authorized redirect URIs. Verificar también que NEXTAUTH_URL en Vercel = `https://conecta-lt2-0.vercel.app`.
+
+**[LOW] `pages: { signIn: '/' }` produce URLs con `?error=...`**
+  - File: src/lib/auth.ts:39-43
+  - Cuando NextAuth necesita redirigir al sign-in (default `/api/auth/signin`), va a `/` con query `?error=Callback` o `?error=CredentialsSignin` o `?error=Configuration`.
+  - No es un bug — es el comportamiento esperado al usar una custom signIn page. Pero combinado con el AgeGate (que renderiza encima de todo), el usuario ve la URL con `?error=...` pegada después de confirmar edad.
+  - Confianza: ALTA de que esto explica el `?error=Callback` visible en el screenshot. No es un hang.
+  - Fix sugerido (cosmético): limpiar el query string en el AgeGate onConfirm o en el page.tsx useEffect.
+
+**[INFO] No existe middleware.ts**
+  - Confirmado: no hay `src/middleware.ts` ni `middleware.ts` en la raíz.
+  - Esto es BUENO: no hay riesgo de redirect loops a nivel middleware. Toda la auth es client-side vía useSession + server-side vía getServerSession en route handlers.
+
+**[INFO] SessionProvider está correctamente envolviendo la app**
+  - File: src/app/layout.tsx:110-112
+  - `<QueryProvider><SessionProvider>{children}</SessionProvider></QueryProvider>` ✓
+
+**[INFO] type augmentation correcta**
+  - File: src/types/next-auth.d.ts
+  - Session.user.id + Session.user.role + JWT.id + JWT.role correctamente declarados. tsc pasa sin errores.
+
+**[INFO] Demo provider funciona correctamente en local**
+  - File: src/lib/auth.ts:60-86
+  - id='demo', upserta DEMO_USER (ana.rodriguez@gmail.com, role=USER). El `authorize()` retorna `{id, name, email, image}` — el jwt callback luego busca el role en DB y lo persiste en el token.
+  - Nota: el demo SIEMPRE loguea como Ana Rodríguez. No hay UI para login como admin/moderator — el worklog menciona que el admin se loguea vía POST directo a /api/auth/callback/credentials. Esto es una limitación UX, no un bug.
+
+**[INFO] Migración Postgres→SQLite ya aplicada (resilience-1 / review-pre-push)**
+  - schema.prisma: provider = "sqlite" ✓
+  - .env: DATABASE_URL = "file:/home/z/my-project/db/dev.db" ✓
+  - .env.example: actualizado ✓
+
+**[INFO] setUser race ya mitigado (review-pre-push)**
+  - File: src/lib/store.ts:102-128
+  - Tres hooks (useFavoritesSync, useRedemptionsSync, useReservationsSync) llaman setUser en paralelo. El store preserva `role` si el incoming user object lo omite (defense-in-depth). Race resuelto.
+
+Análisis: ¿Puede el AUTH causar "page won't load" o "infinite CARGANDO spinner" en la HOME?
+
+  **NO directamente.** El HomePage NO está auth-gateado. Renderiza con useQuery(['businesses']) que es independiente de la sesión. Si la home se cuelga en "CARGANDO…", la causa más probable sigue siendo `/api/businesses` fallando (DB issue — ya mitigado por resilience-1 con error UI + retry).
+
+  **SÍ indirectamente en vistas secundarias:**
+  - ProfilePage (status==='loading' sin timeout) → hang si /api/auth/session no responde.
+  - EstablishmentPage (isLoading sin timeout) → hang si /api/businesses/[slug] no responde.
+  - Dashboards admin/owner (isLoading sin timeout) → hang si sus endpoints no responden.
+
+  **SÍ en el flujo OAuth:**
+  - Si el usuario hace click en "CONTINUAR CON GOOGLE" en Vercel y las creds/redirect URIs están mal configuradas, rebota a `/?error=Callback`. No es un hang, pero explica el screenshot del usuario.
+
+  **SÍ en el flujo Demo en Vercel:**
+  - Si el usuario hace click en "CUENTA DEMO" en Vercel, el `db.user.upsert` en authorize() falla porque SQLite no es escribible en serverless. signIn() rechaza silenciosamente. El usuario no ve feedback y puede percibirlo como "no carga".
+
+Stage Summary:
+- 0 cambios de código realizados (review only, según instrucciones).
+- Auth setup core es sólido: SessionProvider envuelve bien, type augmentation correcta, no hay middleware redirect loops, demo provider funciona en local, race de setUser mitigado.
+- 2 hang risks HIGH (ProfilePage, EstablishmentPage) sin timeout de seguridad — no afectan a la home pero sí a vistas secundarias.
+- 1 hang risk HIGH (demo provider + DB write) en Vercel — ya diagnosticado en resilience-1.
+- 2 issues MEDIUM (signIn sin redirect:false, sin .catch) — UX roto, no hang.
+- 3 issues LOW/INFO (NEXTAUTH_URL localhost, Google creds ausentes, `?error=` en URL) — deployment config, no code bugs.
+- El `?error=Callback` del screenshot previo del usuario casi con certeza viene de Google OAuth misconfigured en Vercel (redirect URI no incluye el dominio Vercel) — debe configurarse en Google Cloud Console + Vercel env vars.
+- Próximos actions sugeridos (NO aplicados aquí): añadir slowLoad 8s + error UI a ProfilePage y EstablishmentPage; añadir redirect:false + .catch a signIn() en Navbar; documentar NEXTAUTH_URL/Google redirect URI en README.
+
+---
+Task ID: review-api-db-1
+Agent: general-purpose (API + DB audit)
+Task: Review API routes and database layer for bugs that could cause "page won't load" / "infinite CARGANDO spinner".
+
+Scope: Read every file fully — src/lib/db.ts, prisma/schema.prisma (full 447 lines), all 7 repositories, all 7 services, all 35 API route.ts files, and src/lib/api.ts (737 lines). Also verified the SQLite DB file exists and has data.
+
+WORK LOG:
+- Read worklog.md (3,302 lines) for prior context — 4 critical bugs already fixed in `review-pre-push` (PostgreSQL→SQLite migration, NEXTAUTH_SECRET, insensitive mode, role race condition) plus a `resilience-1` task that wrapped /api/businesses in try/catch and added HomePage error UI.
+- Verified all 35 route handlers individually. Each is small (20–200 lines), uses the service layer cleanly, and propagates thrown `Response` objects via the standard `if (e instanceof Response) return e` pattern.
+- Verified the SQLite database file:
+  * `/home/z/my-project/db/dev.db` (1.58 MB) — 20 tables, properly seeded.
+  * `/home/z/my-project/db/custom.db` (0 bytes, empty) — leftover from the prior Postgres-era DATABASE_URL, no tables.
+- Live smoke-tested the running dev server (PID 6796, started 04:04): all 5 critical endpoints return HTTP 200 with valid JSON — `/api/businesses` (21 rows), `/api/analytics/popular?limit=8`, `/api/categories` (3 rows), `/api/auth/session` (`{}`), `/api/businesses/views` (POST), `/api/businesses/licoreria-don-sancho` (200).
+
+DB ROW COUNTS (dev.db, queried via direct Prisma client):
+  Business: 21 | User: 19 | Review: 84 | Promotion: 42 | AnalyticsEvent: 5,722
+  Reservation: 0 | Notification: 7 | CouponRedemption: 0 | Favorite: 0
+  Category: 3 | City: 1 | BusinessHours: 146 | BusinessSocial: 73 | BusinessImage: 231
+
+API ROUTE INVENTORY (35 files):
+  Public read:
+  - src/app/api/route.ts — leftover scaffold, returns `{message:"Hello, world!"}` (dead code, HomePage doesn't call it).
+  - src/app/api/businesses/route.ts — GET list of active businesses with optional category/priceRange/q filters; try/catch returns 503 DATABASE_UNAVAILABLE on DB error (added in resilience-1).
+  - src/app/api/businesses/[slug]/route.ts — GET single business by slug, 404 if not found; **NO try/catch** (potential HTML 500 if DB throws).
+  - src/app/api/businesses/views/route.ts — POST bulk view-count lookup by slug list (capped at 100).
+  - src/app/api/businesses/[slug]/views/route.ts — GET 7-day BUSINESS_VIEW count for one slug.
+  - src/app/api/categories/route.ts — GET all categories ordered by sortOrder; **NO try/catch** (potential HTML 500 if DB throws).
+  - src/app/api/analytics/popular/route.ts — GET top-N most-viewed businesses in last 7 days (limit clamped 1–20).
+  - src/app/api/analytics/track/route.ts — POST fire-and-forget event tracking (public, attaches userId when logged in).
+  - src/app/api/auth/[...nextauth]/route.ts — NextAuth v4 catch-all (GET + POST) for sign-in/callback/session.
+
+  Auth-required (user):
+  - src/app/api/favorites/route.ts — GET user's favorites / POST toggle by businessSlug.
+  - src/app/api/favorites/check/route.ts — POST batch-check which slugs the user has favorited (cap 200).
+  - src/app/api/reviews/route.ts — GET current user's reviews / POST upsert review (validates sub-ratings 1–5 + comment length 10–1000).
+  - src/app/api/promotions/[id]/redeem/route.ts — POST claim a coupon (atomic tx: insert redemption + increment count); catches P2002 race as 409.
+  - src/app/api/promotions/redeemed/route.ts — GET user's claimed coupons with promotion + business info.
+  - src/app/api/promotions/check/route.ts — POST batch-check which promotion IDs the user has claimed (cap 200).
+  - src/app/api/reservations/route.ts — GET user's reservations / POST create reservation (validates date/time/guests/name/phone); optional coupon link.
+  - src/app/api/reservations/[id]/cancel/route.ts — POST cancel reservation (PENDING/CONFIRMED → CANCELLED, unlinks coupon atomically).
+  - src/app/api/notifications/route.ts — GET user's notifications (50 cap) with X-Unread-Count header / POST markAllRead.
+  - src/app/api/notifications/[id]/read/route.ts — POST mark single notification as read (scoped by userId).
+  - src/app/api/businesses/[slug]/capacity/route.ts — POST report current capacity (QUIET/MODERATE/FULL), fires CAPACITY_REPORT analytics event best-effort.
+  - src/app/api/businesses/[slug]/claim/route.ts — POST claim business as BUSINESS_OWNER (or ADMIN), notifies all admins/moderators.
+
+  Admin (ADMIN or MODERATOR for reads, ADMIN-only for writes):
+  - src/app/api/admin/stats/route.ts — GET dashboard totals + pending queues + recent activity + top-this-week.
+  - src/app/api/admin/businesses/route.ts — GET all businesses (any status) with owner info; supports status/claimed/ownerId/search filters.
+  - src/app/api/admin/businesses/[id]/status/route.ts — PATCH business status (DRAFT/PENDING_REVIEW/ACTIVE/SUSPENDED/ARCHIVED); notifies owner on suspend/approve.
+  - src/app/api/admin/reviews/route.ts — GET all reviews (any status) with user + business; supports status/businessId filters.
+  - src/app/api/admin/reviews/[id]/status/route.ts — PATCH review status (PENDING/PUBLISHED/HIDDEN/FLAGGED); notifies author on publish/hide.
+  - src/app/api/admin/users/route.ts — GET all users with role/createdAt; supports role/search filters.
+  - src/app/api/admin/users/[id]/role/route.ts — PATCH user role; lockout guard prevents demoting the last ADMIN.
+
+  Owner (BUSINESS_OWNER or ADMIN + per-business ownership check):
+  - src/app/api/owner/businesses/[slug]/route.ts — GET full business with hours/socials/owner / PATCH basic info.
+  - src/app/api/owner/businesses/[slug]/hours/route.ts — PUT replace BusinessHours array (upsert-per-day, atomic).
+  - src/app/api/owner/businesses/[slug]/socials/route.ts — PUT replace BusinessSocial array (delete missing + upsert).
+  - src/app/api/owner/businesses/[slug]/reservations/route.ts — GET reservations for owned business; supports status/date filters.
+  - src/app/api/owner/businesses/[slug]/reservations/[id]/status/route.ts — PATCH reservation status with allowed-transition matrix; notifies user.
+  - src/app/api/owner/businesses/[slug]/promotions/route.ts — GET all promotions / POST create DRAFT promotion; catches P2002 on duplicate code.
+  - src/app/api/owner/businesses/[slug]/promotions/[id]/route.ts — PATCH promotion fields + status transitions (DRAFT↔ACTIVE↔PAUSED); owner can't set EXPIRED.
+
+BUGS / POTENTIAL ISSUES FOUND:
+
+  ⚠ ISSUE 1 (HIGH — environmental, not code):
+  `DATABASE_URL=file:/home/z/my-project/db/custom.db` is set in the SHELL ENVIRONMENT
+  (confirmed via `env | grep DATABASE`). The `.env` file correctly says
+  `file:/home/z/my-project/db/dev.db` (1.58 MB, fully seeded), but Next.js does NOT
+  override existing process.env vars from .env files. The currently-running dev
+  server (PID 6796) was started without that env var set, so it works. But ANY
+  future restart from a shell that has `DATABASE_URL=custom.db` exported will
+  silently switch Prisma to the empty `custom.db` (0 bytes, no tables) and EVERY
+  `/api/*` route that hits the DB will throw "The table `main.Business` does not
+  exist in the current database". The `/api/businesses` route's try/catch returns
+  a clean 503 DATABASE_UNAVAILABLE, which HomePage should now handle as an error
+  UI (added in resilience-1) — but only if HomePage's React Query `isError`
+  branch is wired correctly. If the user is still seeing infinite CARGANDO, this
+  env-var override is the prime suspect. Recommend: `unset DATABASE_URL` in the
+  shell before starting dev, OR delete `/home/z/my-project/db/custom.db` (0 bytes,
+  stale leftover from the Postgres era).
+
+  ⚠ ISSUE 2 (MEDIUM — missing try/catch):
+  `src/app/api/businesses/[slug]/route.ts:10-20` has NO try/catch around
+  `businessRepository.findBySlug(slug)`. If Prisma throws (DB connection error,
+  table missing), Next.js will return an HTML 500 error page that breaks the
+  client's `res.json()` call in `fetchBusinessBySlug` (src/lib/api.ts:60-64),
+  which would propagate as `new Error('Failed to fetch business')` and surface
+  as infinite loading on the EstablishmentPage. All other public read routes
+  (/api/businesses, /api/analytics/popular, /api/businesses/views, etc.) have
+  try/catch — this one is inconsistent.
+
+  ⚠ ISSUE 3 (LOW — missing try/catch):
+  `src/app/api/categories/route.ts:9-12` has NO try/catch around
+  `categoryRepository.findAll()`. Same failure mode as Issue 2: a DB throw
+  produces an HTML 500 page that breaks the client. The HomePage calls
+  `fetchCategories` (src/lib/api.ts:66-72) which would then throw on
+  `res.json()`. Severity is low because categories is a tiny table that rarely
+  fails, but it's still inconsistent with the rest of the codebase.
+
+  ⚠ ISSUE 4 (LOW — `next.config.ts:5` has `typescript.ignoreBuildErrors: true`):
+  This means TypeScript errors won't fail the production build. Not the cause of
+  "page won't load" but a quality risk for production deployments. Should be
+  removed once the codebase is stable.
+
+  ⚠ ISSUE 5 (LOW — stale empty DB file):
+  `/home/z/my-project/db/custom.db` is 0 bytes with no tables. It's a leftover
+  from the prior Postgres-era DATABASE_URL setting. Recommend deleting it to
+  avoid confusion (it can never be useful and is the target of Issue 1's env var
+  override).
+
+  ⚠ ISSUE 6 (INFO — demo Credentials provider accepts any email):
+  `src/lib/auth.ts:60-86` — the demo provider upserts a user row for any email
+  submitted, and if that email matches an existing admin/owner, the user is
+  logged in with that role. This is intentional for the sandbox but is a
+  security hole if deployed publicly without Google OAuth configured. Not the
+  cause of "page won't load".
+
+NO BUGS FOUND IN:
+  - Prisma client singleton (`src/lib/db.ts`) — standard globalThis pattern,
+    dev-mode connection pooling is correct.
+  - Schema (`prisma/schema.prisma`) — provider=sqlite matches .env; indexes on
+    hot paths (AnalyticsEvent[type,createdAt], Review[businessId,status],
+    Notification[userId,read], etc.); all FK relations have correct onDelete
+    cascade rules; no N+1 patterns in `businessInclude` (single shared include).
+  - All 7 repositories — thin Prisma accessors, accept optional `tx` for
+    transaction wrapping, no business logic, no circular deps. Only shared
+    symbol is `businessInclude` (exported from business.repository.ts and
+    re-used by favorite/promotion/review repositories for the Business shape).
+  - All 7 services — proper use of `db.$transaction()` for atomic multi-writes
+    (review upsert + ratings recalc, promotion redeem + count increment,
+    reservation create + coupon link, reservation cancel + coupon unlink,
+    business hours/socials upsert-per-row). Fire-and-forget notifications
+    always run AFTER the tx commits and have their own try/catch.
+  - `transformBusiness` (`src/server/services/business.service.ts:387-524`) —
+    uses `?? ''` and `?? null` consistently for every nullable field;
+    `review.user?.name ?? 'Usuario Anónimo'` in `transformReview`;
+    `business.claimedAt?.toISOString() ?? null`; `business.coverImage ??
+    coverUrls[0] ?? galleryUrls[0] ?? ''`. Solid null-safety.
+  - All write endpoints validate input (sub-rating 1–5, comment length, date
+    format YYYY-MM-DD via `isValidDate`, time format HH:mm via `isValidTime`,
+    guests integer >=1, phone >=7 chars, etc.) and return clean 400s.
+  - All P2002 race conditions are caught (reviews, reservations link-coupon,
+    promotions redeem, owner promotion code uniqueness) and surfaced as clean
+    409s/400s.
+  - Rate-limit caps on batch endpoints (MAX_SLUGS=100 for /api/businesses/views,
+    MAX_SLUGS=200 for /api/favorites/check and /api/promotions/check).
+  - No unbounded queries (everything has take/cap or is bounded by the schema).
+
+CAN ANY API BUG CAUSE "PAGE WON'T LOAD" OR "INFINITE CARGANDO SPINNER"?
+  - Locally (current dev server, PID 6796, using dev.db): NO. All endpoints
+    return HTTP 200 with valid JSON. HomePage's React Query `fetchBusinesses`
+    will resolve successfully.
+  - On Vercel (the user's reported scenario): YES, but it's environmental
+    (SQLite doesn't work on Vercel serverless — already diagnosed in
+    resilience-1). The resilience-1 fix added HomePage error UI + 8s slowLoad
+    safety net, so the user should NOT see infinite CARGANDO anymore on Vercel
+    — they should see "No pudimos cargar los locales" + Reintentar button.
+  - If the user is STILL seeing infinite CARGANDO locally, the most likely
+    cause is Issue 1 (shell env var DATABASE_URL=custom.db pointing at the
+    empty DB), which would make /api/businesses return 503 — and IF the
+    resilience-1 HomePage error UI has a bug (out of scope for this audit),
+    the spinner could persist. Recommend verifying HomePage.tsx's isError
+    branch in a follow-up.
+
+VERIFICATION ARTIFACTS LEFT:
+  - No code changes were made (audit-only task).
+  - Temporary probe scripts (check-db*.ts) were created in /home/z/my-project/
+    and have been deleted; only next-env.d.ts, next.config.ts, tailwind.config.ts
+    remain in the project root (as before).
+
+Stage Summary:
+- The API + DB layer is well-architected and does NOT contain code bugs that
+  would cause "page won't load" or "infinite CARGANDO spinner" in the local
+  dev environment. All 35 route handlers were reviewed in full.
+- 2 real bugs found (Issue 2 + Issue 3 — missing try/catch on 2 public read
+  routes), both LOW/MEDIUM severity. They wouldn't cause spinner today but
+  would produce HTML 500 pages on a DB hiccup (inconsistent with the rest of
+  the codebase's graceful JSON error handling).
+- 1 environmental issue (Issue 1 — shell DATABASE_URL=custom.db overriding
+  .env's dev.db) is the prime suspect if the user is seeing the spinner
+  locally after a dev server restart.
+- The DB file (`/home/z/my-project/db/dev.db`) exists, has all 20 tables, and
+  is properly seeded (21 businesses, 19 users, 84 reviews, 42 promotions,
+  5,722 analytics events, 7 notifications, 146 hours, 73 socials, 231 images).
+- Recommended next actions (in priority order):
+  1. `unset DATABASE_URL` in the shell, delete `db/custom.db`, restart dev
+     server to confirm local app loads.
+  2. Add try/catch to `src/app/api/businesses/[slug]/route.ts` and
+     `src/app/api/categories/route.ts` for consistency.
+  3. Remove `typescript.ignoreBuildErrors: true` from `next.config.ts`.
+  4. Verify HomePage.tsx's `isError` branch (out of scope — flagged for the
+     frontend audit agent).
+
+---
+Task ID: review-frontend-1
+Agent: frontend-reviewer
+Task: Audit the FRONTEND RENDERING CHAIN for any bug that could cause the page to fail to render, hang, or crash. User reports "localhost refused connection" and sometimes an infinite "CARGANDO" spinner.
+
+Work Log:
+- Leído worklog.md (3302 líneas) — contexto de etapas 0–7.C + fixes resilience-1 (HomePage isError/slowLoad) y review-pre-push (Prisma SQLite + NEXTAUTH_SECRET + race de role).
+- Leídos COMPLETAMENTE: layout.tsx, page.tsx, providers.tsx, session-provider.tsx, HomePage.tsx, Navbar.tsx, AgeGate.tsx, Notifications.tsx, store.ts, los 6 hooks en src/lib/hooks/, globals.css, Matchmaker.tsx, MapPage.tsx (parcial), ProfilePage.tsx (parcial), EstablishmentPage.tsx (parcial), ActivePromotionsBadge.tsx, CapacityBadge.tsx, use-toast.ts, toaster.tsx, api.ts, auth.ts, server/auth.ts, next.config.ts, tsconfig.json, package.json.
+- Verificado: `npx tsc --noEmit` → 0 errores. Dev server corriendo (PID 6812, next-server v16.1.3). curl a `/`, `/api/businesses`, `/api/auth/session`, `/api/analytics/popular` → todos 200 en 20–50ms. 0 errores/warnings en dev.log reciente.
+
+═══════════════════════════════════════════════════════════════
+CADENA DE RENDERIZADO COMPLETA (layout → page → HomePage)
+═══════════════════════════════════════════════════════════════
+
+RootLayout (src/app/layout.tsx:100-117)
+└─ <html lang="es" suppressHydrationWarning>
+   └─ <body className="…antialiased bg-background text-foreground">
+      └─ <QueryProvider>  (src/components/providers.tsx)
+         └─ <QueryClientProvider client={
+              new QueryClient({
+                defaultOptions: { queries: {
+                  staleTime: 5min, refetchOnWindowFocus: false, retry: 1
+                }}
+              })
+            }>
+            └─ <SessionProvider>  (src/components/session-provider.tsx)
+               └─ <NextAuthSessionProvider>  (sin session prop → fetch /api/auth/session)
+                  └─ {children}  ← page.tsx
+      <Toaster />  (Radix Toast — fuera del SessionProvider)
+
+Home (src/app/page.tsx:59-137)
+└─ <div className="min-h-screen bg-obsidian text-white … flex flex-col">
+   ├─ <div className="bg-orbs"> (decoración, position:fixed, z:0, pointer-events:none)
+   ├─ {!ageVerified && <AgeGate onConfirm={confirmAge} />}  (overlay z-[100])
+   │  └─ useSyncExternalStore(subscribeAgeVerified, getAgeSnapshot, getServerSnapshot=false)
+   │     · Server snapshot siempre false → AgeGate renderiza en SSR
+   │     · Client snapshot lee sessionStorage['age-verified'] después de hydrate
+   │     · Si difieren, React re-renderiza sin crash (patrón hidratación-segura)
+   ├─ <Notifications />  (toasts efímeros, fixed top-right, z-[60])
+   ├─ <Navbar />  (fixed top, z-50, glass-nav)
+   │  └─ Monta 4 sync hooks (useFavoritesSync, useRedemptionsSync,
+   │     useReservationsSync, useNotificationsSync) — cada uno llama useSession()
+   │     y tiene useEffect que hace setUser() cuando status !== 'loading'
+   │  └─ <NotificationsBell /> (solo si user está seteado en el store)
+   ├─ <main className="pt-28 sm:pt-20 flex-1 relative z-10">
+   │  └─ <AnimatePresence mode="wait">
+   │     └─ {view === 'home' && <HomePage key="home" />}
+   │        ├─ useQuery(['businesses']) → fetchBusinesses() → GET /api/businesses
+   │        ├─ useQuery(['analytics','popular']) → GET /api/analytics/popular?limit=8
+   │        ├─ useQuery(['analytics','views','bulk', slugs]) → POST /api/businesses/views
+   │        │  (enabled: visibleSlugs.length > 0)
+   │        ├─ if (isError) → UI error + botón "Reintentar"  (resilience-1)
+   │        ├─ if (isLoading) → spinner "CARGANDO…" + slowLoad hint a los 8s
+   │        └─ else → hero + popular rail (si no vacío) + directorio grid + <Matchmaker>
+   │     {view === 'map'    && <MapPage />}     (dynamic import LeafletMap ssr:false)
+   │     {view === 'detail' && <EstablishmentPage />}
+   │     {view === 'profile'&& <ProfilePage />} (early-return si !authenticated)
+   │     {view === 'admin'  && <AdminDashboard />}
+   │     {view === 'owner'  && <OwnerDashboard />}
+   └─ <footer className="mt-auto …"> (sticky al fondo via flex-col + mt-auto)
+
+═══════════════════════════════════════════════════════════════
+HALLAZGOS DETALLADOS
+═══════════════════════════════════════════════════════════════
+
+╔══ NO HAY BUGS BLOQUEANTES EN LA RUTA DE RENDERIZADO INICIAL ══╗
+║                                                                ║
+║  La cadena layout → page → HomePage no tiene ningún componente  ║
+║  que retorne null o un spinner basado en useSession() ===       ║
+║  'loading'. HomePage es independiente del estado de sesión.    ║
+║  El gate "CARGANDO…" está protegido por retry:1 + isError +    ║
+║  slowLoad 8s (añadido por resilience-1).                       ║
+╚════════════════════════════════════════════════════════════════╝
+
+── Potencial issue #1: useToast effect deps incorrecto ──
+  Archivo: src/hooks/use-toast.ts:177-185
+  Código:
+    React.useEffect(() => {
+      listeners.push(setState)
+      return () => { …splice… }
+    }, [state])   // ← BUG: debería ser []
+  Impacto: El effect se re-ejecuta en cada cambio de `state`, removiendo
+    y re-agregando `setState` a los listeners. Ineficiente pero NO rompe
+    funcionalidad (setState es estable, la lista se reconstruye igual).
+  El shadcn/ui original usa `[]` como deps. Esto es una desviación.
+  Severidad: baja (cosmético/perf).
+
+── Potencial issue #2: calculateMatch usa `!` en arrays posiblemente vacíos ──
+  Archivo: src/lib/store.ts:188, 190, 195, 199, 202
+  Código:
+    return clubs.find(…) ?? clubs[0]!;   // clubs podría ser []
+    return tascas.find(…) ?? tascas[0]!; // tascas podría ser []
+    return allEstablishments.find(…) ?? allEstablishments[0]!;
+  Impacto: `!` es solo aserción de TypeScript en compile-time. En runtime,
+    si el array está vacío, retorna `undefined`. Luego getRecommendedDrink()
+    hace `est.category` → TypeError. Pero Matchmaker solo se renderiza
+    después de que HomePage cargó businesses (isLoading=false), así que
+    en la práctica allEstablishments nunca está vacío cuando se llama.
+  Severidad: baja (latente, requiere race condition muy específica).
+
+── Potencial issue #3: slowLoad no se resetea al reintentar ──
+  Archivo: src/components/conecta/HomePage.tsx:74-79
+  Código:
+    const [slowLoad, setSlowLoad] = useState(false);
+    useEffect(() => {
+      if (!isLoading) return;
+      const t = setTimeout(() => setSlowLoad(true), 8000);
+      return () => clearTimeout(t);
+    }, [isLoading]);
+  Impacto: Si el usuario hace clic en "Reintentar" desde el estado slowLoad
+    y el retry también es lento, el hint "tardando más de lo habitual"
+    aparece inmediatamente (slowLoad sigue true del primer intento).
+    El comentario en línea defiende esto como aceptable. UX menor.
+  Severidad: muy baja (cosmético).
+
+── Potencial issue #4: ProfilePage bloquea en status === 'loading' ──
+  Archivo: src/components/conecta/ProfilePage.tsx:87-91
+  Código:
+    if (status === 'loading') {
+      return <div>Cargando…</div>;
+    }
+  Impacto: Si /api/auth/session se cuelga, ProfilePage muestra "Cargando…"
+    para siempre. PERO esto solo afecta la vista 'profile' (requiere click
+    del usuario en "Mi Perfil"), NO la carga inicial de la home.
+  Severidad: baja (no afecta la ruta de renderizado inicial).
+
+── Potencial issue #5: Duplicación de setUser en 3 sync hooks ──
+  Archivos:
+    src/lib/hooks/use-favorites-sync.ts:40-54
+    src/lib/hooks/use-redemptions-sync.ts:37-51
+    src/lib/hooks/use-reservations-sync.ts:40-54
+  Los tres hooks tienen el mismo useEffect que mirror session → store.
+    El primero en correr hace setUser(); los otros dos son no-ops (mismo
+    user.id → merge branch en store.setUser). Documentado como intencional
+    ("zustand dedupes the set"). No es un bug, pero es código duplicado.
+  Severidad: ninguna (funciona correctamente, solo DRY).
+
+── Potencial issue #6: AnimatePresence mode="wait" añade 400ms de transición ──
+  Archivo: src/app/page.tsx:98-105 + cada view component tiene exit:{duration:0.4}
+  Impacto: Al cambiar de vista, hay 400ms donde la vista vieja sale antes
+    de que la nueva entre. Si el usuario clickea rápido, puede percibir
+    lentitud. NO es un bug — es el comportamiento intencional de la
+    animación. No causa "infinite spinner".
+  Severidad: ninguna (UX intencional).
+
+── Potencial issue #7: window.scrollTo con behavior:'instant' ──
+  Archivo: src/app/page.tsx:80
+  Código: window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  Impacto: 'instant' es un ScrollBehavior válido en browsers modernos
+    (Chrome 2+, Firefox 75+, Safari 15.4+) pero no está en el tipo TS.
+    El cast `as ScrollBehavior` es necesario. En browsers muy viejos,
+    scroll podría ser smooth en vez de instant. Compatibilidad menor.
+  Severidad: ninguna para el caso de uso (preview panel es Chromium).
+
+═══════════════════════════════════════════════════════════════
+VERIFICACIONES ESPECÍFICAS SOLICITADAS
+═══════════════════════════════════════════════════════════════
+
+✓ AgeGate (useSyncExternalStore) — ¿podría causar hydration mismatch?
+  NO crashea. Patrón correcto:
+    - getServerSnapshot() siempre retorna false → SSR renderiza AgeGate
+    - getSnapshot() lee sessionStorage DESPUÉS de hydrate
+    - React 19 usa el server snapshot para hidratar, luego re-renderiza
+      con el client snapshot si difiere
+  Puede haber un "flash" breve del AgeGate en navegaciones cliente-side
+    si sessionStorage tiene 'age-verified'='true', pero no es un crash.
+
+✓ AgeGate — ¿podría bloquear permanentemente el renderizado?
+  NO. confirmAge() hace 3 cosas:
+    1. ageVerifiedInMemory = true  (variable module-level, persiste)
+    2. sessionStorage.setItem('age-verified','true')  (try/catch)
+    3. emitAgeVerifiedChange()  (notifica listeners)
+  Incluso si sessionStorage.throw (modo privado), el flag in-memory es
+    suficiente. useSyncExternalStore re-renderiza y AgeGate desmonta.
+  El único camino para que AgeGate bloquee es que el usuario NO haga clic
+    en "SOY MAYOR DE EDAD" — que es el comportamiento intencional.
+
+✓ useQuery con `enabled` que nunca se vuelve true
+  HomePage tiene 3 useQuery:
+    - ['businesses'] → sin enabled (siempre corre) ✓
+    - ['analytics','popular'] → sin enabled (siempre corre) ✓
+    - ['analytics','views','bulk',…] → enabled: visibleSlugs.length > 0
+      visibleSlugs se deriva de `filtered` (que se deriva de establishments).
+      Si establishments está vacío, visibleSlugs=[], query no corre →
+      viewCounts=[] → no crash. ✓
+  Matchmaker tiene 1 useQuery:
+    - ['businesses'] → sin enabled (siempre corre, reusa cache de HomePage) ✓
+  MapPage tiene 1 useQuery:
+    - ['businesses'] → sin enabled ✓
+  Navbar hooks (useFavoritesSync etc.) → enabled: status === 'authenticated'
+    Si el usuario nunca se loguea, estas queries no corren → no crash. ✓
+
+✓ Componentes que retornan null/spinner en status === 'loading'
+  BUSQUEDA COMPLETA en src/components/conecta/:
+    - HomePage: NO (independiente de sesión)
+    - Navbar: NO (renderiza siempre, user null → botón "CUENTA DEMO")
+    - Notifications: NO
+    - AgeGate: NO
+    - MapPage: NO
+    - ProfilePage: SÍ (line 87) — pero solo afecta vista 'profile'
+    - EstablishmentPage: usa isLoading (de useQuery, no de sesión)
+    - AdminDashboard: usa isLoading (de useQuery)
+    - OwnerDashboard: usa isLoading (de useQuery)
+  NINGÚN componente en la ruta de renderizado inicial (layout→page→home)
+    bloquea en status === 'loading'.
+
+✓ useEffect que podría causar loop infinito
+  - page.tsx:79-81 (scrollTo on view change) — deps [view], no loop
+  - HomePage.tsx:75-79 (slowLoad timer) — deps [isLoading], no loop
+  - use-favorites-sync.ts:40-54 (setUser) — deps [session,status,setUser],
+    session ref estable, setUser ref estable (zustand) → no loop
+  - use-favorites-sync.ts:67-83 (sync favorites → store) — guardado con
+    comparación sorted-string para evitar re-set innecesario → no loop
+  - use-notifications-sync.ts:60-62 (sync notifications) — deps [data,
+    setPersistentNotifications], data ref cambia solo si cambia el query
+  - AgeGate.tsx:17-23 (lock body scroll) — deps [], cleanup restaura → no loop
+  - Navbar NotificationsBell:107-119 (click-outside) — deps [isOpen] → no loop
+  - El bug histórico de ProfilePage (getSnapshot infinite loop, Task 11) ya
+    está fixeado con useMemo.
+
+✓ Imports de componentes que no existen
+  Verificado: `npx tsc --noEmit` pasa con 0 errores. Todos los imports en
+    layout.tsx y page.tsx resuelven a archivos existentes.
+  - layout.tsx: @/components/ui/toaster ✓, @/components/providers ✓,
+    @/components/session-provider ✓
+  - page.tsx: @/lib/store ✓, @/components/conecta/{Navbar,Notifications,
+    HomePage,MapPage,EstablishmentPage,ProfilePage,admin/AdminDashboard,
+    owner/OwnerDashboard,AgeGate} ✓ — todos existen
+
+✓ CSS que podría ocultar la página entera
+  globals.css revisado completo (668 líneas):
+    - body { @apply bg-background text-foreground; } → bg blanco en :root
+      PERO el div raíz de page.tsx tiene bg-obsidian (#090d1a) con
+      min-h-screen → cubre todo el viewport. No hay flash blanco.
+    - NO hay `body { display: none }`, `visibility: hidden`, ni reglas
+      que oculten el body o html.
+    - .bg-orbs es position:fixed, z:0, pointer-events:none → no bloquea.
+    - .glass-nav y .glass-card usan backdrop-filter (puede ser costoso
+      en GPU pero no rompe renderizado).
+    - z-index hierarchy: AgeGate z-[100] > Navbar z-50 > Notifications z-[60]
+      > main z-10 > bg-orbs z-0 → consistente.
+
+╔══════════════════════════════════════════════════════════════╗
+║  RESPUESTA DIRECTA A LAS PREGUNTAS DEL USUARIO                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+❓ ¿Alguno bug frontend podría causar "page won't load" o "infinite CARGANDO"?
+  → NO en el estado actual del código. La cadena de renderizado inicial
+    (layout → page → HomePage) no tiene ningún bloqueo en session loading.
+    El único gate "CARGANDO…" está en HomePage.tsx:161 y está protegido
+    por:
+      (a) isError → UI de error con botón Reintentar (resilience-1)
+      (b) slowLoad → hint + botón Reintentar a los 8s (resilience-1)
+      (c) retry: 1 en QueryClient (1 reintento automático)
+    El único escenario para "infinite CARGANDO" sería que el fetch a
+    /api/businesses se cuelgue indefinidamente SIN timeout — muy
+    improbable para same-origin localhost.
+  → "localhost refused connection" es un error de CONEXIÓN (el servidor
+    no está escuchando en :3000), NO un error de código. El dev server
+    está corriendo ahora mismo y responde 200 en ~50ms. Esto indica que
+    el usuario vio el error en un momento donde el dev server no estaba
+    corriendo (terminal cerrada, proceso caído, o antes del primer
+    `next dev`).
+
+❓ ¿AgeGate podría bloquear permanentemente el renderizado?
+  → NO. confirmAge() setea ageVerifiedInMemory=true (module-level,
+    persiste por toda la sesión del tab) + intenta sessionStorage
+    (try/catch para modo privado) + emite change event. El
+    useSyncExternalStore re-renderiza y AgeGate desmonta en el siguiente
+    tick. Incluso si sessionStorage es inaccesible, el flag in-memory
+    basta.
+
+Stage Summary:
+- 0 bugs bloqueantes encontrados en la cadena de renderizado frontend.
+- 7 potenciales issues menores documentados (5 cosméticos/perf, 2 latentes
+  que requieren condiciones muy específicas para manifestarse).
+- Dev server saludable: HTTP 200 para /, /api/businesses, /api/auth/session,
+  /api/analytics/popular (todos 20–50ms). 0 errores tsc. 0 errores en dev.log.
+- La causa de "localhost refused connection" es infraestructura (servidor
+  no corriendo), no código. La causa de "infinite CARGANDO" ya fue
+  mitigada por resilience-1 (isError + slowLoad 8s con botón Reintentar).
+- AgeGate es seguro: no puede bloquear permanentemente el renderizado
+  gracias al flag in-memory + try/catch en sessionStorage.
+- No se requieren cambios de código. Recomendación: si el usuario vuelve
+  a ver "localhost refused connection", verificar que el dev server
+  esté corriendo (`ps -ef | grep next` o `curl -sI http://localhost:3000/`).
+
+---
+Task ID: review-fix-all-1
+Agent: main
+Task: User reported site won't load, suspected code bugs. Launched 4 parallel agents to review entire codebase. Found and fixed real issues.
+
+Work Log:
+- Launched 4 agents in parallel: auth review, API/DB review, frontend review, structure review.
+- CRITICAL FINDING (agent review-api-db-1): shell env had DATABASE_URL=file:/home/z/my-project/db/custom.db pointing to an EMPTY 0-byte file, overriding .env (dev.db with 21 businesses). Every server restart risked connecting to the empty DB → all queries fail → infinite CARGANDO.
+- FIX: deleted empty custom.db, created symlink custom.db -> dev.db so both env vars resolve to the same data.
+- Found businesses/[slug] route had no try/catch (agent review-api-db-1) — added graceful 503 JSON.
+- Found categories route had no try/catch — added graceful 503 JSON.
+- Found ProfilePage blocks on status==='loading' with no timeout (agent review-auth-1) — added 8s slowLoad safety hint.
+- Found EstablishmentPage isLoading gate with no timeout/error UI (agent review-auth-1) — added isError UI with Reintentar + 8s slowLoad hint.
+- Found Navbar signIn() without redirect:false and no .catch() (agent review-auth-1) — fixed to use redirect:false, surface errors as toasts, add .catch().
+- Verified: lint clean, tsc clean (0 errors), server HTTP 200, 21 businesses, detail API works, 29 cards render, zero console errors.
+
+Stage Summary:
+- ROOT CAUSE of intermittent "no carga": DATABASE_URL shell env override pointing to empty custom.db. Fixed via symlink.
+- 4 additional resilience fixes applied (try/catch on 2 API routes, slowLoad on 2 pages, signIn error handling).
+- All code verified working via Agent Browser: home renders 29 cards, age gate works, API returns 21 businesses, zero console errors.
+- The Vercel deployment issue (separate from local) still requires migrating off SQLite for serverless.

@@ -7,6 +7,14 @@ import { NextResponse } from 'next/server';
 import { categoryRepository } from '@/server/repositories/business.repository';
 
 export async function GET() {
-  const categories = await categoryRepository.findAll();
-  return NextResponse.json(categories);
+  try {
+    const categories = await categoryRepository.findAll();
+    return NextResponse.json(categories);
+  } catch (err) {
+    console.error('[GET /api/categories] DB query failed:', err);
+    return NextResponse.json(
+      { error: 'DATABASE_UNAVAILABLE', message: 'No se pudieron cargar las categorías.' },
+      { status: 503 },
+    );
+  }
 }
