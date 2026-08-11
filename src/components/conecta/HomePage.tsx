@@ -18,7 +18,7 @@ import type {
   PopularBusiness,
   PriceRange,
 } from '@/lib/types';
-import { Matchmaker } from './Matchmaker';
+import { NightPlanner } from '@/components/planner/NightPlanner';
 import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
 import { CapacityBadge } from '@/components/establishment/CapacityBadge';
 import {
@@ -558,7 +558,7 @@ export function HomePage() {
         )}
       </section>
 
-      <Matchmaker open={matchmakerOpen} onClose={() => setMatchmakerOpen(false)} />
+      <NightPlanner open={matchmakerOpen} onClose={() => setMatchmakerOpen(false)} />
     </motion.div>
   );
 }
