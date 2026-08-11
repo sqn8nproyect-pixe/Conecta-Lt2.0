@@ -384,45 +384,32 @@ export function Navbar() {
   );
 
   const handleLogin = () => {
-    if (googleEnabled) {
-      // Real Google OAuth — redirect: false so we can surface
-      // success/error as a toast. Google OAuth requires a full redirect
-      // to Google's consent screen, so redirect:false only affects the
-      // RETURN from the callback, not the outbound redirect.
-      void signIn('google', { callbackUrl: '/', redirect: false })
-        .then((res) => {
-          if (res?.error) {
-            addNotification('No se pudo iniciar sesión con Google. Intenta de nuevo.', 'info');
-          } else {
-            addNotification('¡Sesión iniciada con Google!');
-            // IMPORTANT: use reload(), NOT window.location.href = res.url.
-            // res.url comes from NEXTAUTH_URL which may differ from the
-            // browser's current origin (e.g. localhost vs 127.0.0.1 vs
-            // the gateway domain). Navigating cross-origin would lose
-            // the just-set session cookie and sessionStorage. A simple
-            // reload stays same-origin and picks up the new cookie.
-            window.location.reload();
-          }
-        })
-        .catch(() => {
-          addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
-        });
-    } else {
-      // Fallback Demo — entra directo como Ana Rodríguez.
-      // redirect: false + reload() keeps everything same-origin.
-      void signIn('demo', { callbackUrl: '/', redirect: false })
-        .then((res) => {
-          if (res?.error) {
-            addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
-          } else {
-            addNotification('¡Sesión iniciada con éxito!');
-            window.location.reload();
-          }
-        })
-        .catch(() => {
-          addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
-        });
-    }
+    // Use redirect: false so signIn() uses fetch (not a form submit +
+    // 302 redirect). This is CRITICAL because NextAuth's redirect
+    // resolves to NEXTAUTH_URL (localhost:3000), which may differ from
+    // the browser's current origin (127.0.0.1:3000 or the gateway
+    // domain). A cross-origin redirect would lose the session cookie.
+    //
+    // With redirect: false:
+    //   1. fetch POSTs to /api/auth/callback/<provider> (same origin)
+    //   2. Response sets the session cookie for the current origin
+    //   3. We reload() — stays same-origin, cookie is sent, session
+    //      is read by useSession() → store populates → navbar updates
+    const provider = googleEnabled ? 'google' : 'demo';
+    void signIn(provider, { callbackUrl: '/', redirect: false })
+      .then((res) => {
+        if (res?.error) {
+          addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
+        } else {
+          // reload() picks up the new session cookie. We must NOT use
+          // window.location.href = res.url because res.url may be
+          // cross-origin (localhost vs 127.0.0.1 vs gateway domain).
+          window.location.reload();
+        }
+      })
+      .catch(() => {
+        addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
+      });
   };
 
   const handleLogout = () => {

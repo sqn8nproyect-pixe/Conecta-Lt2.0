@@ -36,6 +36,9 @@ const DEMO_USER = {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as Adapter,
   session: { strategy: 'jwt' },
+  // Trust the Host header so the app works behind the Caddy gateway
+  // (the browser sees the gateway domain, not localhost:3000).
+  trustHost: true,
   pages: {
     // We don't ship a custom sign-in page; the navbar triggers
     // signIn('google') or signIn('credentials') directly.
@@ -64,24 +67,29 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
       },
       async authorize(credentials) {
-        const email = credentials?.email?.trim() || DEMO_USER.email;
-        const name = DEMO_USER.name;
-        const image = DEMO_USER.image;
+        try {
+          const email = credentials?.email?.trim() || DEMO_USER.email;
+          const name = DEMO_USER.name;
+          const image = DEMO_USER.image;
 
-        // upsert so the demo user always exists with a stable id
-        const user = await db.user.upsert({
-          where: { email },
-          update: { name, image },
-          create: { email, name, image, role: 'USER' },
-          select: { id: true, name: true, email: true, image: true },
-        });
+          // upsert so the demo user always exists with a stable id
+          const user = await db.user.upsert({
+            where: { email },
+            update: { name, image },
+            create: { email, name, image, role: 'USER' },
+            select: { id: true, name: true, email: true, image: true },
+          });
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          };
+        } catch (err) {
+          console.error('[auth.demo.authorize] FAILED:', err);
+          return null;
+        }
       },
     }),
   ],

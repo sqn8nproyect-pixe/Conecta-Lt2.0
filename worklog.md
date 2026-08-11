@@ -4108,3 +4108,25 @@ Stage Summary:
 - Login now works: signIn(redirect:false) + window.location.reload() keeps everything same-origin.
 - Age gate works correctly (shows once per session, then sessionStorage remembers).
 - Dev server persists via start-dev.sh (setsid + disown, PPID=1).
+
+---
+Task ID: fix-login-cookie-1
+Agent: main
+Task: User reported "inicia sesión como Ana Rodríguez pero sigue diciendo cuenta demo, entro a mapa y me pide loguearme". Root cause found and fixed.
+
+Work Log:
+- Reproduced the bug: after clicking CUENTA DEMO, the toast appeared but the navbar still showed "CUENTA DEMO" and the session was empty.
+- Inspected cookies after login: next-auth.csrf-token and next-auth.callback-url were set, but next-auth.session-token was MISSING.
+- Tested the authorize() function directly via fetch with redirect:'manual' — the session cookie WAS set and /api/auth/session returned "Ana Rodríguez". So authorize() works fine.
+- ROOT CAUSE: The default signIn() (without redirect:false) does a form POST + 302 redirect. NextAuth constructed the redirect URL as http://localhost:3000/ (from the callback-url cookie / NEXTAUTH_URL), but the browser was at http://127.0.0.1:3000/. This cross-origin redirect (127.0.0.1 → localhost) caused the browser to drop the session cookie (cookies are per-host: 127.0.0.1 ≠ localhost).
+- Also found: .env had NEXTAUTH_URL="http://localhost:3000" and AUTH_URL="http://localhost:3000" which forced NextAuth to use localhost as the canonical URL.
+- FIX 1: Removed NEXTAUTH_URL and AUTH_URL from .env. With trustHost:true in auth.ts, NextAuth infers the URL from the request's Host header, so the redirect stays same-origin.
+- FIX 2: Changed handleLogin to use signIn(redirect:false) + window.location.reload(). The fetch stays same-origin (no 302 redirect to a different host), the cookie is set for the current origin, and reload() picks it up. Critical: do NOT use window.location.href = res.url because res.url may be cross-origin.
+- Removed the custom cookies config (was overriding NextAuth defaults, could cause issues).
+- Verified end-to-end: fresh browser → age gate → CUENTA DEMO → URL stays 127.0.0.1:3000 (no redirect) → session-token cookie set → navbar shows "Mi Perfil/Mis Locales/Salir" → session API returns "Ana Rodríguez, BUSINESS_OWNER" → Map page works without asking for login → "MI UBICACIÓN" button enabled. Zero console errors.
+
+Stage Summary:
+- Login now works reliably: signIn(redirect:false) + reload() keeps everything same-origin.
+- Session persists across page navigation (Map page reads user from store, no re-login needed).
+- Removed NEXTAUTH_URL/AUTH_URL from .env so NextAuth works behind any proxy/gateway.
+- trustHost:true ensures NextAuth trusts the request's Host header.
