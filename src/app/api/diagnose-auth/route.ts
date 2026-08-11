@@ -1,6 +1,9 @@
-// /api/auth/diagnose — Endpoint de diagnóstico de configuración OAuth.
+// /api/diagnose-auth — Endpoint de diagnóstico de configuración OAuth.
 // NO expone secretos, solo indica si están configurados y su longitud.
 // Útil para depurar errores OAuthCallback sin filtrar credenciales.
+//
+// Está en /api/diagnose-auth (no en /api/auth/diagnose) para evitar
+// el conflicto con el catch-all /api/auth/[...nextauth] de NextAuth.
 
 import { NextResponse } from 'next/server';
 
