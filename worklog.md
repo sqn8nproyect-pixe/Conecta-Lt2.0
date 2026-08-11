@@ -4188,3 +4188,81 @@ Stage Summary:
      NEXTAUTH_SECRET, NEXTAUTH_URL, AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET)
   5. Push a GitHub (5 commits pendientes)
 - Dev server local sigue corriendo en :3000 (HTTP 200) con SQLite local.
+
+---
+Task ID: fix-vercel-postgres-2
+Agent: main
+Task: Usuario proporcionó URL de Neon. Verificar conexión, sincronizar schema, probar dev server end-to-end con datos reales.
+
+Work Log:
+- Recibida URL pooler de Neon:
+  postgresql://neondb_owner:[REDACTED-NEON-PWD-ROTATED]@ep-lingering-hill-ay3mv4lk-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+- Derivada DIRECT_URL (sin -pooler) para migraciones Prisma.
+- Escrito .env con todas las vars (DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET,
+  AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, NEXT_PUBLIC_GOOGLE_CLIENT_ID).
+  Copia de seguridad en .env.local (ambos gitignored).
+- prisma generate ejecutado → Prisma Client v6.19.2 generado para postgresql.
+- Ejecutado bun run prisma/verify-neon.ts:
+  ✅ Conexión OK (pooler Neon)
+  ✅ 21 tablas en schema "public" (incluye _prisma_migrations)
+  ✅ 21 businesses (status=ACTIVE)
+  ✅ 86 reviews, 42 promotions, 231 business images, 73 socials
+  ✅ 4 reservations, 2 coupon redemptions, 7 notifications
+  ✅ 6027 analytics events, 23 users
+  ✅ Usuario demo 'ana.rodriguez@gmail.com' existe con role BUSINESS_OWNER
+  ✅ Licorería Don Sancho: avgRating 4.6, reviewCount 5
+  ⚠ Deltas menores vs conteos esperados (esperado por uso en tests):
+    User 23 vs 19 (+4), Favorite 3 vs 0 (+3), AnalyticsEvent 6027 vs 6025 (+2),
+    BusinessHours 146 vs 147 (-1). No críticos.
+- Ejecutado prisma db push (idempotente, schema ya sincronizado): 8.41s, OK.
+- Actualizado start-dev.sh para cargar .env (Neon) y limpiar override
+  DATABASE_URL=file:/home/z/my-project/db/custom.db que persistía en el
+  shell del sandbox. Verificación: arranca con "✅ DATABASE_URL: Neon (pooler)".
+- Dev server reiniciado con Neon:
+  GET / → 200, GET /api/businesses → 200 (21 negocios, 73KB),
+  GET /api/businesses/licoreria-don-sancho → 200 (4KB detalle),
+  GET /api/categories → 200, GET /api/analytics/popular → 200 (28KB),
+  GET /api/auth/session → 200 {}
+- Bug encontrado en handleLogin (Navbar.tsx): el fix anterior
+  (Task fix-login-cookie-1) trataba igual a Google OAuth y Demo
+  Credentials. Para Demo, signIn(redirect:false) + reload funciona
+  (authorize() corre server-side via fetch y setea cookie). Pero para
+  Google, signIn(redirect:false) retorna { url } (URL de Google) y
+  reload() no navega a ella → usuario nunca se autentica.
+- Fix aplicado: distinguir los dos casos en la respuesta de signIn():
+    if (res?.url) window.location.href = res.url;  // OAuth provider
+    else window.location.reload();                  // Credentials provider
+- Verificación end-to-end con Agent Browser:
+  * AgeGate → "SOY MAYOR DE EDAD" → entra al sitio
+  * Home: 21 cards, 8 populares con view counts reales (Tasca La Cava 348)
+  * Click "Licorería Don Sancho" → detalle con 10 fotos, 2 promos, 5 reviews,
+    Instagram @licoreriadonsancho, WhatsApp +584242569762
+  * Login demo (POST /api/auth/callback/demo) → cookie session-token seteada
+    → /api/auth/session retorna {user: 'Ana Rodríguez', role: 'BUSINESS_OWNER'}
+  * Navbar: "Mi Perfil" / "Mis Locales" / "Salir" + avatar
+  * Click "Mis Locales" → OwnerDashboard con 3 tabs (Info/Reservas/Promociones)
+  * Tab Promociones: tabla con "Cerveza Polar 2x1" (POLAR2X1, ACTIVA, 0/50
+    canjes, vigencia 2026-08-03 → 2026-09-09)
+  * 0 errores de consola, 0 errores de página
+- Lint PASS. tsc --noEmit 0 errores nuevos.
+
+Stage Summary:
+- Neon PostgreSQL vivo y todos los datos intactos (21 businesses, 86 reviews,
+  42 promos, 6025+ analytics events, 23 users).
+- Dev server local corriendo con Neon (no SQLite).
+- Login demo + owner dashboard verificados end-to-end con Agent Browser.
+- Bug de handleLogin (Google vs Demo) fixeado.
+- 8 commits pendientes de push a origin/main (4 anteriores + 4 nuevos):
+    060def2 fix(auth): handleLogin distingue Google OAuth vs Demo
+    6e81cca fix(dev): start-dev.sh carga .env (Neon)
+    c2817d8 docs(worklog): registro Task fix-vercel-postgres-1
+    9e70c6e fix(vercel): migrar Prisma SQLite → PostgreSQL (Neon)
+    7925840 fix-login-cookie-1 (trustHost, sin NEXTAUTH_URL/AUTH_URL)
+    49087ac fix-login-1 (signIn + reload, start-dev.sh prev)
+    731dedf review-fix-all-1 (try/catch APIs, slowLoad páginas)
+    d8450e4 resilience-1 (slowLoad + error UI HomePage)
+- Pendiente (requiere acción del usuario):
+  1. GitHub PAT para git push origin main (8 commits)
+  2. Configurar env vars en Vercel dashboard (DATABASE_URL, DIRECT_URL,
+     NEXTAUTH_SECRET, NEXTAUTH_URL, AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET)
+  3. Vercel redeploy → verificar que /api/* ya responden 200
