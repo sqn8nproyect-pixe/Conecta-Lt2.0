@@ -16,6 +16,7 @@ import {
   type CouponRedemptionWithPromotion,
 } from '@/server/repositories/promotion.repository';
 import { transformPromotion } from '@/server/services/business.service';
+import { notificationService } from '@/server/services/notification.service';
 
 /**
  * Build a JSON Response (thrown from service → returned by route handler).
@@ -190,6 +191,18 @@ export const promotionService = {
     // detail page (offers[].redemptionCount went up by 1).
     const businessId = promotion.business.id;
     const offer = transformPromotion(updatedPromotion, businessId);
+
+    // ── Persistent notification (Etapa 7.A) ──────────────────────
+    // Fire-and-forget AFTER the tx commits so a notification DB error
+    // can never roll back the coupon claim. `promotion.code` is the
+    // pre-increment value (unchanged by the increment op) and
+    // `promotion.business.name` was loaded by `findById`.
+    await notificationService.notify(
+      userId,
+      'COUPON_REDEEMED',
+      'Cupón reclamado',
+      `Reclamaste el cupón ${promotion.code ?? ''} para ${promotion.business.name}.`,
+    );
 
     return {
       redemption: {

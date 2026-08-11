@@ -9,6 +9,8 @@ import { HomePage } from '@/components/conecta/HomePage';
 import { MapPage } from '@/components/conecta/MapPage';
 import { EstablishmentPage } from '@/components/conecta/EstablishmentPage';
 import { ProfilePage } from '@/components/conecta/ProfilePage';
+import { AdminDashboard } from '@/components/conecta/admin/AdminDashboard';
+import { OwnerDashboard } from '@/components/conecta/owner/OwnerDashboard';
 import { AgeGate } from '@/components/conecta/AgeGate';
 
 export default function Home() {
@@ -66,6 +68,8 @@ export default function Home() {
           {view === 'map' && <MapPage key="map" />}
           {view === 'detail' && <EstablishmentPage key="detail" />}
           {view === 'profile' && <ProfilePage key="profile" />}
+          {view === 'admin' && <AdminDashboard key="admin" />}
+          {view === 'owner' && <OwnerDashboard key="owner" />}
         </AnimatePresence>
       </main>
 

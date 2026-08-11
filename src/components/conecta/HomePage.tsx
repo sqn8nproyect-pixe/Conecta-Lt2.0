@@ -20,6 +20,7 @@ import type {
 } from '@/lib/types';
 import { Matchmaker } from './Matchmaker';
 import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
+import { CapacityBadge } from '@/components/establishment/CapacityBadge';
 import {
   Select,
   SelectContent,
@@ -410,6 +411,20 @@ export function HomePage() {
                             {est.priceRange}
                           </span>
                         </div>
+
+                        {/* Etapa 3.6 — Aforo en tiempo real.
+                            Bottom-left of the cover image so it never
+                            collides with the top-right favorite button
+                            (right-4) or the top-right ActivePromotionsBadge
+                            (right-16) when both exist. */}
+                        {est.currentCapacity && (
+                          <div className="absolute bottom-4 left-4">
+                            <CapacityBadge
+                              capacity={est.currentCapacity}
+                              size="sm"
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="p-5 sm:p-6">
                         <div className="flex items-start justify-between gap-2 mb-2">

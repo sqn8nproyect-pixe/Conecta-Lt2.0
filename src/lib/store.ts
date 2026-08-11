@@ -6,6 +6,7 @@ import type {
   BookingData,
   Establishment,
   MatchAnswers,
+  PersistentNotification,
   Reservation,
   User,
   View,
@@ -40,8 +41,18 @@ interface AppState {
   // in the ProfilePage so a reload / re-login keeps the user's bookings.
   reservations: Reservation[];
 
-  // Notifications
+  // Notifications — ephemeral toasts (auto-dismiss after 4s).
+  // Used for transient feedback like "¡Reserva confirmada!" — NOT
+  // for the persistent inbox (see `persistentNotifications` below).
   notifications: AppNotification[];
+
+  // Persistent notifications (Etapa 7.A) — DB-backed inbox of important
+  // events for the user (reservation confirmed, coupon redeemed, review
+  // published…). Hydrated by `useNotificationsSync` in the Navbar.
+  // Survives across sessions (unlike the ephemeral `notifications`
+  // array above). The Navbar's bell icon shows the unread count badge
+  // and a dropdown with the latest entries.
+  persistentNotifications: PersistentNotification[];
 
   // Actions: navigation
   setView: (view: View) => void;
@@ -64,9 +75,12 @@ interface AppState {
   // cancelReservation() invalidate the query so the array re-syncs.
   setReservations: (r: Reservation[]) => void;
 
-  // Actions: notifications
+  // Actions: notifications (ephemeral)
   addNotification: (message: string, type?: 'success' | 'info') => void;
   dismissNotification: (id: number) => void;
+
+  // Actions: persistent notifications (Etapa 7.A)
+  setPersistentNotifications: (n: PersistentNotification[]) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -78,6 +92,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   redeemedPromotionIds: [],
   reservations: [],
   notifications: [],
+  persistentNotifications: [],
 
   setView: (view) => set({ view }),
   goToDetail: (slug) =>
@@ -92,10 +107,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     // user changed (login/logout/switch) — clear local favorites AND
-    // redeemed promotion IDs AND reservations so the Navbar's useQuery
-    // can re-hydrate from /api/favorites, /api/promotions/redeemed
-    // and /api/reservations.
-    set({ user, favorites: [], redeemedPromotionIds: [], reservations: [] });
+    // redeemed promotion IDs AND reservations AND persistent
+    // notifications so the Navbar's useQuery hooks can re-hydrate
+    // from /api/favorites, /api/promotions/redeemed, /api/reservations
+    // and /api/notifications.
+    set({
+      user,
+      favorites: [],
+      redeemedPromotionIds: [],
+      reservations: [],
+      persistentNotifications: [],
+    });
   },
   setFavorites: (slugs) => set({ favorites: slugs }),
   addFavoriteLocal: (slug) =>
@@ -135,6 +157,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   dismissNotification: (id) =>
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
+
+  setPersistentNotifications: (n) => set({ persistentNotifications: n }),
 }));
 
 // ── Favorites selector (used by cards) ──────────────────────

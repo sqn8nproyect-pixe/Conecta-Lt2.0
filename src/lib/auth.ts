@@ -17,6 +17,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
 import type { Adapter } from 'next-auth/adapters';
+import type { UserRole } from '@prisma/client';
 
 import { db } from '@/lib/db';
 
@@ -86,23 +87,42 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     // ── JWT ────────────────────────────────────────────────
-    // Persist the user id on the token so the session exposes it.
+    // Persist the user id AND role on the token so the session can
+    // expose them. The `user` argument is only present on the FIRST
+    // sign-in call (CredentialsProvider.authorize return value), so we
+    // use that opportunity to fetch the role from the DB. Subsequent
+    // JWT rotations just carry `token.role` forward (no DB hit).
+    //
+    // Etapa 7.B — added `role` for RBAC.
     async jwt({ token, user }) {
       if (user) {
         token.id = (user as { id?: string }).id ?? token.sub;
         const img = user.image ?? token.picture;
         token.image = img ?? undefined;
+        // Fetch the user's role from the DB once on sign-in. This is
+        // a single extra query on the sign-in path (not on every
+        // request) and keeps the JWT's role in sync with the DB row
+        // at the moment of login.
+        const dbUser = await db.user.findUnique({
+          where: { id: (user as { id?: string }).id ?? token.sub ?? '' },
+          select: { role: true },
+        });
+        token.role = (dbUser?.role ?? 'USER') as UserRole;
       }
       return token;
     },
     // ── Session ────────────────────────────────────────────
-    // Expose session.user.id for server-side use (favorites, reviews).
+    // Expose session.user.id + session.user.role for client + server use.
+    // The role comes from the JWT (set above) so no DB hit is needed on
+    // every session read.
     async session({ session, token }) {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string | undefined;
         if (token.image) {
           session.user.image = token.image as string | null;
         }
+        (session.user as { role?: UserRole }).role =
+          (token.role as UserRole | undefined) ?? 'USER';
         // name/email fall through from the default JWT callback
       }
       return session;

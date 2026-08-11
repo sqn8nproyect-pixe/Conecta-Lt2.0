@@ -50,6 +50,7 @@ export const ANALYTICS_EVENT_TYPES = [
   'SEARCH', // user executed a search query on the homepage
   'RESERVE_CLICK', // user opened the booking modal
   'REDEEM_CLICK', // user clicked "Reclamar código"
+  'CAPACITY_REPORT', // Etapa 3.6 — user reported a venue's current capacity
 ] as const;
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
 

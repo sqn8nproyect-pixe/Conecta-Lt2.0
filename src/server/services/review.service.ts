@@ -15,6 +15,7 @@ import {
   transformReview,
   type BusinessWithRelations,
 } from '@/server/services/business.service';
+import { notificationService } from '@/server/services/notification.service';
 
 type DbOrTx = PrismaClient | Prisma.TransactionClient;
 
@@ -193,6 +194,17 @@ export const reviewService = {
       // Extremely unlikely (business was here a moment ago), but guard anyway.
       throw jsonError('Negocio no encontrado tras la actualización', 404);
     }
+
+    // ── Persistent notification (Etapa 7.A) ──────────────────────
+    // Fire-and-forget AFTER the tx commits so a notification DB error
+    // can never roll back the review write. `business.name` was loaded
+    // upstream by `businessRepository.findBySlug(businessSlug)`.
+    await notificationService.notify(
+      userId,
+      'REVIEW_PUBLISHED',
+      'Reseña publicada',
+      `Tu reseña de ${business.name} fue publicada.`,
+    );
 
     return {
       review: transformReview(upserted, business.id),

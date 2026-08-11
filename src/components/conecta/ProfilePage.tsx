@@ -19,11 +19,14 @@ import {
   Users,
   X,
   CalendarX,
+  Store,
+  ArrowRight,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import {
+  fetchBusinesses,
   fetchFavorites,
   fetchMyReviews,
   fetchMyRedemptions,
@@ -64,6 +67,19 @@ export function ProfilePage() {
   const { data: reservations = [] } = useQuery({
     queryKey: ['my-reservations'],
     queryFn: fetchMyReservations,
+    enabled: status === 'authenticated',
+  });
+
+  // Etapa 7.B — All businesses (cached under the same ['businesses']
+  // query key as the HomePage, so React Query dedupes the request).
+  // We filter client-side by `ownerId === user.id` to populate the
+  // "MIS LOCALES" section for BUSINESS_OWNER users. Cheaper than a
+  // dedicated /api/businesses/mine endpoint because there are only 21
+  // businesses total and the request is already in flight on the
+  // homepage — the ProfilePage just reuses the cached payload.
+  const { data: allBusinesses = [] } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: () => fetchBusinesses(),
     enabled: status === 'authenticated',
   });
 
@@ -119,6 +135,7 @@ export function ProfilePage() {
     userReviews={userReviews}
     redemptions={redemptions}
     reservations={reservations}
+    allBusinesses={allBusinesses}
     onLogout={handleLogout}
     onGoToDetail={goToDetail}
     onToggleFavorite={toggleFavorite}
@@ -134,6 +151,7 @@ function ProfileContent({
   userReviews,
   redemptions,
   reservations,
+  allBusinesses,
   onLogout,
   onGoToDetail,
   onToggleFavorite,
@@ -146,6 +164,7 @@ function ProfileContent({
   userReviews: import('@/lib/api').ReviewWithEstablishment[];
   redemptions: CouponRedemption[];
   reservations: Reservation[];
+  allBusinesses: import('@/lib/api').EstablishmentWithRelations[];
   onLogout: () => void;
   onGoToDetail: (slug: string) => void;
   onToggleFavorite: (slug: string, name?: string) => void;
@@ -280,6 +299,24 @@ function ProfileContent({
           </div>
         </div>
       </section>
+
+      {/* Etapa 7.B — MIS LOCALES.
+          Only rendered for BUSINESS_OWNER users. Lists every business
+          where `ownerId === user.id` (driven by the claim flow). Each
+          card shows the business name + address and a "Gestionar"
+          button that navigates to the detail page (the admin panel in
+          7.C will add a "manage" route, but for now owners manage via
+          the same detail page they always have). Empty state nudges
+          the user to explore the directory and claim a business. */}
+      {user.role === 'BUSINESS_OWNER' && (
+        <MyLocalesSection
+          businesses={allBusinesses.filter(
+            (b) => b.ownerId && b.ownerId === user.id,
+          )}
+          onGoToDetail={onGoToDetail}
+          onSetView={onSetView}
+        />
+      )}
 
       {/* Mis Favoritos */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
@@ -784,4 +821,118 @@ function getReservationCountdown(dateStr: string): string {
   if (diffDays === -1) return 'Ayer';
   if (diffDays < -1) return `Hace ${Math.abs(diffDays)} días`;
   return 'Fecha pasada';
+}
+
+// ─── Etapa 7.B — MIS LOCALES section ────────────────────────────
+// Renders the list of businesses the current user owns (claimed via
+// POST /api/businesses/[slug]/claim). Each card is a clickable tile
+// that navigates to the detail page so the owner can manage capacity,
+// respond to reviews, etc. (the dedicated admin panel for owners
+// comes in Etapa 7.C).
+function MyLocalesSection({
+  businesses,
+  onGoToDetail,
+  onSetView,
+}: {
+  businesses: import('@/lib/api').EstablishmentWithRelations[];
+  onGoToDetail: (slug: string) => void;
+  onSetView: (view: 'home' | 'map' | 'detail' | 'profile') => void;
+}) {
+  return (
+    <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-2">
+      <div className="flex items-center gap-3 mb-6">
+        <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+          MIS LOCALES
+        </h2>
+        <span className="text-white/40 text-xs font-mono">
+          ({businesses.length})
+        </span>
+      </div>
+
+      {businesses.length === 0 ? (
+        <div className="glass-card rounded-2xl py-16 px-6 text-center text-white/40 space-y-5">
+          <Store size={36} className="mx-auto opacity-50" />
+          <p className="text-sm leading-relaxed max-w-md mx-auto">
+            Aún no has reclamado ningún local. Explora el directorio y
+            reclama tu negocio para gestionarlo desde aquí.
+          </p>
+          <button
+            onClick={() => onSetView('home')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-obsidian font-bold hover:bg-gold hover:text-obsidian active:scale-95 transition-all text-xs tracking-wider glow-gold"
+          >
+            <Sparkles size={14} /> EXPLORAR DIRECTORIO
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {businesses.map((est) => {
+            const avg = est.avgRating;
+            const cardClass =
+              est.category === 'discoteca'
+                ? 'card-glow-hover-purple'
+                : 'card-glow-hover';
+            return (
+              <div
+                key={est.id}
+                className={`glass-card rounded-2xl overflow-hidden ${cardClass} group relative`}
+              >
+                <button
+                  onClick={() => onGoToDetail(est.slug)}
+                  className="block w-full text-left"
+                  aria-label={`Gestionar ${est.name}`}
+                >
+                  <div className="relative h-40 overflow-hidden">
+                    <img
+                      src={est.coverImage}
+                      alt={est.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <span className="px-2.5 py-1 bg-black/80 backdrop-blur-md text-[9px] font-bold tracking-widest rounded-full border border-white/20 text-white">
+                        {est.category.toUpperCase()}
+                      </span>
+                      <span className="px-2 py-1 bg-gold/20 backdrop-blur-md text-[9px] font-black tracking-wide rounded-full border border-gold/40 text-gold">
+                        {est.priceRange}
+                      </span>
+                    </div>
+                    {/* "Gestionando" badge — same gold chip as on the detail
+                        page header so the user recognizes the claim state. */}
+                    <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gold/90 border border-gold text-obsidian text-[9px] font-bold tracking-wide">
+                      <Store size={10} /> GESTIONANDO
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-serif text-lg font-bold tracking-tight text-white line-clamp-1 group-hover:text-gold transition-colors">
+                      {est.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-white/50">
+                      <Star size={13} className="text-gold" fill="#d4af37" />
+                      <span className="font-mono font-bold text-gold">
+                        {avg}
+                      </span>
+                      <span>·</span>
+                      <span className="line-clamp-1 flex items-center gap-1">
+                        <MapPin size={11} className="shrink-0" />
+                        {est.address.split(',')[0]}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+                {/* "Gestionar" CTA — full-width footer button on each card. */}
+                <button
+                  onClick={() => onGoToDetail(est.slug)}
+                  className="w-full py-2.5 -mt-1 mb-3 mx-4 rounded-xl bg-gold/15 hover:bg-gold text-gold hover:text-obsidian font-bold text-[11px] tracking-wider transition-all flex items-center justify-center gap-2"
+                  style={{ width: 'calc(100% - 2rem)' }}
+                >
+                  GESTIONAR <ArrowRight size={13} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 }

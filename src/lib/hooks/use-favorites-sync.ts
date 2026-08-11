@@ -33,6 +33,10 @@ export function useFavoritesSync() {
   const addNotification = useAppStore((s) => s.addNotification);
 
   // ── 1. Mirror the NextAuth session into the Zustand store ────────
+  // Etapa 7.B: also mirror `role` (read from the JWT by the session
+  // callback in src/lib/auth.ts). Components like EstablishmentPage
+  // branch on `user.role === 'BUSINESS_OWNER'` to show the
+  // "Reclamar este local" button.
   useEffect(() => {
     if (status === 'loading') return;
     if (status === 'authenticated' && session?.user) {
@@ -42,6 +46,7 @@ export function useFavoritesSync() {
         name: u.name ?? '',
         email: u.email ?? '',
         avatar: u.image ?? '',
+        role: u.role ?? 'USER',
       });
     } else {
       setUser(null);

@@ -26,6 +26,8 @@ import {
   Scale,
   Loader2,
   Eye,
+  CheckCircle2,
+  KeyRound,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -35,11 +37,12 @@ import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
 import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import { useAnalytics } from '@/lib/hooks/use-analytics';
-import { fetchBusinessBySlug, createReview, fetchBusinessViews } from '@/lib/api';
-import type { BookingData, CouponRedemption, Offer, Review } from '@/lib/types';
+import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity, claimBusiness } from '@/lib/api';
+import type { BookingData, CapacityLevel, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
 import { SocialContactPanel } from '@/components/establishment/SocialContactPanel';
+import { CapacityBadge } from '@/components/establishment/CapacityBadge';
 import {
   ActivePromotionsBadge,
   formatDate,
@@ -190,6 +193,32 @@ export function EstablishmentPage() {
   const [reservationCode, setReservationCode] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  // Etapa 3.6 — Aforo en tiempo real. Local mirror of `est.currentCapacity`
+  // so the user can do an optimistic update immediately after reporting,
+  // without waiting for the business query cache to revalidate. Rollback
+  // to the server value on error.
+  const [localCapacity, setLocalCapacity] = useState<CapacityLevel | null>(
+    null,
+  );
+  const [isReporting, setIsReporting] = useState(false);
+
+  // Etapa 7.B — Business claim flow. `isClaiming` drives the button
+  // spinner while the POST is in flight. We don't need a local mirror
+  // of `est.ownerId` because the queryClient invalidation below will
+  // refetch the business with the new ownerId set, and the UI will
+  // naturally switch from "Reclamar este local" → "Gestionando este
+  // local" once the cache updates.
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  // Sync localCapacity whenever the server-fetched est.currentCapacity
+  // changes (initial load, navigation between establishments, mutation
+  // invalidation). Using useEffect keeps this single-directional:
+  // server → local. The optimistic update goes the other way
+  // (handleReport sets local immediately).
+  useEffect(() => {
+    setLocalCapacity(est?.currentCapacity ?? null);
+  }, [est?.id, est?.currentCapacity]);
+
   const handleCopyCode = useCallback(async (code: string) => {
     // Attempt the async Clipboard API first, then fall back to execCommand.
     // Either way, we ALWAYS show the visual "Copiado" feedback because the
@@ -286,6 +315,75 @@ export function EstablishmentPage() {
     setActivePhotoIndex((p) => (p + 1) % est.images.length);
   const handlePrevPhoto = () =>
     setActivePhotoIndex((p) => (p - 1 + est.images.length) % est.images.length);
+
+  // Etapa 3.6 — Report a venue's current capacity. Defined after the
+  // `if (!est)` early return so `est` is narrowed to non-null here.
+  // Optimistic: update `localCapacity` immediately, rollback on error.
+  // Invalidates the business + businesses React Query caches so the new
+  // value surfaces on the homepage grid too.
+  const handleReportCapacity = async (level: CapacityLevel) => {
+    if (!user) {
+      addNotification('Inicia sesión para reportar el aforo.', 'info');
+      return;
+    }
+    if (isReporting) return; // debounce double-clicks
+    setIsReporting(true);
+    const previous = localCapacity;
+    setLocalCapacity(level); // optimistic
+    try {
+      await reportCapacity(est.slug, level);
+      addNotification('¡Gracias por reportar el aforo!');
+      queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
+    } catch (e) {
+      addNotification(
+        e instanceof Error && e.message === 'NOT_AUTHENTICATED'
+          ? 'Inicia sesión para reportar el aforo.'
+          : 'No se pudo reportar el aforo. Intenta de nuevo.',
+        'info',
+      );
+      setLocalCapacity(previous); // rollback
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  // Etapa 7.B — Claim this business (assert ownership). Only visible to
+  // BUSINESS_OWNER users when the business has no `ownerId` set. On
+  // success we invalidate the business query so the page refetches with
+  // `ownerId` populated, which makes the claim button disappear and the
+  // "Gestionando este local" badge take its place.
+  const handleClaim = async () => {
+    if (!user) {
+      addNotification('Inicia sesión para reclamar este local.', 'info');
+      return;
+    }
+    if (isClaiming) return; // debounce double-clicks
+    setIsClaiming(true);
+    try {
+      await claimBusiness(est.slug);
+      addNotification(
+        '¡Local reclamado! Ahora puedes gestionarlo desde tu perfil.',
+      );
+      // Refetch the business so ownerId + claimedAt populate, which
+      // flips the UI from "Reclamar" button → "Gestionando" badge.
+      queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : 'No se pudo reclamar el local.';
+      addNotification(
+        msg === 'NOT_AUTHENTICATED'
+          ? 'Inicia sesión para reclamar este local.'
+          : msg === 'Acceso denegado'
+            ? 'Tu cuenta no tiene permisos para reclamar locales.'
+            : msg,
+        'info',
+      );
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
@@ -495,11 +593,49 @@ export function EstablishmentPage() {
               <Eye size={11} className="text-gold/70" />
               <span className="font-mono">{views?.viewCount ?? '…'} vistas</span>
             </span>
+            {/* Etapa 3.6 — Aforo en tiempo real. Reads from the local
+                optimistic mirror (`localCapacity`) so the badge updates
+                instantly when the user reports a new value. */}
+            <CapacityBadge capacity={localCapacity} size="md" />
             {est.activePromotion && (
               <ActivePromotionsBadge
                 promotion={est.activePromotion}
                 variant="inline"
               />
+            )}
+            {/* Etapa 7.B — Business claim flow.
+                - If est.ownerId === user.id → show "Gestionando este local" gold badge.
+                - Else if est.ownerId is null AND user.role === 'BUSINESS_OWNER' → show "Reclamar este local" button.
+                - Else if est.ownerId is null AND no user / role === 'USER' → subtle hint text.
+                - Else (someone else owns it) → render nothing. */}
+            {est.ownerId && est.ownerId === user?.id && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/15 border border-gold/40 text-gold text-xs font-semibold">
+                <CheckCircle2 size={12} /> Gestionando este local
+              </span>
+            )}
+            {!est.ownerId && user?.role === 'BUSINESS_OWNER' && (
+              <button
+                type="button"
+                onClick={handleClaim}
+                disabled={isClaiming}
+                aria-label={`Reclamar ${est.name}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gold/40 bg-gold/10 text-gold text-xs font-semibold hover:bg-gold/20 transition disabled:opacity-50 disabled:cursor-wait"
+              >
+                {isClaiming ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" /> Reclamando...
+                  </>
+                ) : (
+                  <>
+                    <KeyRound size={12} /> Reclamar este local
+                  </>
+                )}
+              </button>
+            )}
+            {!est.ownerId && (!user || user.role === 'USER') && (
+              <span className="text-white/40 text-xs">
+                Local sin dueño gestionando
+              </span>
             )}
           </div>
         </div>
@@ -523,6 +659,91 @@ export function EstablishmentPage() {
         specialty={est.specialty}
         valueProposition={est.valueProposition}
       />
+
+      {/* Etapa 3.6 — Reportar aforo.
+          Always visible above the tabs so the user can report from any
+          tab. Three buttons (Tranquilo / Moderado / Lleno) — the active
+          one matches `localCapacity`. Auth-gated: clicking while logged
+          out surfaces a toast asking the user to sign in. */}
+      <section className="glass-card rounded-3xl p-5 sm:p-6 border border-white/10 mb-8 sm:mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-5">
+          <div className="min-w-0">
+            <h4 className="text-xs font-bold tracking-[3px] text-gold font-mono uppercase">
+              Aforo en tiempo real
+            </h4>
+            <p className="text-white/60 text-xs mt-1 leading-relaxed">
+              ¿Cómo está el aforo ahora? Tu reporte ayuda a toda la comunidad.
+            </p>
+          </div>
+          {/* Current value preview — hidden until the first report
+              arrives so the widget doesn't show an empty badge. */}
+          {localCapacity && (
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <span className="uppercase tracking-wider">Reportado:</span>
+              <CapacityBadge capacity={localCapacity} size="md" />
+            </div>
+          )}
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+          {(
+            [
+              {
+                level: 'QUIET' as CapacityLevel,
+                label: 'Tranquilo',
+                hint: 'Hay espacio',
+                activeCls:
+                  'bg-emerald-500/20 border-emerald-400/60 text-emerald-200 glow-gold',
+                idleCls:
+                  'bg-white/5 border-white/10 text-white/70 hover:bg-emerald-500/10 hover:border-emerald-400/40 hover:text-emerald-200',
+              },
+              {
+                level: 'MODERATE' as CapacityLevel,
+                label: 'Moderado',
+                hint: 'Llenándose',
+                activeCls:
+                  'bg-amber-500/20 border-amber-400/60 text-amber-200 glow-gold',
+                idleCls:
+                  'bg-white/5 border-white/10 text-white/70 hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-200',
+              },
+              {
+                level: 'FULL' as CapacityLevel,
+                label: 'Lleno',
+                hint: 'A tope',
+                activeCls:
+                  'bg-rose-500/20 border-rose-400/60 text-rose-200 glow-gold',
+                idleCls:
+                  'bg-white/5 border-white/10 text-white/70 hover:bg-rose-500/10 hover:border-rose-400/40 hover:text-rose-200',
+              },
+            ]
+          ).map((opt) => {
+            const isActive = localCapacity === opt.level;
+            const isPendingThis = isReporting && isActive;
+            return (
+              <button
+                key={opt.level}
+                type="button"
+                onClick={() => handleReportCapacity(opt.level)}
+                disabled={isReporting}
+                aria-pressed={isActive}
+                aria-label={`Reportar aforo: ${opt.label}`}
+                className={`relative px-3 sm:px-4 py-3 rounded-2xl border text-center transition-all disabled:cursor-wait disabled:opacity-60 ${
+                  isActive ? opt.activeCls : opt.idleCls
+                }`}
+              >
+                <div className="font-bold text-xs sm:text-sm">{opt.label}</div>
+                <div className="text-[10px] uppercase tracking-wider opacity-70 mt-0.5">
+                  {isPendingThis ? 'Enviando…' : opt.hint}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {!user && (
+          <p className="mt-3 text-[10px] text-white/40 text-center">
+            Inicia sesión con Google para reportar el aforo.
+          </p>
+        )}
+      </section>
 
       {/* Navigation Tabs */}
       <div className="flex gap-6 sm:gap-8 border-b border-white/10 mb-8 sm:mb-10 overflow-x-auto scrollbar-none">

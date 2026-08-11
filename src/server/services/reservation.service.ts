@@ -19,6 +19,7 @@ import {
   reservationRepository,
   type ReservationWithRelations,
 } from '@/server/repositories/reservation.repository';
+import { notificationService } from '@/server/services/notification.service';
 
 /**
  * Build a JSON Response (thrown from service → returned by route handler).
@@ -365,7 +366,20 @@ export const reservationService = {
       return created;
     });
 
-    // ── 8. Build the response payload ──────────────────────────────
+    // ── 8. Persistent notification (Etapa 7.A) ────────────────────
+    // Fire-and-forget AFTER the tx commits so a notification DB error
+    // can never roll back the reservation. The notification service
+    // catches + logs its own errors and never throws.
+    // `reservation.business.name` is already loaded via the
+    // `reservationInclude` so we don't need an extra round-trip.
+    await notificationService.notify(
+      userId,
+      'RESERVATION_CONFIRMED',
+      'Reserva confirmada',
+      `Tu reserva ${reservation.confirmationCode} en ${reservation.business.name} fue confirmada.`,
+    );
+
+    // ── 9. Build the response payload ──────────────────────────────
     return {
       reservation: {
         id: reservation.id,
@@ -515,6 +529,17 @@ export const reservationService = {
         );
       }
     });
+
+    // ── 5. Persistent notification (Etapa 7.A) ────────────────────
+    // Fire-and-forget AFTER the tx commits. `reservation` was loaded
+    // via `findById` with `reservationInclude` so `confirmationCode`
+    // is already in scope.
+    await notificationService.notify(
+      userId,
+      'RESERVATION_CANCELLED',
+      'Reserva cancelada',
+      `Tu reserva ${reservation.confirmationCode} fue cancelada.`,
+    );
 
     return {
       reservation: { id: reservation.id, status: 'CANCELLED' },

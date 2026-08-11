@@ -4,6 +4,32 @@ export type Category = 'licorería' | 'tasca' | 'discoteca';
 
 export type PriceRange = '$' | '$$' | '$$$';
 
+// ─── Etapa 7.B — UserRole (local mirror of the Prisma enum) ────
+//
+// We define this locally rather than importing from '@prisma/client'
+// because types.ts is shared with client code, and importing Prisma's
+// generated types into the client bundle would unnecessarily bloat it.
+// The runtime values of the Prisma `UserRole` enum are exactly these
+// strings (see prisma/schema.prisma → `enum UserRole`), so the union
+// is structurally identical and casts at the API boundary are safe.
+//
+// Mirrors `UserRole` from `prisma/schema.prisma`:
+//   enum UserRole { USER, BUSINESS_OWNER, BUSINESS_MANAGER, MODERATOR, ADMIN }
+export type UserRole =
+  | 'USER'
+  | 'BUSINESS_OWNER'
+  | 'BUSINESS_MANAGER'
+  | 'MODERATOR'
+  | 'ADMIN';
+
+// ─── Etapa 3.6 — Aforo en tiempo real ──────────────────────────
+// Crowdsourced venue capacity. Users who visit a venue report its
+// current load: QUIET (tranquilo — plenty of space) / MODERATE
+// (moderado — filling up) / FULL (lleno — at capacity). The most
+// recent report wins (per-business). Mirrors the Prisma
+// `CapacityLevel` enum in `prisma/schema.prisma`.
+export type CapacityLevel = 'QUIET' | 'MODERATE' | 'FULL';
+
 export interface SubRatings {
   ambiente: number;
   servicio: number;
@@ -60,6 +86,26 @@ export interface Establishment {
   socialMedia: SocialMedia;
   /** If present, the home card shows a pulsing "PROMO ACTIVA" badge */
   activePromotion?: ActivePromotion;
+
+  // ─── Etapa 3.6 — Aforo en tiempo real ──────────────────────────
+  // Crowdsourced current-capacity signal. Null when no one has reported
+  // yet. Set by POST /api/businesses/[slug]/capacity (auth required) and
+  // surfaced on every card + the detail page header so users can see at
+  // a glance whether a venue is tranquilo / moderado / lleno right now.
+  currentCapacity?: CapacityLevel | null;
+
+  // ─── Etapa 7.B — Business claim flow ────────────────────────
+  // `ownerId` is null until a BUSINESS_OWNER (or ADMIN) claims the
+  // business via POST /api/businesses/[slug]/claim. Once set,
+  // `claimedAt` is the ISO timestamp of when the claim happened.
+  //
+  // The EstablishmentPage uses these to render either:
+  //   - "Gestionando este local" badge (if ownerId === current user.id)
+  //   - "Reclamar este local" button (if ownerId is null AND the user
+  //     is a BUSINESS_OWNER)
+  //   - nothing (if someone else owns it)
+  ownerId?: string | null;
+  claimedAt?: string | null;
 }
 
 export interface Offer {
@@ -182,11 +228,195 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
+  /**
+   * Etapa 7.B — RBAC role. Mirrors the Prisma `UserRole` enum.
+   * Defaults to 'USER' if the session hasn't populated it yet (e.g.
+   * during the brief window between session loading and the
+   * `useFavoritesSync` effect mirroring the session into the store).
+   */
+  role?: UserRole;
 }
 
-export type View = 'home' | 'map' | 'detail' | 'profile';
+// ─── Etapa 7.C.1 — Admin Panel types ───────────────────────────
+//
+// The admin panel surfaces businesses / reviews / users / claims in
+// every status (not just ACTIVE / PUBLISHED / USER) so moderators can
+// triage queues. The following types mirror the Prisma enums for the
+// frontend, declared locally (same policy as `UserRole` above — avoid
+// importing `@prisma/client` into the client bundle).
+//
+// Mirrors `BusinessStatus` from `prisma/schema.prisma`:
+//   enum BusinessStatus { DRAFT, PENDING_REVIEW, ACTIVE, SUSPENDED, ARCHIVED }
+export type BusinessStatus =
+  | 'DRAFT'
+  | 'PENDING_REVIEW'
+  | 'ACTIVE'
+  | 'SUSPENDED'
+  | 'ARCHIVED';
+
+// Mirrors `ReviewStatus` from `prisma/schema.prisma`:
+//   enum ReviewStatus { PENDING, PUBLISHED, HIDDEN, FLAGGED }
+export type ReviewStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'FLAGGED';
+
+export type View = 'home' | 'map' | 'detail' | 'profile' | 'admin' | 'owner';
 
 export type NotificationType = 'success' | 'info';
+
+// ── Admin dashboard types (Etapa 7.C.1) ───────────────────────────
+//
+// `AdminStats` is the payload of GET /api/admin/stats — a single object
+// with totals, pending queues, recent activity and "top this week"
+// rankings. Drives the Resumen tab of the AdminDashboard.
+//
+// `AdminBusiness` extends the public `Establishment` with the admin-only
+// `status` and `owner` fields (the public transformBusiness already
+// exposes `ownerId`/`claimedAt`, but the admin table also needs the
+// owner's name + email so the moderator can contact them).
+export interface AdminStats {
+  totals: {
+    businesses: number;
+    users: number;
+    reviews: number;
+    reservations: number;
+    promotions: number;
+    couponRedemptions: number;
+    analyticsEvents: number;
+    notifications: number;
+  };
+  pending: {
+    businesses: number; // status = PENDING_REVIEW
+    reviews: number; // status = PENDING or FLAGGED
+    promotions: number; // status = DRAFT or PAUSED
+  };
+  recent: {
+    reservations: Array<{
+      id: string;
+      confirmationCode: string;
+      createdAt: string;
+      business: { name: string; slug: string };
+      user: { name: string | null; email: string } | null;
+    }>;
+    reviews: Array<{
+      id: string;
+      rating: number;
+      comment: string;
+      createdAt: string;
+      business: { name: string; slug: string };
+      user: { name: string | null };
+    }>;
+    claims: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      claimedAt: string;
+      owner: { name: string | null; email: string };
+    }>;
+  };
+  topThisWeek: {
+    businesses: Array<{ name: string; slug: string; views: number }>;
+  };
+}
+
+export interface AdminBusiness extends Establishment {
+  status: BusinessStatus;
+  owner: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  } | null;
+}
+
+export interface AdminReview {
+  id: string;
+  rating: number;
+  ambienteRating: number;
+  servicioRating: number;
+  precioCalidadRating: number;
+  comment: string;
+  status: ReviewStatus;
+  createdAt: string;
+  business: { id: string; name: string; slug: string };
+  user: { id: string; name: string | null; email: string; image: string | null };
+}
+
+export interface AdminUser {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  role: UserRole;
+  createdAt: string;
+}
+
+// ─── Etapa 7.C.2 — Owner Dashboard types ───────────────────────
+//
+// The owner dashboard ("Mis Locales") surfaces a BUSINESS_OWNER's
+// claimed businesses with ALL editable fields exposed (hours, socials,
+// owner info) — not just the public Establishment shape. It also
+// lists reservations for their business (with the customer's user
+// info) and their promotions (all statuses, not just ACTIVE).
+
+// Mirrors `PromotionStatus` from `prisma/schema.prisma`:
+//   enum PromotionStatus { DRAFT, ACTIVE, EXPIRED, PAUSED }
+export type PromotionStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'PAUSED';
+
+/**
+ * The business payload returned by GET /api/owner/businesses/[slug] —
+ * the full public Establishment shape PLUS the raw `hours` / `socials`
+ * / `owner` arrays the owner dashboard's edit forms need (the public
+ * transformer collapses them into derived fields like `schedule` /
+ * `instagram` / etc., but the edit forms need the raw rows too).
+ */
+export interface OwnerBusiness extends Establishment {
+  hours: Array<{
+    id: string;
+    dayOfWeek: number;
+    openTime: string;
+    closeTime: string;
+    isClosed: boolean;
+  }>;
+  socials: Array<{ id: string; type: string; value: string }>;
+  owner: { id: string; name: string | null; email: string } | null;
+}
+
+/**
+ * A reservation with the user's info attached — the owner dashboard
+ * table shows the customer's name + phone so the owner can contact
+ * them. The user is null for legacy reservations that pre-date the
+ * user link (or for guest reservations if we ever add that flow).
+ */
+export interface OwnerReservation extends Reservation {
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  } | null;
+}
+
+/**
+ * The promotion payload returned by the owner list/create endpoints.
+ * Same shape as `Offer` plus the dates as ISO strings + the
+ * redemptionCount + status (so the dashboard can render status
+ * badges and redemption progress).
+ */
+export interface OwnerPromotion {
+  id: string;
+  businessId: string;
+  title: string;
+  description: string;
+  price: string;
+  discount: string;
+  image: string;
+  code: string;
+  startDate: string | null;
+  endDate: string | null;
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  status: PromotionStatus;
+  createdAt: string;
+}
 
 export interface AppNotification {
   id: number;
@@ -223,7 +453,8 @@ export type AnalyticsEventType =
   | 'MAPS_CLICK'
   | 'SEARCH'
   | 'RESERVE_CLICK'
-  | 'REDEEM_CLICK';
+  | 'REDEEM_CLICK'
+  | 'CAPACITY_REPORT'; // Etapa 3.6
 
 export interface TrackEventPayload {
   type: AnalyticsEventType;
@@ -239,4 +470,35 @@ export interface PopularBusiness {
 export interface BusinessViewCount {
   slug: string;
   viewCount: number;
+}
+
+// ── NOTIFICATIONS persistent (Etapa 7.A) ─────────────────────
+//
+// Persistent notifications = an "inbox" of important events for the
+// user (reservation confirmed, coupon redeemed, review published…).
+// They survive across sessions (DB-backed) and are surfaced via the
+// bell icon in the navbar. This is a SEPARATE concept from the
+// ephemeral `AppNotification` toast array above (which is for transient
+// feedback like "¡Reserva confirmada!" and disappears in 4s).
+//
+// `PersistentNotificationType` mirrors the union in
+// `src/server/services/notification.service.ts → NotificationType`.
+// The Prisma schema stores `type` as a plain String so we can add new
+// types without a migration, but this union is the compile-time
+// contract for the frontend.
+export type PersistentNotificationType =
+  | 'RESERVATION_CONFIRMED'
+  | 'RESERVATION_CANCELLED'
+  | 'COUPON_REDEEMED'
+  | 'REVIEW_PUBLISHED'
+  | 'CAPACITY_REPORTED'
+  | 'SYSTEM';
+
+export interface PersistentNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string; // ISO
 }
