@@ -4931,3 +4931,149 @@ Stage Summary:
   * 3378ee3 — Sprint 3 (Servicio + Endpoint)
 - Próximo sprint: Sprint 4 — UI progresiva (NightPlanner.tsx + 6 steps + results)
   Reemplazará Matchmaker.tsx como el flujo activo de "Planificar Noche"
+
+---
+Task ID: planner-sprint-4
+Agent: main (claude)
+Task: Sprint 4 — UI progresiva del Night Planner v2 (NightPlanner + 6 steps + results, reemplaza Matchmaker)
+
+Work Log:
+- Leído contexto previo:
+  * Matchmaker.tsx (312 líneas) — 3 preguntas binarias, calculateMatch con slugs hardcodeados
+  * types.ts planner (289 líneas) — NightPlannerPreferences + PlannerRecommendation + 4 estados availability
+  * api.ts — fetchPlannerRecommend ya implementado (Sprint 3)
+  * planner.distance.ts — formatDistance exportado
+  * store.ts — goToDetail, favorites, useFavoriteActions
+  * use-analytics.ts — track(type, opts) fire-and-forget
+  * types.ts — 12 eventos PLANNER_* ya registrados (Sprint 1)
+  * Blueprint FASE 2 §6 — estructura de 13 componentes sugeridos
+- Diseñado set consolidado de 5 archivos (más simple que los 13 del blueprint):
+  * PlannerProgress.tsx (57 líneas) — 6 dots animados
+  * PlannerSteps.tsx (438 líneas) — 6 step components + StepHeader + OptionCard shared
+  * PlannerBusinessCard.tsx (350 líneas) — card + ScoreRing + skeleton
+  * PlannerResults.tsx (288 líneas) — loading/error/empty/success dispatcher
+  * NightPlanner.tsx (557 líneas) — orquestador modal + state machine
+- Creado src/components/planner/PlannerProgress.tsx:
+  * 6 dots, 3 estados: current (w-8 bg-gold pulse), completed (w-4 gold/70), upcoming (w-4 white/15)
+  * sr-only "Paso X de Y" para screen readers
+- Creado src/components/planner/PlannerSteps.tsx:
+  * OptionCard shared (single-select): icon + title + desc, selected state con glow gold
+  * Step 1 Mood: 8 opciones (relax/date/friends/party/celebration/live_music/food_drinks/drinks)
+    Multi-select cap 2 — al superar, reemplaza el más antiguo
+  * Step 2 Company: 5 opciones (solo/couple/friends/family/celebration)
+  * Step 3 Budget: 4 rangos USD (under_20/20_50/50_100/100_plus)
+  * Step 4 DateTime: date input (min=today) + time input con icono Clock
+    [color-scheme:dark] para que el picker nativo se vea en modo oscuro
+  * Step 5 Guests: stepper -/+ con presets [1,2,4,6,8,10], rango 1-50
+  * Step 6 Distance: 4 opciones (nearby/10_min/20_min/any)
+  * StepHeader: "PASO X DE 6" + title + subtitle animado (framer-motion)
+  * Fix tsc: value[1] posiblemente undefined → guard con if(second)
+- Creado src/components/planner/PlannerBusinessCard.tsx:
+  * Rank medal 🥇🥈🥉 para top 3
+  * ScoreRing SVG circular (size=56, stroke=4):
+    - color: bright gold glow si score≥75, gold si ≥50, muted white si <50
+    - animación stroke-dashoffset 0.6s ease-out
+  * Availability badge (4 estados con colores):
+    - AVAILABLE → emerald "Disponible"
+    - LIKELY_AVAILABLE → lime "Probablemente disponible"
+    - CHECK_REQUIRED → amber "Confirmar aforo"
+    - UNAVAILABLE → rose "Sin disponibilidad"
+  * Chips: distance (formatDistance), scheduleLabel, activePromotion
+  * Reasons list (max 5, bullet points gold)
+  * CTAs: VER DETALLE (gold, glow) + Heart toggle favoritos
+  * Skeleton loader para loading state
+  * Analytics: PLANNER_RECOMMENDATION_SELECTED al click VER DETALLE
+- Creado src/components/planner/PlannerResults.tsx:
+  * Dispatcher discrimina por props: loading | error | result(null) | empty | success
+  * Loading: sparkles animado + 3 PlannerBusinessCardSkeleton
+  * Error: icono AlertTriangle + mensaje + REINTENTAR/AJUSTAR
+  * Empty: 5 reason codes con iconos específicos:
+    - NO_CANDIDATES_IN_CITY → SearchX
+    - ALL_CLOSED_AT_TIME → Clock3
+    - DISTANCE_TOO_STRICT → MapPinned
+    - BUDGET_TOO_STRICT → Wallet
+    - NO_MATCH_AT_ALL → SearchX
+    + sugerencia del backend (single source of truth para copy)
+  * Success: header "TU NOCHE IDEAL" + "Encontramos N opciones" + cards + NUEVA BÚSQUEDA
+  * Type guard isEmptyResult: 'reason' in res
+- Creado src/components/planner/NightPlanner.tsx (orquestador):
+  * Props: { open, onClose } — mismo contrato que Matchmaker (drop-in replacement)
+  * State: step (1..6), draft (PlannerDraft con nullables), view ('form' | 'results')
+  * Request state: loading, error, result (NightPlannerResponse | null)
+  * Defaults: date=today, startTime=21:00, guests=2, citySlug='los-teques'
+  * Per-step validation isStepValid(step, draft):
+    - step 1: mood.length >= 1
+    - step 2: company !== null
+    - step 3: budget !== null
+    - step 4: date + time non-empty
+    - step 5: guests in 1..50
+    - step 6: distance !== null
+  * buildPreferences(draft) → resuelve nullables a NightPlannerPreferences
+  * Modal chrome: backdrop black/80 + blur, glass-card, top gradient purple→gold→amber
+  * Body scroll lock al abrir (document.body.style.overflow)
+  * Lifecycle useEffect: al abrir → track PLANNER_OPENED + reset state
+  * handleClose: track PLANNER_DISMISSED si estaba en form con step>1
+  * handleNext: track PLANNER_STEP_COMPLETED → advance or submit
+  * handleBack: si en results → vuelve a form; si step>1 → retrocede; si step=1 → cierra
+  * submit(): setLoading + setView('results') + track PLANNER_SEARCH_STARTED
+    + fetchPlannerRecommend + track PLANNER_RESULTS_SHOWN (success/empty)
+    + catch → setError
+  * handleView(slug): track PLANNER_RECOMMENDATION_VIEWED + onClose + goToDetail (deferred 50ms)
+  * handleReset: vuelve a step 1 con draft limpio
+  * Inline hints cuando !canAdvance: "Elige al menos un ambiente" / "Selecciona una opción"
+- Modificado src/components/conecta/HomePage.tsx:
+  * Import cambiado: Matchmaker → NightPlanner
+  * Render: <NightPlanner open={matchmakerOpen} ...> reemplaza <Matchmaker>
+  * Estado local matchmakerOpen preservado (mismo nombre, menor churn)
+  * Matchmaker.tsx NO tocado (legacy sin uso, conforme al blueprint FASE 2)
+- Verificación con Agent Browser (browser-verified end-to-end):
+  * Mockeado /api/businesses → [] (sandbox DATABASE_URL no funciona)
+  * Click "SOY MAYOR DE EDAD" → entra a HomePage
+  * Click "PLANIFICAR NOCHE" → modal abre con heading "Tu noche ideal" + 8 mood options ✓
+  * CONTINUAR disabled hasta seleccionar mood ✓
+  * Selecciona "Rumba fuerte" → CONTINUAR enabled → click ✓
+  * Step 2: 5 company options, ATRÁS + CONTINUAR disabled ✓
+  * Selecciona "Solo" → CONTINUAR → step 3 ✓
+  * Step 3: 4 budget options → "Hasta $20" → CONTINUAR → step 4 ✓
+  * Step 4: date + time pickers con defaults (today/21:00) → CONTINUAR → step 5 ✓
+  * Step 5: stepper + presets → CONTINUAR → step 6 ✓
+  * Step 6: 4 distance options + "VER RECOMENDACIONES" button ✓
+  * Selecciona "Cercano" → submit → loading (3 skeletons + sparkles) → results ✓
+  * Sin mock: 500 error → "Algo salió mal" + REINTENTAR/AJUSTAR ✓
+  * Mock success (2 recs): "TU NOCHE IDEAL" + "Encontramos 2 opciones" +
+    Discoteca Eclipse (92% score, Disponible, 1.8 km, promo 2x1, 5 reasons) +
+    Licorería Selecta (76% score, Probablemente disponible, 1.2 km) +
+    NUEVA BÚSQUEDA button ✓
+  * Mock empty (ALL_CLOSED_AT_TIME): "No hay negocios abiertos a esa hora" +
+    sugerencia + AJUSTAR BÚSQUEDA/REINICIAR ✓
+  * Capturas: /tmp/planner-success.png + /tmp/planner-empty.png + /tmp/planner-error.png
+- Lint PASS (0 errores, 0 warnings)
+- tsc PASS (0 errores en archivos planner/HomePage)
+  (errores preexistentes en Navbar/AdminMetricsTab/auth.ts NO tocados)
+- Dev server HTTP 200, sin errores de runtime en archivos planner
+- Commit 4a798bc pusheado a origin/main
+
+Stage Summary:
+- 🎉 SPRINT 4 COMPLETADO Y PUSHEADO
+- 6 archivos cambiados, 1724 insertions, 2 deletions
+- 5 archivos nuevos en src/components/planner/ (1722 líneas)
+- 1 archivo modificado (HomePage.tsx: swap Matchmaker → NightPlanner)
+- UI del planner COMPLETA y funcional end-to-end:
+  * 6 pasos progresivos con validación UX
+  * 4 estados terminales (loading/error/empty/success)
+  * Score ring circular con colores por threshold
+  * Availability badges (4 estados, nunca promete falsamente)
+  * Reasons list (max 5, ordenadas por contribución)
+  * CTAs: VER DETALLE + favoritos
+  * Analytics: 7 eventos PLANNER_* disparados
+- Matchmaker.tsx preservado como legacy (blueprint FASE 2)
+- Endpoint /api/planner/recommend devuelve 500 en sandbox
+  (DATABASE_URL no configurada — preexistente). En Vercel funcionará.
+- 3 estados verificados con mocks de red (success/empty/error)
+- Commits en origin/main:
+  * bd73d34 — Sprint 1 (Foundation)
+  * c0d0cc1 — Sprint 2 (Motor puro)
+  * 3378ee3 — Sprint 3 (Servicio + Endpoint)
+  * 4a798bc — Sprint 4 (UI progresiva)
+- Próximo sprint: Sprint 5 — integración final (borrar Matchmaker,
+  limpiar calculateMatch del store, documentar blueprint compliance)
