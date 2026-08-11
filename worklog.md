@@ -4130,3 +4130,61 @@ Stage Summary:
 - Session persists across page navigation (Map page reads user from store, no re-login needed).
 - Removed NEXTAUTH_URL/AUTH_URL from .env so NextAuth works behind any proxy/gateway.
 - trustHost:true ensures NextAuth trusts the request's Host header.
+
+---
+Task ID: fix-vercel-postgres-1
+Agent: main
+Task: Usuario reportó que el despliegue de Vercel (https://conecta-lt2-0.vercel.app) devuelve HTTP 500 en todas las rutas /api/*. Diagnosticar y preparar fix.
+
+Work Log:
+- Verificado estado del repositorio local:
+  * Repo: github.com/sqn8nproyect-pixe/Conecta-Lt2.0 (público)
+  * Homepage en GitHub: https://conecta-lt2-0.vercel.app
+  * 4 commits locales SIN pushear (d8450e4, 731dedf, 49087ac, 7925840) — fixes de login, resilience, try/catch en APIs
+  * Último push: 2086c28 (Aug 11 04:22 UTC) "fix(hydration): AgeGate"
+  * Sin credenciales GitHub en sandbox: `git push --dry-run` falla con "could not read Username"
+- Verificado despliegue Vercel:
+  * GET / → HTTP 200 (HTML prerendered, AgeGate visible, 24KB)
+  * GET /api/auth/session → HTTP 200, body {} (vacío pero responde)
+  * GET /api/businesses → HTTP 500, body vacío (0 bytes)
+  * GET /api/categories → HTTP 500, body vacío
+  * GET /api/analytics/popular → HTTP 500, body vacío
+- ROOT CAUSE: schema.prisma en commit 13c4b41 (Aug 11) migró provider de
+  "postgresql" a "sqlite" para arreglar el sandbox local que perdía .env.local.
+  Ese commit se pusheó a origin/main → Vercel usa SQLite → no funciona en
+  serverless (filesystem efímero, no compartido entre lambdas, archivo
+  db/dev.db no existe en el servidor de Vercel).
+- Confirmado que las credenciales Neon originales NO están completas en
+  el worklog (línea 1463): solo se conserva la versión truncada
+  `postgresql://neondb_owner:[REDACTED-NEON-PWD-ROTATED]@ep-lingering-hill-ay3mv4lk...neondb`
+- Usuario compartió URL de consola Neon:
+  https://console.neon.tech/app/org-damp-breeze-85043324/settings
+  → confirmado que la cuenta sigue activa, pero requiere auth (no accesible
+  desde el sandbox).
+- Preparado fix en commit 9e70c6e (sin pushear todavía):
+  * prisma/schema.prisma: provider="postgresql" + directUrl para migraciones
+  * .env.example: documentación completa de Neon (DATABASE_URL pooler +
+    DIRECT_URL sin pooler, ?sslmode=require en ambas)
+  * vercel.json: buildCommand="prisma generate && next build" (solo genera
+    el client en build, NO hace db push — eso se hace manualmente desde
+    local cuando cambie el schema)
+  * prisma/verify-neon.ts: script de verificación post-deploy que confirma
+    conexión + lista tablas + cuenta registros esperados (21 businesses,
+    86 reviews, 42 promos, 6025 analytics events, 19 users) + sanity check
+    de usuario demo (ana.rodriguez@gmail.com) y Licorería Don Sancho
+  * package.json: añadido script db:verify-neon
+- Lint: PASS (0 errores). tsc --noEmit: 0 errores nuevos (solo el
+  pre-existente de trustHost en auth.ts que es un issue de tipos de
+  next-auth v4, funciona en runtime).
+
+Stage Summary:
+- Causa raíz del 500 en Vercel: SQLite no corre en serverless. Fix preparado.
+- 5 commits pendientes de push a origin/main (4 anteriores + este).
+- Pendiente (requiere acción del usuario):
+  1. Pegar URL completa de Neon (con -pooler y sin -pooler) en .env
+  2. Ejecutar `bun run db:push` para sincronizar schema en Neon
+  3. Ejecutar `bun run db:verify-neon` para confirmar que los datos siguen
+  4. Configurar env vars en Vercel dashboard (DATABASE_URL, DIRECT_URL,
+     NEXTAUTH_SECRET, NEXTAUTH_URL, AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET)
+  5. Push a GitHub (5 commits pendientes)
+- Dev server local sigue corriendo en :3000 (HTTP 200) con SQLite local.
