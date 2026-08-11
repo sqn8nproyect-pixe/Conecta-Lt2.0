@@ -4713,3 +4713,64 @@ Stage Summary:
   * b000ee2 — refactor(admin-metrics): depuración (cleanup)
 - Repo completamente sincronizado
 - Vercel hará deploy automático del cleanup
+
+---
+Task ID: planner-sprint-1
+Agent: main (claude)
+Task: Sprint 1 — Foundation del Night Planner v2 (crear estructura, tipos, schema Zod, eventos analytics)
+
+Work Log:
+- Leído blueprint CONectaLT_PLANIFICAR_NOCHE_BLUEPRINT.md (1708 líneas, 43 secciones)
+- Auditado estado actual del proyecto con subagente Explore:
+  * Matchmaker.tsx (312 líneas) — 3 preguntas binarias, llama calculateMatch()
+  * store.ts — calculateMatch() con slugs hardcodeados (discoteca-eclipse, etc.)
+  * Prisma: Business, BusinessHours, Promotion, Reservation, AnalyticsEvent
+    TODOS existen con los campos necesarios (lat/lng/priceRange/currentCapacity)
+  * AnalyticsEvent.type es String (no enum) → agregar tipos no requiere migración
+  * Zod v4 + react-hook-form + @hookform/resolvers ya instalados
+  * NO existe carpeta planner, NO existe endpoint /api/planner
+- Diseñado plan de 7 sprints consolidando las 27 fases del blueprint
+- Sprint 1 ejecutado:
+  * Creadas carpetas src/server/planner/ y src/components/planner/
+  * Creado src/server/planner/types.ts (270 líneas) con:
+    - PlannerMood, PlannerBudget, PlannerCompany, PlannerDistance (enums)
+    - NightPlannerPreferences (input completo del planner)
+    - PlannerScoreBreakdown (9 factores normalizados 0-1, total 0-100)
+    - PlannerAvailability (4 estados: AVAILABLE/LIKELY/CHECK/UNAVAILABLE)
+    - PlannerPromotionSummary, PlannerBusinessSummary
+    - PlannerRecommendation (business + score + breakdown + reasons)
+    - NightRouteStop, NightRoute (multi-stop itinerary)
+    - NightPlannerResult, NightPlannerEmptyResult, NightPlannerResponse
+    - PlannerEmptyReason (5 códigos de empty state)
+  * Creado src/server/planner/planner.schema.ts (130 líneas) con:
+    - 4 Zod enums (mood, budget, company, distance)
+    - Regex para date (YYYY-MM-DD) y time (HH:mm 24h)
+    - Regex para citySlug (kebab-case)
+    - plannerSchema con validación: mood 1-2 items, guests 1-50, etc.
+    - validatePlannerInput() helper con errores flat [{field, message}]
+  * Modificado src/server/services/analytics.service.ts:
+    - Agregados 12 eventos PLANNER_* a ANALYTICS_EVENT_TYPES
+    - Comentada la dependencia de sincronización con types.ts
+  * Modificado src/lib/types.ts:
+    - Agregados 12 eventos PLANNER_* al union AnalyticsEventType
+    - Comentario aclarando que debe estar sincronizado con el service
+- Verificación:
+  * bun run lint → PASS (0 errores, 0 warnings)
+  * bunx tsc --noEmit → mis archivos NO tienen errores
+    (errores preexistentes en Navbar.tsx, AdminMetricsTab.tsx, auth.ts
+     NO fueron introducidos por este sprint)
+  * Dev server corre en :3000, GET / → HTTP 200
+  * Matchmaker.tsx NO fue modificado (legacy sigue funcionando)
+- Commit bd73d34 pusheado a origin/main
+
+Stage Summary:
+- 🎉 SPRINT 1 COMPLETADO Y PUSHEADO
+- 4 archivos cambiados, 482 insertions, 2 deletions
+- Commits en origin/main:
+  * bd73d34 — feat(planner): Sprint 1 — Foundation
+- Base lista para Sprint 2 (motor puro: availability, distance, scoring, reasons)
+- Sin migración DB necesaria (AnalyticsEvent.type es String)
+- Sin romper nada: Matchmaker.tsx sigue siendo el flujo activo
+- Próximo sprint: implementar las 4 funciones puras del planner
+  (isBusinessOpenAt, calculateDistanceKm, calculateScore, buildReasons)
+  sin tocar DB todavía — testeable de forma aislada
