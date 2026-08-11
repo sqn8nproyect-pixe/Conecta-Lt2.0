@@ -4634,3 +4634,52 @@ Stage Summary:
 - El usuario sqn8nproyect@gmail.com debe cerrar sesión y volver a iniciar
   para que el JWT se regenere con role=ADMIN (o ya funcionará si nunca
   ha logueado en esta sesión)
+
+---
+Task ID: admin-metrics-1
+Agent: main (claude)
+Task: Implementar tab "Métricas" en el panel admin con dashboard de analytics en tiempo real (clics WhatsApp, vistas, búsquedas, etc.)
+
+Work Log:
+- Verificado que la infraestructura de tracking YA existía:
+  * AnalyticsEvent model en Prisma (type, userId, businessId, metadata, createdAt)
+  * 8 eventos ya capturados: BUSINESS_VIEW, WHATSAPP_CLICK, INSTAGRAM_CLICK,
+    MAPS_CLICK, SEARCH, RESERVE_CLICK, REDEEM_CLICK, CAPACITY_REPORT
+  * Endpoint público POST /api/analytics/track (fire-and-forget)
+  * Hook useAnalytics ya conectado en EstablishmentPage.tsx (clics WhatsApp,
+    Instagram, Maps, Reserve, Redeem) y HomePage.tsx (búsquedas)
+  * Recharts ya instalado (v2.15.4)
+- Fase 1.1 — Agregados 5 métodos al analytics.repository.ts:
+  * countByType(sinceDays) → Record<eventType, count>
+  * countByTypeAndDay({sinceDays, type?}) → serie temporal diaria zero-filled
+  * topBusinessesByEventType({type, sinceDays, limit}) → top N negocios
+  * topSearchQueries({sinceDays, limit}) → top búsquedas (de metadata.query)
+  * recentEvents({limit, type?}) → últimos N eventos con info resuelta
+- Fase 1.2 — Creado endpoint GET /api/admin/analytics/overview?range=1d|7d|30d|90d:
+  * Protegido por requireRole('ADMIN')
+  * Un solo request retorna: kpis, timeSeries, topWhatsApp, topViews,
+    topSearches, recentEvents
+  * Todas las agregaciones corren en paralelo (Promise.all)
+- Fase 2.3 — Agregado tipo AdminAnalyticsOverview + AnalyticsRange en types.ts
+  y función fetchAdminAnalytics(range) en api.ts
+- Fase 2.1 — Creado AdminMetricsTab.tsx (~470 líneas):
+  * 8 tarjetas KPI con icono, count, y % del total
+  * Line chart Recharts con tendencia diaria, leyenda click-to-toggle
+  * Top 10 WhatsApp + Top 10 Vistas (barras horizontales animadas)
+  * Top búsquedas frecuentes (tag cloud ponderado por count)
+  * Feed de últimos 50 eventos con scroll
+  * Filtro de rango: Hoy / 7d / 30d / 90d
+- Fase 2.2 — Integrado tab "Métricas" en AdminDashboard.tsx con icono BarChart3
+- Lint PASS (0 errores)
+- Commit aaf4a0d pusheado a origin/main → deploy automático en Vercel
+- Verificación de seguridad: endpoint retorna 401 sin auth (correcto)
+
+Stage Summary:
+- 🎉 TAB "MÉTRICAS" IMPLEMENTADO Y PUSHEADO
+- 6 archivos modificados, 1087 líneas insertadas
+- Backend: 5 métodos repo + 1 endpoint admin
+- Frontend: 1 componente nuevo + integración en AdminDashboard
+- El tab muestra métricas REALES que ya se estaban capturando
+- Para cambiar el rango temporal: botones Hoy/7d/30d/90d
+- Para ocultar/mostrar líneas en el chart: click en la leyenda
+- Pending: verificar en producción (Vercel) cuando termine el deploy
