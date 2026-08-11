@@ -490,8 +490,15 @@ export interface BookingData {
   dealTitle: string;
 }
 
-// ── ANALYTICS (Etapa 6) ───────────────────────────────────────
+// ── ANALYTICS (Etapa 6 + Night Planner v2) ────────────────────
+//
+// MUST stay in sync with `ANALYTICS_EVENT_TYPES` in
+// `src/server/services/analytics.service.ts` (the runtime array).
+// The DB column is a plain String, so adding new types needs no
+// Prisma migration — but TS will error here if the union and the
+// array drift (which is exactly the safety we want).
 export type AnalyticsEventType =
+  // ── Establishment interaction (Etapa 6) ──────────────────────
   | 'BUSINESS_VIEW'
   | 'WHATSAPP_CLICK'
   | 'INSTAGRAM_CLICK'
@@ -499,7 +506,20 @@ export type AnalyticsEventType =
   | 'SEARCH'
   | 'RESERVE_CLICK'
   | 'REDEEM_CLICK'
-  | 'CAPACITY_REPORT'; // Etapa 3.6
+  | 'CAPACITY_REPORT' // Etapa 3.6
+  // ── Night Planner v2 funnel (Sprint 1 — blueprint FASE 16) ───
+  | 'PLANNER_OPENED'
+  | 'PLANNER_STEP_COMPLETED'
+  | 'PLANNER_SEARCH_STARTED'
+  | 'PLANNER_RESULTS_SHOWN'
+  | 'PLANNER_RECOMMENDATION_VIEWED'
+  | 'PLANNER_RECOMMENDATION_SELECTED'
+  | 'PLANNER_ROUTE_CREATED'
+  | 'PLANNER_RESERVATION_STARTED'
+  | 'PLANNER_RESERVATION_COMPLETED'
+  | 'PLANNER_PROMOTION_VIEWED'
+  | 'PLANNER_PROMOTION_CLAIMED'
+  | 'PLANNER_DISMISSED';
 
 export interface TrackEventPayload {
   type: AnalyticsEventType;

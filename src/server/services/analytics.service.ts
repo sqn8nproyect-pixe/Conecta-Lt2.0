@@ -42,7 +42,13 @@ function jsonError(message: string, status: number): Response {
 // Exported so the frontend (and the seed script) can reuse the same
 // definition. Adding a new event type only requires touching this array
 // (the repo is intentionally permissive — see analytics.repository.ts).
+//
+// IMPORTANT: the `AnalyticsEventType` union in `src/lib/types.ts` MUST
+// be kept in sync with this array (both are the compile-time contract;
+// the DB column is a plain string so no migration is needed when adding
+// types, but TS will complain if a tracked type isn't in the union).
 export const ANALYTICS_EVENT_TYPES = [
+  // ── Establishment interaction (Etapa 6) ────────────────────────
   'BUSINESS_VIEW', // user opened an establishment detail page
   'WHATSAPP_CLICK', // user clicked the WhatsApp button on an establishment
   'INSTAGRAM_CLICK', // user clicked the Instagram button
@@ -51,6 +57,24 @@ export const ANALYTICS_EVENT_TYPES = [
   'RESERVE_CLICK', // user opened the booking modal
   'REDEEM_CLICK', // user clicked "Reclamar código"
   'CAPACITY_REPORT', // Etapa 3.6 — user reported a venue's current capacity
+
+  // ── Night Planner v2 funnel (Sprint 1 — blueprint FASE 16) ─────
+  // The full planner funnel. Each step is a separate event so the
+  // admin dashboard can compute completion rate, zero-result rate,
+  // result click-through rate, and reservation conversion. Metadata
+  // for these events is defined in `usePlannerAnalytics` (Sprint 5).
+  'PLANNER_OPENED', // user opened the Night Planner modal
+  'PLANNER_STEP_COMPLETED', // user answered one step (metadata.step = 1..6)
+  'PLANNER_SEARCH_STARTED', // user submitted the form → POST /api/planner/recommend
+  'PLANNER_RESULTS_SHOWN', // server returned N results (metadata.resultCount, topScore)
+  'PLANNER_RECOMMENDATION_VIEWED', // user scrolled to / hovered a result card
+  'PLANNER_RECOMMENDATION_SELECTED', // user clicked "Ver local" on a result
+  'PLANNER_ROUTE_CREATED', // user generated a multi-stop route (Sprint 7)
+  'PLANNER_RESERVATION_STARTED', // user clicked "Reservar" from a result
+  'PLANNER_RESERVATION_COMPLETED', // reservation was confirmed (from the planner flow)
+  'PLANNER_PROMOTION_VIEWED', // user expanded a promo on a result card
+  'PLANNER_PROMOTION_CLAIMED', // user claimed a promo from a result card
+  'PLANNER_DISMISSED', // user closed the planner without selecting anything
 ] as const;
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
 
