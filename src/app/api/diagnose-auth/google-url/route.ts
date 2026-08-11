@@ -2,7 +2,8 @@
 // y hace un HEAD request a Google para ver si acepta los parámetros.
 
 import { NextResponse } from 'next/server';
-import GoogleProvider from 'next-auth/providers/google';
+
+const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 export async function GET() {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -21,14 +22,7 @@ export async function GET() {
   const nextAuthUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || origin;
 
   try {
-    const provider = GoogleProvider({ clientId, clientSecret });
-
-    // Cast para acceder al internals del provider
-    const p = provider as unknown as {
-      authorization: { url: string; params: Record<string, unknown> };
-    };
-
-    const authUrl = new URL(p.authorization.url);
+    const authUrl = new URL(GOOGLE_AUTH_URL);
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('redirect_uri', callbackUrl);
     authUrl.searchParams.set('response_type', 'code');
