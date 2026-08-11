@@ -397,14 +397,28 @@ export function Navbar() {
     //   authorize() server-side and sets the session cookie via fetch.
     //   No `url` in the response — we just reload() to pick up the cookie.
     //
-    // The previous bug (Task fix-login-cookie-1) conflated these two and
-    // always called reload(), which broke Google OAuth (the browser never
-    // navigated to Google, so no session was created).
+    // ERROR DETECTION: when signIn fails, NextAuth returns
+    //   `{ url: "/api/auth/error?error=OAuthCallback" }` (or similar)
+    //   instead of the provider URL. We detect that pattern and show
+    //   a helpful toast instead of navigating to the error page.
     const provider = googleEnabled ? 'google' : 'demo';
     void signIn(provider, { callbackUrl: '/', redirect: false })
       .then((res) => {
         if (res?.error) {
           addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
+        } else if (res?.url && res.url.includes('/api/auth/error')) {
+          // NextAuth returns the error URL when the OAuth flow fails
+          // (e.g., redirect_uri_mismatch, invalid client_secret, state
+          // mismatch). Show a clear message instead of navigating to
+          // the generic error page.
+          const errorMatch = res.url.match(/[?&]error=([^&]+)/);
+          const errorCode = errorMatch ? decodeURIComponent(errorMatch[1]) : 'unknown';
+          console.error('[auth] OAuth provider error:', errorCode, res.url);
+          addNotification(
+            `Error de autenticación con ${provider === 'google' ? 'Google' : 'el proveedor'}. ` +
+            `Código: ${errorCode}. Revisa la configuración OAuth.`,
+            'info'
+          );
         } else if (res?.url) {
           // OAuth provider — navigate to provider's authorization URL
           window.location.href = res.url;
