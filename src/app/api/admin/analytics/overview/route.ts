@@ -41,6 +41,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const rangeParam = url.searchParams.get('range') ?? '7d';
     const sinceDays = VALID_RANGES[rangeParam] ?? 7;
+    // Normalize: if the param is invalid, fall back to '7d' in the
+    // response so the client knows which window was actually used.
     const rangeLabel = VALID_RANGES[rangeParam] ? rangeParam : '7d';
 
     // ── Run all aggregations in parallel ─────────────────────────

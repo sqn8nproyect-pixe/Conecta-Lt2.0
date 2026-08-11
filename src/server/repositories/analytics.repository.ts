@@ -30,6 +30,18 @@ type DbOrTx = PrismaClient | Prisma.TransactionClient;
  */
 export const DEFAULT_SINCE_DAYS = 7;
 
+/**
+ * Format a Date as a UTC `YYYY-MM-DD` string. Used by the daily
+ * time-series aggregation to bucket events by day. Kept tz-agnostic
+ * (always UTC) so the caller can format in the user's timezone.
+ */
+function formatUTCDate(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(
+    2,
+    '0',
+  )}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
 export const analyticsRepository = {
   /**
    * Insert a single AnalyticsEvent row.
@@ -257,10 +269,7 @@ export const analyticsRepository = {
     // Bucket by day + type.
     const bucket = new Map<string, number>();
     for (const r of rows) {
-      const d = r.createdAt;
-      const dateKey = `${d.getUTCFullYear()}-${String(
-        d.getUTCMonth() + 1,
-      ).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      const dateKey = formatUTCDate(r.createdAt);
       const key = `${dateKey}|${r.type}`;
       bucket.set(key, (bucket.get(key) ?? 0) + 1);
     }
@@ -291,9 +300,7 @@ export const analyticsRepository = {
           now.getUTCDate() - i,
         ),
       );
-      const dateKey = `${d.getUTCFullYear()}-${String(
-        d.getUTCMonth() + 1,
-      ).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      const dateKey = formatUTCDate(d);
       for (const type of eventTypes) {
         const key = `${dateKey}|${type}`;
         out.push({ date: dateKey, type, count: bucket.get(key) ?? 0 });

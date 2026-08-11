@@ -37,15 +37,10 @@ import {
   Users,
   Activity,
   TrendingUp,
-  Clock,
 } from 'lucide-react';
-import {
-  fetchAdminAnalytics,
-} from '@/lib/api';
+import { fetchAdminAnalytics } from '@/lib/api';
 import type { AnalyticsRange, AdminAnalyticsOverview } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   ResponsiveContainer,
@@ -501,71 +496,69 @@ export function AdminMetricsTab() {
                 Sin datos en este período
               </p>
             ) : (
-              <>
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={chartData}
-                      margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
-                    >
-                      <CartesianGrid stroke="#ffffff10" strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fill: '#ffffff60', fontSize: 10 }}
-                        tickFormatter={(v: string) => {
-                          const d = new Date(v + 'T00:00:00Z');
-                          return d.toLocaleDateString('es-VE', {
-                            day: 'numeric',
-                            month: 'short',
-                            timeZone: 'America/Caracas',
-                          });
-                        }}
-                        minTickGap={20}
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
+                  >
+                    <CartesianGrid stroke="#ffffff10" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: '#ffffff60', fontSize: 10 }}
+                      tickFormatter={(v: string) => {
+                        const d = new Date(v + 'T00:00:00Z');
+                        return d.toLocaleDateString('es-VE', {
+                          day: 'numeric',
+                          month: 'short',
+                          timeZone: 'America/Caracas',
+                        });
+                      }}
+                      minTickGap={20}
+                    />
+                    <YAxis
+                      tick={{ fill: '#ffffff60', fontSize: 10 }}
+                      allowDecimals={false}
+                      width={40}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend
+                      formatter={(value: string) => {
+                        const meta = EVENT_META.find((m) => m.type === value);
+                        return (
+                          <span
+                            className="text-xs cursor-pointer select-none"
+                            style={{
+                              color: hiddenTypes.has(value)
+                                ? '#ffffff40'
+                                : '#ffffffcc',
+                              textDecoration: hiddenTypes.has(value)
+                                ? 'line-through'
+                                : 'none',
+                            }}
+                            onClick={() => toggleType(value)}
+                          >
+                            {meta?.label ?? value}
+                          </span>
+                        );
+                      }}
+                    />
+                    {EVENT_META.map((meta) => (
+                      <Line
+                        key={meta.type}
+                        type="monotone"
+                        dataKey={meta.type}
+                        stroke={meta.color}
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4, strokeWidth: 0 }}
+                        hide={hiddenTypes.has(meta.type)}
+                        isAnimationActive={false}
                       />
-                      <YAxis
-                        tick={{ fill: '#ffffff60', fontSize: 10 }}
-                        allowDecimals={false}
-                        width={40}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend
-                        formatter={(value: string) => {
-                          const meta = EVENT_META.find((m) => m.type === value);
-                          return (
-                            <span
-                              className="text-xs cursor-pointer select-none"
-                              style={{
-                                color: hiddenTypes.has(value)
-                                  ? '#ffffff40'
-                                  : '#ffffffcc',
-                                textDecoration: hiddenTypes.has(value)
-                                  ? 'line-through'
-                                  : 'none',
-                              }}
-                              onClick={() => toggleType(value)}
-                            >
-                              {meta?.label ?? value}
-                            </span>
-                          );
-                        }}
-                      />
-                      {EVENT_META.map((meta) => (
-                        <Line
-                          key={meta.type}
-                          type="monotone"
-                          dataKey={meta.type}
-                          stroke={meta.color}
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{ r: 4, strokeWidth: 0 }}
-                          hide={hiddenTypes.has(meta.type)}
-                          isAnimationActive={false}
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </>
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </div>
 
