@@ -4579,3 +4579,58 @@ Stage Summary:
 - El worklog.md sigue siendo el historial detallado (4500+ líneas)
 - PROJECT_STATUS.md es el resumen conciso del estado ACTUAL
 - CLAUDE.md son las instrucciones para el agente
+
+---
+Task ID: admin-email-allowlist-1
+Agent: main
+Task: Usuario quiere que solo sqn8nproyect@gmail.com pueda acceder al panel admin.
+
+Work Log:
+- Verificado estado inicial:
+  * Panel admin YA existe: src/components/conecta/admin/AdminDashboard.tsx
+    (1476 líneas, 4 tabs: Resumen/Negocios/Reseñas/Usuarios)
+  * 7 API endpoints admin bajo /api/admin/ (todos protegidos con requireRole)
+  * DB tenía 2 usuarios admin: admin@conecta.lt (ADMIN), moderator@conecta.lt (MODERATOR)
+  * sqn8nproyect@gmail.com ya existía en DB pero con role USER (logueó con Google antes)
+- Creado src/lib/admin-config.ts:
+  * ADMIN_EMAILS = ['sqn8nproyect@gmail.com'] (single source of truth)
+  * isAdminEmail(email) helper (case-insensitive)
+- Modificado src/lib/auth.ts (JWT callback):
+  * Si email está en ADMIN_EMAILS → forzar role=ADMIN
+  * Si email NO está pero DB dice ADMIN/MODERATOR → forzar role=USER
+  * Persistir email en token para verificación server-side
+- Modificado src/server/auth.ts (requireRole):
+  * Defense in depth: si se requiere ADMIN, verificar email en ADMIN_EMAILS
+    además del rol del JWT (catches stale JWTs)
+- Modificado src/components/conecta/Navbar.tsx:
+  * Botón 'Admin' visible solo si isAdminEmail(user.email)
+  * Removida condición role === 'ADMIN' || role === 'MODERATOR'
+- Modificado src/components/conecta/admin/AdminDashboard.tsx:
+  * Guard: if (!user || !isAdminEmail(user.email)) → AccessDenied
+  * isAdmin = true para todos los que pasan el guard (no más distinción MODERATOR)
+- DB actualizada:
+  * sqn8nproyect@gmail.com → ADMIN (promovido)
+  * admin@conecta.lt → USER (demovido)
+  * moderator@conecta.lt → USER (demovido)
+- Lint PASS. 1 commit pusheado (14eda00).
+- Verificación post-deploy en producción:
+  * GET / → HTTP 200
+  * GET /api/admin/stats sin auth → HTTP 401 (correcto)
+  * Login demo Ana Rodríguez (BUSINESS_OWNER) → funciona
+  * Ana Rodríguez intentando /api/admin/stats → HTTP 403 (correcto,
+    no es admin)
+  * Agent Browser: sin login, botón Admin no visible (correcto)
+
+Stage Summary:
+- 🎉 PANEL ADMIN RESTRINGIDO A sqn8nproyect@gmail.com
+- Single source of truth: ADMIN_EMAILS en src/lib/admin-config.ts
+- 3 capas de verificación:
+  1. JWT callback (en sign-in) fuerza role según email
+  2. requireRole (en cada request) verifica email si se requiere ADMIN
+  3. Frontend (Navbar + AdminDashboard) verifica email antes de mostrar
+- DB consistente: solo sqn8nproyect@gmail.com tiene role ADMIN
+- Para cambiar quién tiene acceso admin en el futuro, editar ADMIN_EMAILS
+  en src/lib/admin-config.ts — ese es el único lugar
+- El usuario sqn8nproyect@gmail.com debe cerrar sesión y volver a iniciar
+  para que el JWT se regenere con role=ADMIN (o ya funcionará si nunca
+  ha logueado en esta sesión)
