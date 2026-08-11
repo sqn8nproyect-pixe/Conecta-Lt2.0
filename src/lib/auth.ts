@@ -39,6 +39,69 @@ export const authOptions: NextAuthOptions = {
   // Trust the Host header so the app works behind the Caddy gateway
   // (the browser sees the gateway domain, not localhost:3000).
   trustHost: true,
+  // WORKAROUND para NextAuth v4 + Next.js 16 + Vercel: las cookies con
+  // prefix __Host- que NextAuth setea por default pueden no preservarse
+  // correctamente en el flujo OAuth (state cookie se pierde entre el
+  // redirect a Google y el callback de vuelta → OAuthCallback error).
+  // Configuramos cookies manualmente sin el __Host- prefix para evitar
+  // este issue. Sacrifica un poco de seguridad (sin prefix enforcement)
+  // pero hace que OAuth funcione.
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    callbackUrl: {
+      name: 'next-auth.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    csrfToken: {
+      name: 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    pkceCodeVerifier: {
+      name: 'next-auth.pkce.code_verifier',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    state: {
+      name: 'next-auth.state',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    nonce: {
+      name: 'next-auth.nonce',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+  },
   // Debug: TEMPORALMENTE habilitado en producción para diagnosticar
   // el error OAuthCallback de Google. Cambiar a `process.env.NODE_ENV
   // === 'production' ? false : true` una vez estabilizado.
