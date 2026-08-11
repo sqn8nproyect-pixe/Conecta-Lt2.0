@@ -30,38 +30,38 @@ import { db } from '@/lib/db';
 // response. This causes openid-client to throw
 // `RPError: iss missing from the response` on every Google login.
 //
-// We patch `Issuer.discover` to flip this flag to false for Google
-// after the discovery document is fetched, so openid-client skips
-// the iss check. This is the same fix used by Auth.js v5
-// (which migrated off openid-client to oauth4webapi for this
-// exact reason).
-//
-// See: https://github.com/panva/node-openid-client/issues/...
-//      https://github.com/nextauthjs/next-auth/issues/...
+// We patch `Issuer.discover` to return a Proxy that returns false
+// for `authorization_response_iss_parameter_supported` when the
+// issuer is Google. This makes openid-client skip the iss check.
+// (Auth.js v5 fixes this by migrating to oauth4webapi; this is
+// the equivalent workaround for NextAuth v4.)
 // ─────────────────────────────────────────────────────────────
 const _originalDiscover = Issuer.discover.bind(Issuer);
 (Issuer as unknown as { discover: (uri: string) => Promise<unknown> }).discover =
   async function (uri: string) {
     const issuer = (await _originalDiscover(uri)) as {
       issuer?: string;
-      authorization_response_iss_parameter_supported?: unknown;
     };
     if (issuer.issuer === 'https://accounts.google.com') {
-      // Override the getter-based property with a plain data property
-      // set to false. Without this, openid-client throws
-      // "iss missing from the response" for every Google login because
-      // Google's discovery claims iss support but Google does not send
-      // iss in the authorization response.
-      Object.defineProperty(
-        issuer,
-        'authorization_response_iss_parameter_supported',
-        {
-          value: false,
-          enumerable: true,
-          configurable: true,
-          writable: true,
+      // Wrap the issuer in a Proxy that returns false for the iss
+      // parameter supported flag. We can't redefine the property on
+      // the issuer itself because openid-client defines it as a
+      // non-configurable getter. The Proxy intercepts all property
+      // access and overrides just this one.
+      return new Proxy(issuer, {
+        get(target, prop, receiver) {
+          if (prop === 'authorization_response_iss_parameter_supported') {
+            return false;
+          }
+          return Reflect.get(target, prop, receiver);
         },
-      );
+        has(target, prop) {
+          if (prop === 'authorization_response_iss_parameter_supported') {
+            return true;
+          }
+          return Reflect.has(target, prop);
+        },
+      });
     }
     return issuer;
   };
