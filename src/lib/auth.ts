@@ -18,53 +18,20 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
 import type { Adapter } from 'next-auth/adapters';
 import type { UserRole } from '@prisma/client';
-import { Issuer } from 'openid-client';
 
 import { db } from '@/lib/db';
 
 // ─────────────────────────────────────────────────────────────
-// WORKAROUND: openid-client v5.4+ (used by NextAuth v4) enforces
-// RFC 9207 strictly. Google's OIDC discovery document declares
-// `authorization_response_iss_parameter_supported: true`, but
+// NOTE: openid-client's strict `iss` parameter check (RFC 9207)
+// is patched out via scripts/patch-openid-client.js (runs in
+// postinstall). Google's OIDC discovery document declares
+// `authorization_response_iss_parameter_supported: true` but
 // Google does NOT actually send `iss` in the authorization
-// response. This causes openid-client to throw
+// response, which causes openid-client to throw
 // `RPError: iss missing from the response` on every Google login.
-//
-// We patch `Issuer.discover` to return a Proxy that returns false
-// for `authorization_response_iss_parameter_supported` when the
-// issuer is Google. This makes openid-client skip the iss check.
-// (Auth.js v5 fixes this by migrating to oauth4webapi; this is
-// the equivalent workaround for NextAuth v4.)
+// The patch comments out the check in node_modules/openid-client/
+// lib/client.js. See scripts/patch-openid-client.js for details.
 // ─────────────────────────────────────────────────────────────
-const _originalDiscover = Issuer.discover.bind(Issuer);
-(Issuer as unknown as { discover: (uri: string) => Promise<unknown> }).discover =
-  async function (uri: string) {
-    const issuer = (await _originalDiscover(uri)) as {
-      issuer?: string;
-    };
-    if (issuer.issuer === 'https://accounts.google.com') {
-      // Wrap the issuer in a Proxy that returns false for the iss
-      // parameter supported flag. We can't redefine the property on
-      // the issuer itself because openid-client defines it as a
-      // non-configurable getter. The Proxy intercepts all property
-      // access and overrides just this one.
-      return new Proxy(issuer, {
-        get(target, prop, receiver) {
-          if (prop === 'authorization_response_iss_parameter_supported') {
-            return false;
-          }
-          return Reflect.get(target, prop, receiver);
-        },
-        has(target, prop) {
-          if (prop === 'authorization_response_iss_parameter_supported') {
-            return true;
-          }
-          return Reflect.has(target, prop);
-        },
-      });
-    }
-    return issuer;
-  };
 
 // Demo user used by the Credentials provider fallback so the app
 // is fully functional in the sandbox without real Google creds.
