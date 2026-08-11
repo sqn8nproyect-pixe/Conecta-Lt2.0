@@ -3282,3 +3282,21 @@ Stage Summary:
 - Push pendiente — requiere credenciales GitHub del usuario.
 - DB SQLite sembrada en /home/z/my-project/db/dev.db (1.5MB, no
   commiteada — gitignore db/*.db la excluye).
+
+---
+Task ID: resilience-1
+Agent: main
+Task: User reported site "no carga" (won't load) on PC and mobile — screenshot showed Vercel deployment (conecta-lt2-0.vercel.app) stuck on "CARGANDO" spinner with ?error=Callback in URL. Diagnose and fix.
+
+Work Log:
+- Diagnosed: local dev server is healthy (HTTP 200, /api/businesses returns 21 rows, zero console errors, 29 business cards render in browser).
+- Identified root cause of the Vercel hang: SQLite + Vercel serverless = the .db file lives on an ephemeral/read-only filesystem, so Prisma queries fail/hang and the HomePage `if (isLoading)` gate spun forever. The `?error=Callback` is a separate NextAuth Google-OAuth misconfiguration on the Vercel domain (NEXTAUTH_URL / Google redirect URI not set for conecta-lt2-0.vercel.app).
+- Fixed HomePage.tsx: destructure isError + refetch from the businesses query; added an error state UI ("No pudimos cargar los locales" + Reintentar button) rendered before the loading gate; added an 8s slowLoad safety net that surfaces a "tardando más de lo habitual" hint with a retry button so the spinner never appears infinite; kept slowLoad reset-free (lint-compliant, only read inside isLoading branch).
+- Fixed /api/businesses/route.ts: wrapped businessRepository.findAll in try/catch returning a clean 503 JSON {error:'DATABASE_UNAVAILABLE'} so the client's res.json() never throws on a serverless DB failure (previously an unhandled Prisma error returned an HTML error page that broke JSON parsing).
+- MapPage already resilient (defaults establishments to []), no change needed.
+- Verified: `bun run lint` clean; dev server recompiled (873ms); browser reload shows full page (hero + popular rail + 29 cards), zero console errors.
+
+Stage Summary:
+- Local preview (what the user sees in the Preview Panel) is fully functional.
+- Frontend is now resilient: a failed/hung businesses API shows a Spanish error+retry UI after retries instead of an infinite "CARGANDO" spinner.
+- The Vercel deployment issue is environmental, NOT a code bug: (1) SQLite cannot run on Vercel serverless — must migrate to a real DB (Vercel Postgres / Neon / Turso) or keep running on a persistent-host server; (2) Google OAuth needs NEXTAUTH_URL + NEXTAUTH_SECRET + Google client ID/secret set in Vercel env vars, and the Google Cloud OAuth redirect URI must include the Vercel domain. These are deployment-config tasks the user must do on Vercel; the code now degrades gracefully if they are not set.

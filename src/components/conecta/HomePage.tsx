@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Star, Heart, Clock, Eye, TrendingUp } from 'lucide-react';
+import { Search, Sparkles, Star, Heart, Clock, Eye, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useAnalytics } from '@/lib/hooks/use-analytics';
@@ -53,10 +53,30 @@ export function HomePage() {
     }
   };
 
-  const { data: establishments = [], isLoading } = useQuery({
+  const {
+    data: establishments = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['businesses'],
     queryFn: () => fetchBusinesses(),
+    retry: 1,
   });
+
+  // Safety net: if loading takes unusually long (e.g. a serverless DB
+  // cold start or a hung request), surface a slow-loading hint with a
+  // retry button instead of leaving the user staring at a spinner
+  // forever. 8s is well past a healthy local response (~80ms) but
+  // short enough to feel responsive. slowLoad is only read inside the
+  // isLoading branch, so it never needs resetting (the whole loading
+  // block unmounts once data arrives).
+  const [slowLoad, setSlowLoad] = useState(false);
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setTimeout(() => setSlowLoad(true), 8000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   // Etapa 6 — Populares esta semana (top BUSINESS_VIEW count, last 7 days).
   // Hidden entirely when empty so the homepage never shows an empty rail.
@@ -111,12 +131,54 @@ export function HomePage() {
   const filters: Filter[] = ['Todas', 'licorería', 'tasca', 'discoteca'];
   const priceFilters: PriceFilter[] = ['Todos', '$', '$$', '$$$'];
 
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] px-6">
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+          <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-400" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-white">No pudimos cargar los locales</h2>
+            <p className="text-sm text-white/50">
+              Revisa tu conexión a internet e inténtalo de nuevo. Si el
+              problema persiste, el servicio podría estar temporalmente no
+              disponible.
+            </p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gold text-obsidian text-sm font-semibold hover:bg-gold/90 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-6">
         <div className="flex flex-col items-center gap-3 text-white/40">
           <div className="w-10 h-10 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
           <div className="text-xs tracking-[4px] font-mono">CARGANDO…</div>
+          {slowLoad && (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <p className="text-xs text-white/40 max-w-xs text-center">
+                Está tardando más de lo habitual. Si la página no carga,
+                puedes reintentar.
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 text-white/70 text-xs font-medium hover:bg-white/5 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Reintentar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

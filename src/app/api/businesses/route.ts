@@ -25,6 +25,21 @@ export async function GET(request: Request) {
     ];
   }
 
-  const businesses = await businessRepository.findAll(where);
-  return NextResponse.json(businesses.map(transformBusiness));
+  try {
+    const businesses = await businessRepository.findAll(where);
+    return NextResponse.json(businesses.map(transformBusiness));
+  } catch (err) {
+    // Graceful JSON error so the client's `res.json()` never throws.
+    // This matters on serverless hosts (e.g. Vercel) where the SQLite
+    // file may be unavailable — the frontend can then show a retry
+    // state instead of hanging on a parse failure.
+    console.error('[GET /api/businesses] DB query failed:', err);
+    return NextResponse.json(
+      {
+        error: 'DATABASE_UNAVAILABLE',
+        message: 'No se pudo consultar la base de datos de locales.',
+      },
+      { status: 503 },
+    );
+  }
 }
