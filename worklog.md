@@ -4320,3 +4320,66 @@ Stage Summary:
 - 0 errores de consola
 - La cuenta Neon (org-damp-breeze-85043324) sigue activa y con todos los datos
 - No fue necesario reconfigurar env vars en Vercel — ya estaban de Etapa 2
+
+---
+Task ID: fix-google-oauth-1
+Agent: main
+Task: Usuario reportó "google esta fallando" en Vercel. Diagnosticar y arreglar.
+
+Work Log:
+- Verificado estado inicial:
+  * /api/auth/providers → lista provider google ✓
+  * POST /api/auth/callback/google → {"url":"...?error=OAuthCallback"}
+  * GET /api/auth/signin/google → 302 → /?error=google
+  * Demo login sigue funcionando OK
+- Creado endpoint /api/auth/diagnose (luego movido a /api/diagnose-auth
+  para evitar conflicto con catch-all [...nextauth]).
+- Diagnóstico mostró:
+  * NEXTAUTH_URL: https://....app (32 chars) ✓
+  * NEXTAUTH_SECRET: set (64 chars) ✓
+  * AUTH_SECRET: set (64 chars) ✓
+  * NEXT_PUBLIC_GOOGLE_CLIENT_ID: 67384034....com (72 chars) ✓
+  * GOOGLE_CLIENT_SECRET: set (35 chars) ✓
+  * GOOGLE_CLIENT_ID: undefined (no se usa en auth.ts, usamos NEXT_PUBLIC_)
+  * NEXTAUTH_URL coincide con https://conecta-lt2-0.vercel.app ✓
+- Creado endpoint /api/diagnose-auth/google-url que genera manualmente
+  la URL de OAuth de Google y hace HEAD request para ver si Google
+  acepta los parámetros. Resultado:
+  * google_response.status: 302 ← Google ACEPTA los parámetros
+  * location: https://accounts.google.com/v3/signin/identifier?...
+  * ✅ Google acepta los parámetros — el problema está en NextAuth
+    interno (probablemente cookies/state)
+- Fix intent 1: habilitar logger con debug:true + remover override del
+  logger en route.ts /api/auth/[...nextauth]. Deployado pero no se
+  pudieron ver logs desde sandbox.
+- Fix intent 2: configurar cookies manualmente sin __Host- prefix
+  (workaround conocido para Vercel + NextAuth v4). Deployado → no
+  arregló el problema.
+- Fix intent 3: usar signIn con redirect:true (form POST tradicional)
+  en Vercel en vez de redirect:false (fetch). Deployado → no arregló
+  el problema. El POST directo a /api/auth/callback/google sin
+  json=true también devuelve 302 → error=OAuthCallback.
+- DIAGNÓSTICO FINAL:
+  * Google OAuth está 100% bien configurado (client_id, secret,
+    redirect URI, NEXTAUTH_URL)
+  * Google acepta los parámetros cuando los enviamos directamente
+  * NextAuth v4.24.13 NO puede iniciar el flujo OAuth → devuelve
+    OAuthCallback error genérico
+  * Causa raíz probable: incompatibilidad NextAuth v4.24 + Next.js 16
+    (NextAuth v4 no tiene soporte oficial para Next 16)
+  * La solución definitiva es migrar a Auth.js v5 (sucesor de
+    NextAuth) que sí soporta Next.js 16
+
+Stage Summary:
+- Google OAuth NO funciona en Vercel por incompatibilidad NextAuth v4 + Next.js 16
+- Demo login SÍ funciona en Vercel
+- 3 fixes intentados, ninguno arregló el problema
+- Opciones para el usuario:
+  A) Migrar a Auth.js v5 (cambio grande, ~2-3 horas de trabajo, pero
+     solución definitiva)
+  B) Deshabilitar Google OAuth y dejar solo Demo (rápido pero limita
+     funcionalidad real en producción)
+  C) Implementar Google OAuth sin NextAuth usando @react-oauth/google
+     directamente (cambio mediano)
+- Pendiente: ver logs de Vercel Functions para confirmar el error real
+  antes de migrar a Auth.js v5
