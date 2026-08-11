@@ -4683,3 +4683,33 @@ Stage Summary:
 - Para cambiar el rango temporal: botones Hoy/7d/30d/90d
 - Para ocultar/mostrar líneas en el chart: click en la leyenda
 - Pending: verificar en producción (Vercel) cuando termine el deploy
+
+---
+Task ID: admin-metrics-cleanup-1
+Agent: main (claude)
+Task: Depurar el código del tab Métricas y subir todo al repo
+
+Work Log:
+- Revisado AdminMetricsTab.tsx (592 líneas):
+  * Encontrados 3 imports sin usar: Clock, Button, Badge → removidos
+  * Import de fetchAdminAnalytics estaba en multi-línea innecesaria → simplificado a 1 línea
+  * Fragment <> innecesario envolvía un solo <div> en el chart → eliminado
+  * Indentación del LineChart corregida (un nivel menos)
+- Revisado analytics.repository.ts:
+  * Formato de fecha UTC 'YYYY-MM-DD' duplicado en 2 lugares de countByTypeAndDay
+  * Extraído helper formatUTCDate() para DRY
+- Revisado overview/route.ts:
+  * Lógica de rangeLabel ya era correcta, agregado comentario aclaratorio
+- Lint PASS (0 errores, 0 warnings)
+- Dev server compila limpio (HTTP 200)
+- Commit b000ee2 pusheado a origin/main
+- Verificación post-push: local y remote sincronizados (0 commits diferencia)
+
+Stage Summary:
+- 🎉 CÓDIGO DEPURADO Y SUBIDO AL REPO
+- 3 archivos modificados, 79 insertions, 77 deletions (net -2 líneas, más limpio)
+- Commits en origin/main:
+  * aaf4a0d — feat(admin): tab Métricas (feature original)
+  * b000ee2 — refactor(admin-metrics): depuración (cleanup)
+- Repo completamente sincronizado
+- Vercel hará deploy automático del cleanup
