@@ -469,12 +469,6 @@ export interface AppNotification {
   type: NotificationType;
 }
 
-export interface MatchAnswers {
-  mood: '' | 'chill' | 'party';
-  company: '' | 'couple' | 'friends';
-  budget: '' | 'low' | 'premium';
-}
-
 export interface BookingData {
   name: string;
   /** Contact phone — required by the backend (POST /api/reservations). */

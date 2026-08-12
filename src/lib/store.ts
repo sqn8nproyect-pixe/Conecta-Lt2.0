@@ -5,7 +5,6 @@ import type {
   AppNotification,
   BookingData,
   Establishment,
-  MatchAnswers,
   PersistentNotification,
   Reservation,
   User,
@@ -173,55 +172,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
 export function isFavorite(slug: string): (s: AppState) => boolean {
   return (s) => s.favorites.includes(slug);
-}
-
-// ── Matchmaker helpers (pure functions) ─────────────────────
-// Etapa 5.2 reemplazará esto con scoring real basado en datos.
-
-export function calculateMatch(
-  ans: MatchAnswers,
-  allEstablishments: Establishment[],
-): Establishment {
-  if (ans.mood === 'party') {
-    const clubs = allEstablishments.filter((e) => e.category === 'discoteca');
-    if (ans.budget === 'premium') {
-      return clubs.find((c) => c.slug === 'discoteca-eclipse' || c.slug === 'discoteca-royal') ?? clubs[0]!;
-    }
-    return clubs.find((c) => c.slug === 'discoteca-glamour' || c.slug === 'discoteca-noche-eterna') ?? clubs[0]!;
-  }
-  // chill
-  if (ans.company === 'couple') {
-    const tascas = allEstablishments.filter((e) => e.category === 'tasca');
-    return tascas.find((t) => t.slug === 'tasca-la-cava' || t.slug === 'tasca-el-patio') ?? tascas[0]!;
-  }
-  // friends / group
-  if (ans.budget === 'premium') {
-    return allEstablishments.find((e) => e.slug === 'licoreria-vinos-del-valle' || e.slug === 'licoreria-selecta') ?? allEstablishments[0]!;
-  }
-  return (
-    allEstablishments.find((e) => e.slug === 'tasca-los-amigos' || e.slug === 'tasca-el-sabor' || e.slug === 'licoreria-don-sancho') ??
-    allEstablishments[0]!
-  );
-}
-
-export function getRecommendedDrink(
-  ans: MatchAnswers,
-  est: Establishment,
-): string {
-  if (est.category === 'licorería') {
-    return ans.budget === 'premium'
-      ? 'Whisky Single Malt Escocés 18 años'
-      : 'Ron Añejo Reserva Extra Seco';
-  }
-  if (est.category === 'tasca') {
-    return ans.company === 'couple'
-      ? 'Jarra de Sangría Frutal Premium en Copa Templada'
-      : 'Tobito de Cervezas Polar Negrita Glacial';
-  }
-  // discoteca
-  return ans.budget === 'premium'
-    ? 'Servicio de Vodka Premium con Bebida Energizante'
-    : 'Cóctel Glamour Blue de la Casa';
 }
 
 export function generateReservationCode(): string {
