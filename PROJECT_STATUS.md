@@ -194,5 +194,5 @@ El agente debe:
 - [Vercel Dashboard](https://vercel.com/dashboard)
 - [Neon Console](https://console.neon.tech/app/org-damp-breeze-85043324)
 - [GitHub Repo](https://github.com/sqn8nproyect-pixe/Conecta-Lt2.0)
-- [Google Cloud Console OAuth](https://console.cloud.google.com/apis/credentials) — OAuth client ID: `[REDACTED-GOOGLE-CLIENT-ID-REGENERATED]`
+- [Google Cloud Console OAuth](https://console.cloud.google.com/apis/credentials) — OAuth client ID: `[REDACTED — Client ID filtrado en commit histórico, regenerado]`
 - [Google OAuth redirect URI configurada](https://conecta-lt2-0.vercel.app/api/auth/callback/google)

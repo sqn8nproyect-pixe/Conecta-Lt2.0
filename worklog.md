@@ -1349,7 +1349,7 @@ Stage Summary:
   * NEXT_PUBLIC_GOOGLE_CLIENT_ID — de Google Cloud Console
   * GOOGLE_CLIENT_SECRET — de Google Cloud Console
   * NEXTAUTH_URL — https://tu-dominio.vercel.app (sin slash final)
-  * NEXTAUTH_SECRET — [REDACTED-NEXTAUTH-SECRET-ROTATED] (nuevo)
+  * NEXTAUTH_SECRET — [REDACTED — valor filtrado en commit histórico, rotado en producción] (nuevo)
   * AUTH_SECRET — mismo valor que NEXTAUTH_SECRET
 - URIs de redireccionamiento autorizadas en Google Cloud Console (CRÍTICO):
   * http://localhost:3000/api/auth/callback/google (dev local)
@@ -1459,14 +1459,14 @@ Task: Schema + DB push + backfill para Etapa 3 (sub-ratings reales en reviews)
 
 Work Log:
 - Detectado problema: `.env.local` con URL de Neon se había perdido del sandbox (solo quedaba `.env` con SQLite local `file:/home/z/my-project/db/custom.db`)
-- Recuperadas todas las variables de entorno de Vercel vía API (token `vcp_[REDACTED-VERCEL-TOKEN-REVOKED]...`):
-  * DATABASE_URL = postgresql://neondb_owner:[REDACTED-NEON-PWD-ROTATED]@ep-lingering-hill-ay3mv4lk...neondb
-  * DIRECT_URL = mismo valor
+- Recuperadas todas las variables de entorno de Vercel vía API (token [REDACTED — token Vercel revocado]):
+  * DATABASE_URL = [REDACTED — cadena Neon filtrada, password rotado]
+  * DIRECT_URL = mismo valor (redacted)
   * NEXTAUTH_URL = https://conecta-lt2-0.vercel.app
-  * NEXTAUTH_SECRET = [REDACTED-NEXTAUTH-SECRET-ROTATED]
-  * AUTH_SECRET = mismo valor
-  * NEXT_PUBLIC_GOOGLE_CLIENT_ID = [REDACTED-GOOGLE-CLIENT-ID-REGENERATED]...
-  * GOOGLE_CLIENT_SECRET = [REDACTED-GOOGLE-CLIENT-SECRET-RESET]
+  * NEXTAUTH_SECRET = [REDACTED — valor filtrado, rotado]
+  * AUTH_SECRET = mismo valor (redacted)
+  * NEXT_PUBLIC_GOOGLE_CLIENT_ID = [REDACTED — Client ID público filtrado, regenerado]
+  * GOOGLE_CLIENT_SECRET = [REDACTED — secret filtrado, reseteado en Google Cloud Console]
 - Reconstruido `.env.local` y actualizado `.env` con las vars de Neon
 - Añadidas 3 columnas al modelo `Review` en `prisma/schema.prisma`:
   * `ambienteRating Int @default(0)` (1-5)
@@ -4156,7 +4156,7 @@ Work Log:
   db/dev.db no existe en el servidor de Vercel).
 - Confirmado que las credenciales Neon originales NO están completas en
   el worklog (línea 1463): solo se conserva la versión truncada
-  `postgresql://neondb_owner:[REDACTED-NEON-PWD-ROTATED]@ep-lingering-hill-ay3mv4lk...neondb`
+  `postgresql://neondb_owner:[REDACTED — password rotado]@ep-lingering-hill-ay3mv4lk...neondb`
 - Usuario compartió URL de consola Neon:
   https://console.neon.tech/app/org-damp-breeze-85043324/settings
   → confirmado que la cuenta sigue activa, pero requiere auth (no accesible
@@ -4196,7 +4196,7 @@ Task: Usuario proporcionó URL de Neon. Verificar conexión, sincronizar schema,
 
 Work Log:
 - Recibida URL pooler de Neon:
-  postgresql://neondb_owner:[REDACTED-NEON-PWD-ROTATED]@ep-lingering-hill-ay3mv4lk-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+  postgresql://neondb_owner:[REDACTED — password rotado en producción]@ep-lingering-hill-ay3mv4lk-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 - Derivada DIRECT_URL (sin -pooler) para migraciones Prisma.
 - Escrito .env con todas las vars (DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET,
   AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, NEXT_PUBLIC_GOOGLE_CLIENT_ID).
