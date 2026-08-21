@@ -400,10 +400,13 @@ export function Navbar() {
     //   corre server-side via fetch y setea la cookie. Necesitamos
     //   reload() para que el cliente lea la nueva cookie.
     const provider = googleEnabled ? 'google' : 'demo';
-    const isVercel = typeof window !== 'undefined'
-      && window.location.hostname.includes('vercel.app');
+    // true si estamos en producción (dominio real, no localhost/sandbox).
+    // Aplica tanto a conectalt.com como a vercel.app preview URLs.
+    const isProduction = typeof window !== 'undefined'
+      && !window.location.hostname.includes('localhost')
+      && !window.location.hostname.startsWith('127.0.0.1')
 
-    if (provider === 'google' && isVercel) {
+    if (provider === 'google' && isProduction) {
       // Flujo OAuth tradicional: form POST + 302 redirect.
       // No manejamos la promesa porque el navegador navegará a Google.
       void signIn(provider, { callbackUrl: '/' }).catch(() => {
