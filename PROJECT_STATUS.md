@@ -4,7 +4,7 @@
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
 **Última actualización:** 2026-08-18
-**HEAD commit:** `b48ea8f` — `docs(status): actualizar PROJECT_STATUS.md al estado real post-incidente`
+**HEAD commit:** `1cc9528` — `docs(status): corregir HEAD commit en PROJECT_STATUS.md (b48ea8f no 47fdc38)`
 **Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git reescrito y limpio de secretos.
 
 ---
