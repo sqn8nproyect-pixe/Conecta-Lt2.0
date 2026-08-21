@@ -167,8 +167,21 @@ Para cambiar quién tiene acceso admin, editar `ADMIN_EMAILS` en `src/lib/admin-
 ### 8. Login Demo ( signIn con redirect:false + reload )
 `Navbar.tsx` `handleLogin` usa `signIn('demo-credentials', { redirect:false })` y luego `window.location.reload()`. **NO** usar `window.location.href = res.url` porque `res.url` puede ser cross-origin y perder la cookie de sesión.
 
-### 9. Sandbox: DATABASE_URL override
-El shell del sandbox tiene un override persistente `DATABASE_URL=file:/home/z/my-project/db/custom.db`. `start-dev.sh` lo hace `unset` antes de cargar `.env`. Si la app local no carga datos, verificar con `echo $DATABASE_URL` — si apunta a SQLite, hay que hacer `unset DATABASE_URL` o reiniciar con `./start-dev.sh`.
+### 9. Sandbox: DATABASE_URL override + .env en SQLite
+**Estado real tras el incidente de seguridad del 18-Ago:**
+- `.env` local contiene `DATABASE_URL=file:/home/z/my-project/db/custom.db` (SQLite)
+- `.env.local` (que tenía Neon URL con el password rotado) se perdió del sandbox
+- `schema.prisma` tiene `provider="postgresql"` (gotcha #5)
+- **Consecuencia**: el dev server arranca OK (HTTP 200 en `/`), pero TODOS los endpoints que tocan la DB retornan 503/500 (Prisma no puede usar SQLite con schema postgresql)
+
+**Workaround para verificar UI en sandbox:**
+1. Cambiar temporalmente `prisma/schema.prisma` de `provider="postgresql"` a `provider="sqlite"` (SIN commitear)
+2. `bun run db:push` (crea tablas en SQLite local)
+3. `bun run db:seed` (siembra 21 negocios desde `src/lib/data.ts`)
+4. Reiniciar dev server
+5. Revertir el cambio antes de cualquier commit/push (sino rompe Vercel)
+
+**Para producción real**: la app corre en Vercel con Neon (el `.env` de Vercel tiene las credenciales correctas, sin relación con el sandbox local).
 
 ## 📝 Tareas pendientes
 
