@@ -3,9 +3,9 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-08-18
-**HEAD commit:** `1cc9528` — `docs(status): corregir HEAD commit en PROJECT_STATUS.md (b48ea8f no 47fdc38)`
-**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git reescrito y limpio de secretos.
+**Última actualización:** 2026-08-22
+**HEAD commit:** `1600c60` — `d58463c8-b324-4595-ba3e-8e1e368d7db7` (automated worklog update)
+**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`.
 
 ---
 
@@ -32,10 +32,19 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 
 ## 🌐 URLs y conexiones
 
-- **Producción:** https://conecta-lt2-0.vercel.app
+- **Producción dominio custom:** https://conectalt.com (apex, principal)
+- **Producción dominio www:** https://www.conectalt.com (redirige a conectalt.com)
+- **Producción dominio Vercel:** https://conecta-lt2-0.vercel.app
 - **Repositorio:** https://github.com/sqn8nproyect-pixe/Conecta-Lt2.0
 - **Neon Console:** https://console.neon.tech/app/org-damp-breeze-85043324
 - **Neon DB:** 21 businesses, 86 reviews, 42 promos, ~6027 analytics events, ~23 users
+
+### Configuración de dominios en Vercel (estado 2026-08-22)
+- `conectalt.com` → dominio principal (sin redirect) ✅
+- `www.conectalt.com` → redirect a `conectalt.com` (307)
+- `conecta-lt2-0.vercel.app` → dominio original Vercel (sin redirect)
+- DNS Hostinger: A `@` → `216.198.79.1`, CNAME `www` → `3e51f3b1cc8ba216.vercel-dns-017.com.`
+- Google OAuth: 3 URIs de redirect + 3 orígenes JS configurados
 
 ## 🔑 Credenciales (dónde están, NO los valores)
 
@@ -65,8 +74,10 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 - ⏳ `NEXTAUTH_SECRET` — generar nuevo (`openssl rand -base64 32`), actualizar en Vercel + redeploy
 - ⏳ `GOOGLE_CLIENT_SECRET` — Reset en Google Cloud Console (opcional, decisión del usuario)
 - ⏳ GitHub PAT `ghp_uhK...` — verificar si sigue activo y revocarlo
-- ⏳ GitHub PAT `[REDACTED-GITHUB-PAT-DEL-CHAT-REVOCAR]` (usado hoy para el push) — URGENTE revocar
-- ⏳ Vercel token `vcp_7tRx...` — verificar si sigue activo y revocarlo
+- ✅ GitHub PAT `[REDACTED-GITHUB-PAT-DEL-CHAT-REVOCAR]` (18-Ago) — REVOCADO por el usuario
+- ✅ Vercel token `vcp_7tRx...` — REVOCADO por el usuario
+- ✅ Vercel token `vcp_7yJf...` (22-Ago, usado para configurar dominio) — REVOCADO por el usuario
+- ⏳ **Contactar a GitHub Support** para purge de commits viejos en cached views/forks (los commits antiguos siguen accesibles por SHA en GitHub hasta que hagan GC)
 
 **Estado actual del historial git:** 100% limpio. Búsqueda de los 7 patrones de secretos en todos los commits y mensajes → 0 coincidencias. Solo quedan las versiones redactadas (`[REDACTED-NEON-PWD-ROTATED]`, etc.).
 
@@ -78,6 +89,9 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 - ✅ Mapa interactivo con geolocalización
 - ✅ Login Demo (Ana Rodríguez, BUSINESS_OWNER) → funciona en Vercel
 - ✅ **Login Google OAuth** → funciona en Vercel (ver gotcha abajo)
+  - ✅ Funciona en `conecta-lt2-0.vercel.app`
+  - ✅ Funciona en `conectalt.com` (apex, dominio principal)
+  - ⚠️ NO funciona en `www.conectalt.com` directamente — Vercel redirige al apex antes del POST signin, lo que rompe cookies OAuth. Solución: usar siempre `conectalt.com` (el redirect de www al apex es 307, no problemático para navegación normal).
 - ✅ Dashboard de Owner (3 tabs: Info/Reservas/Promociones)
 - ✅ Reservas con AFORO EN TIEMPO REAL
 - ✅ Promociones con códigos de canje
@@ -87,6 +101,7 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 - ✅ Analytics events (6027 registrados)
 - ✅ RBAC (USER / BUSINESS_OWNER / ADMIN)
 - ✅ **Night Planner v2** (Sprint 1-5 completados 12-15 Ago, ver abajo)
+- ✅ **Dominio custom `conectalt.com` configurado** (22-Ago, ver worklog Task ID `domain-setup-1`)
 
 ## 🆕 Night Planner v2 (Sprint 1-5, 12-15 Ago)
 
@@ -183,14 +198,44 @@ Para cambiar quién tiene acceso admin, editar `ADMIN_EMAILS` en `src/lib/admin-
 
 **Para producción real**: la app corre en Vercel con Neon (el `.env` de Vercel tiene las credenciales correctas, sin relación con el sandbox local).
 
+### 10. Dominio custom + OAuth: redirect apex vs www (CRÍTICO)
+**Problema:** Cuando se usa un dominio custom con Vercel, por defecto Vercel configura `apex → www` (ej: `conectalt.com` redirige 308 a `www.conectalt.com`). Esto rompe Google OAuth:
+
+1. Usuario entra a `conectalt.com` (sin www)
+2. Hace clic en "Continuar con Google"
+3. Navbar.tsx hace POST a `conectalt.com/api/auth/signin/google` (porque el navegador está en `conectalt.com`)
+4. Vercel responde con 308 redirect a `www.conectalt.com/api/auth/signin/google`
+5. El navegador sigue el redirect, pero las cookies OAuth (state, pkce) se setean en `conectalt.com` (sin www)
+6. Google vuelve a `www.conectalt.com/api/auth/callback/google` (URL registrada en Google Console)
+7. El navegador busca las cookies en `www.conectalt.com` → **NO las encuentra** → error OAuth
+
+**Solución aplicada (22-Ago):** invertir la configuración en Vercel:
+- `conectalt.com` → dominio principal (sin redirect)
+- `www.conectalt.com` → redirect 307 a `conectalt.com`
+
+Así el dominio principal es el apex y no hay redirects problemáticos en el flujo OAuth. Ver `worklog.md` Task ID `domain-setup-1` para detalles.
+
+### 11. Detección de entorno en Navbar.tsx (commit 8075a39)
+**Problema:** El código original en `Navbar.tsx` detectaba producción con `hostname.includes('vercel.app')`, lo que rompía el flujo OAuth en dominios custom (`conectalt.com`).
+
+**Fix aplicado (commit `8075a39`, 21-Ago):**
+```typescript
+const isProduction = typeof window !== 'undefined'
+  && !window.location.hostname.includes('localhost')
+  && !window.location.hostname.startsWith('127.0.0.1')
+```
+
+Esto funciona para: `conectalt.com`, `*.vercel.app`, y localhost. Ver commit `8075a39` en git log.
+
 ## 📝 Tareas pendientes
 
 ### Alta prioridad (seguridad)
-- **REVOCAR** el GitHub PAT `[REDACTED-GITHUB-PAT-DEL-CHAT-REVOCAR]` (usado el 18-Ago para el force push) en https://github.com/settings/tokens — está en el historial del chat
-- **Rotar** `NEXTAUTH_SECRET` en Vercel (ver "Cómo rotar NEXTAUTH_SECRET" abajo)
+- **Rotar** `NEXTAUTH_SECRET` en Vercel (ver "Cómo rotar NEXTAUTH_SECRET" abajo) — pendiente desde el incidente del 18-Ago
 - **Verificar y revocar** GitHub PAT `ghp_uhK...` si sigue activo
-- **Verificar y revocar** Vercel token `vcp_7tRx...` en https://vercel.com/account/tokens si sigue activo
 - **Contactar a GitHub Support** para purge de commits viejos en cached views/forks (los commits antiguos siguen accesibles por SHA en GitHub hasta que hagan GC)
+- ✅ ~~REVOCAR GitHub PAT del 18-Ago~~ — Hecho
+- ✅ ~~REVOCAR Vercel token `vcp_7tRx...`~~ — Hecho
+- ✅ ~~REVOCAR Vercel token `vcp_7yJf...` (22-Ago)~~ — Hecho
 
 ### Media prioridad (mejoras)
 - **Migrar a Auth.js v5** (~2-3 horas): eliminaría la dependencia del patch script de openid-client y daría soporte oficial a Next.js 16. NextAuth v4 no tiene soporte oficial para Next 16.
@@ -198,7 +243,7 @@ Para cambiar quién tiene acceso admin, editar `ADMIN_EMAILS` en `src/lib/admin-
 - **Sprint 6 (opcional): Night Route multi-stop** — FASE 15 del blueprint. `wantsRoute` ya defaultea a false en el schema, tipos definidos pero UI no implementada.
 
 ### Baja prioridad
-- Verificar Google OAuth con cuenta real de Google end-to-end
+- **Google OAuth end-to-end**: ya verificado que funciona en `conectalt.com` y `conecta-lt2-0.vercel.app`. Falta verificar con cuentas reales de Google de usuarios finales.
 - **Opcional**: Fix 5 preexisting tsc errors en `Navbar.tsx`, `AdminMetricsTab.tsx`, `auth.ts` (debt técnico, no blocking — `next.config.ts` tiene `ignoreBuildErrors: true`)
 
 ## 📂 Estructura clave del proyecto

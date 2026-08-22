@@ -5190,3 +5190,39 @@ Stage Summary:
 - trustHost:true en código + eliminación de NEXTAUTH_URL permite autenticación en cualquier dominio configurado.
 - Pendiente: usuario debe revocar el token temporal Vercel usado para esta configuración en https://vercel.com/account/tokens
 - Nota: Vercel redirige conectalt.com → www.conectalt.com por defecto. Si se quiere lo contrario, editar el dominio en Vercel y configurar redirect inverso.
+
+---
+Task ID: context-recovery-2026-08-22
+Agent: main (Z.ai Code)
+Task: Protocolo de recuperación de contexto — verificar y sincronizar PROJECT_STATUS.md con la realidad
+
+Work Log:
+- Leído PROJECT_STATUS.md completo (317 líneas)
+- Leído últimas 3 secciones de worklog.md: planner-sprint-4, planner-sprint-5, domain-setup-1
+- Verificado git log: HEAD real = `1600c60` (documento decía `1cc9528` → desactualizado)
+- Verificado git status: working tree limpio
+- Health check localhost:3000: dev server NO está corriendo (no aplica para esta tarea)
+- Detectadas 6 inconsistencias entre el documento y la realidad:
+  1. HEAD commit desactualizado (`1cc9528` → `1600c60`)
+  2. Última actualización desactualizada (18-Ago → 22-Ago)
+  3. No mencionaba dominio custom conectalt.com
+  4. Listaba tokens Vercel como pendientes de revocar — usuario ya los revocó
+  5. No mencionaba commit 8075a39 (fix OAuth para dominios custom)
+  6. No documentaba el gotcha del redirect apex vs www con OAuth
+- Correcciones aplicadas a PROJECT_STATUS.md:
+  - Actualizado HEAD commit a `1600c60` con fecha 22-Ago
+  - Agregada sección "Configuración de dominios en Vercel" con estado actual
+  - Agregadas 3 URLs de producción (conectalt.com, www.conectalt.com, conecta-lt2-0.vercel.app)
+  - Marcados como resueltos: GitHub PAT del 18-Ago, Vercel token vcp_7tRx..., Vercel token vcp_7yJf...
+  - Agregado detalle a "Login Google OAuth" en features (funciona en apex, no en www directamente)
+  - Agregado gotcha #10: "Dominio custom + OAuth: redirect apex vs www"
+  - Agregado gotcha #11: "Detección de entorno en Navbar.tsx (commit 8075a39)"
+  - Actualizada sección "Tareas pendientes" con checkmarks en items resueltos
+- Confirmado: token Vercel `vcp_7yJf...` (usado para config de dominio) ya está revocado — API devuelve `{"error":{"code":"forbidden","message":"Not authorized..."}}`
+
+Stage Summary:
+- PROJECT_STATUS.md sincronizado con la realidad actual del proyecto.
+- 6 inconsistencias corregidas en una sola pasada.
+- Estado de producción verificado: 3 dominios devuelven HTTP 200 OK.
+- Tokens Vercel confirmados revocados (seguridad OK).
+- Pendiente: git commit + push de las correcciones a PROJECT_STATUS.md.
