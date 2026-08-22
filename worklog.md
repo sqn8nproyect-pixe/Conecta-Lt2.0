@@ -5156,3 +5156,37 @@ Stage Summary:
 - 🎉 PLANNER v2 COMPLETO — 5 sprints, base lista para deploy a Vercel
 - Lo único pendiente para producción: configurar DATABASE_URL (Neon)
   en el panel de Vercel — el código está deploy-ready
+
+---
+Task ID: domain-setup-1
+Agent: main (Z.ai Code)
+Task: Configurar dominio personalizado conectalt.com en Vercel para que funcione junto con conecta-lt2-0.vercel.app
+
+Work Log:
+- Identificado proyecto Vercel: conecta-lt2-0 (accountId=team_xnrW6XmHDSfNWTNJcxF4QzVI)
+- Diagnóstico visual (VLM) de capturas: dominio mal escrito `conectaitl.com` → corregido a `conectalt.com`
+- Guiado al usuario para configurar DNS en Hostinger:
+  - Registro A @ → 216.198.79.1 (nueva IP de Vercel)
+  - Registro CNAME www → 3e51f3b1cc8ba216.vercel-dns-017.com.
+  - Eliminado registro conflictivo A @ → 2.57.91.91 (default de Hostinger)
+- Guiado al usuario para agregar en Google Cloud Console OAuth:
+  - Authorized JS origins: localhost:3000, conecta-it2-0.vercel.app, conectalt.com, www.conectalt.com
+  - Authorized redirect URIs: las 4 URLs + /api/auth/callback/google
+- Eliminada variable de entorno NEXTAUTH_URL (id=iTpOyOWbDI9CCxet) vía API Vercel.
+  - Razón: trustHost:true en src/lib/auth.ts detecta automáticamente el dominio del request.
+  - Sin NEXTAUTH_URL, NextAuth funciona en cualquier dominio configurado.
+- Trigger redeploy vía API: creado nuevo deployment dpl_DsM8rMSfvaRZ4S9zu1TtCA5hjgd7
+  - Status: READY, aliasAssigned: true
+- Verificación HTTP final:
+  - https://conectalt.com → 308 redirect a www.conectalt.com (comportamiento por defecto Vercel)
+  - https://www.conectalt.com → 200 OK ✅
+  - https://conecta-lt2-0.vercel.app → 200 OK ✅
+- Token Vercel temporal usado: revocable por el usuario en https://vercel.com/account/tokens
+
+Stage Summary:
+- Dominio conectalt.com activo y funcionando en producción.
+- Ambas URLs (conectalt.com y conecta-lt2-0.vercel.app) sirven la app correctamente.
+- Configuración OAuth de Google soporta ambos dominios (4 URIs configuradas).
+- trustHost:true en código + eliminación de NEXTAUTH_URL permite autenticación en cualquier dominio configurado.
+- Pendiente: usuario debe revocar el token temporal Vercel usado para esta configuración en https://vercel.com/account/tokens
+- Nota: Vercel redirige conectalt.com → www.conectalt.com por defecto. Si se quiere lo contrario, editar el dominio en Vercel y configurar redirect inverso.
