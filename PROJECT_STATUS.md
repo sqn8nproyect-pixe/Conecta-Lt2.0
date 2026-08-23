@@ -55,7 +55,7 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 ## 🚨 INCIDENTE DE SEGURIDAD 2026-08-18 (RESUELTO)
 
 **Qué pasó:** En commits del 10-Ago se filtraron en `worklog.md` (repo público) los siguientes secretos reales:
-- Neon DATABASE_URL (con password `npg_fN5WIReFE6qA`)
+- Neon DATABASE_URL (con password `[REDACTED-NEON-PWD-ROTATED]`)
 - NEXTAUTH_SECRET (`Uoj1bf69E+BRo5Q...`)
 - GOOGLE_CLIENT_SECRET (`GOCSPX-BQ9GVBvh2l10...`)
 - NEXT_PUBLIC_GOOGLE_CLIENT_ID (`673840348282-...`)
