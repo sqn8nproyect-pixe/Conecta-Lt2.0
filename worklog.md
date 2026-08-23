@@ -5279,3 +5279,33 @@ Stage Summary:
 - OAuth ahora funciona en conectalt.com porque el código detecta producción
   correctamente (cualquier hostname que no sea localhost/127.0.0.1).
 - Pendiente: usuario debe REVOCAR el GitHub PAT ghp_kPyH7pE3... en https://github.com/settings/tokens
+
+---
+Task ID: rating-fix-2026-08-23
+Agent: main (Z.ai Code)
+Task: Fix bug de visualización de rating con muchos decimales en EstablishmentPage
+
+Work Log:
+- Usuario reportó que la valoración de Licorería Don Sancho mostraba "ese poco de digitos"
+- Auditado src/components/conecta/EstablishmentPage.tsx:
+  * Línea 356: const avg = est.avgRating (Float de Prisma, ej: 4.666666666666667)
+  * Línea 632: {avg} sin formatear en header del negocio (junto a estrella)
+  * Línea 896: {avg} sin formatear en VALORACIÓN GENERAL (text-6xl)
+  * Línea 1300: {avg} sin formatear en RESUMEN DE VALORACIONES (text-6xl)
+- Confirmado que HomePage.tsx (línea 334) y PlannerBusinessCard.tsx (línea 232) ya usaban .toFixed(1)
+- Fix aplicado: 3 ocurrencias cambiadas de {avg} a {avg.toFixed(1)}
+- Lint PASS
+- Dev server local reiniciado, HTTP 200 OK
+- Commit 71db366 creado: "fix(ui): formatear rating con toFixed(1) en EstablishmentPage"
+- Solicitado GitHub PAT temporal al usuario (ghp_dKyiFaDE8...)
+- Push ejecutado: 984cbff..71db366 main -> main
+- Remote URL restaurado sin credenciales
+- Esperado 60s para deploy de Vercel
+- Verificación post-deploy: fix detectado en chunk 28cd0cec22f6640b.js ✅
+- HTTP 200 OK en conectalt.com, www.conectalt.com, conecta-lt2-0.vercel.app
+
+Stage Summary:
+- 🎉 BUG RESUELTO: ratings ahora se muestran con 1 decimal (ej: 4.7 en vez de 4.666666666666667)
+- Fix consistente con HomePage y PlannerBusinessCard que ya usaban toFixed(1)
+- Commit 71db366 pusheado a origin/main, deployado en Vercel
+- Pendiente: usuario debe REVOCAR el GitHub PAT ghp_dKyiFaDE8... en https://github.com/settings/tokens
