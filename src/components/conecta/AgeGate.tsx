@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, ShieldX, Wine, AlertTriangle, ExternalLink } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 
 interface AgeGateProps {
   onConfirm: () => void;
@@ -12,6 +13,7 @@ type GateState = 'verifying' | 'denied';
 
 export function AgeGate({ onConfirm }: AgeGateProps) {
   const [state, setState] = useState<GateState>('verifying');
+  const setView = useAppStore((s) => s.setView);
 
   // Lock body scroll while the gate is showing
   useEffect(() => {
@@ -135,9 +137,24 @@ export function AgeGate({ onConfirm }: AgeGateProps) {
               </div>
 
               <p className="mt-5 text-[10px] text-white/40 leading-relaxed max-w-sm mx-auto">
-                Al ingresar confirmas tener al menos 18 años y aceptas nuestra política
-                de privacidad y términos de uso. CONECTA-LT no se hace responsable por el
-                uso indebido de la información publicada.
+                Al ingresar confirmas tener al menos 18 años y aceptas nuestra{' '}
+                <button
+                  type="button"
+                  onClick={() => setView('privacy')}
+                  className="text-gold hover:underline"
+                >
+                  política de privacidad
+                </button>{' '}
+                y{' '}
+                <button
+                  type="button"
+                  onClick={() => setView('terms')}
+                  className="text-gold hover:underline"
+                >
+                  términos de uso
+                </button>
+                . CONECTA-LT no se hace responsable por el uso indebido de la
+                información publicada.
               </p>
             </div>
           </motion.div>

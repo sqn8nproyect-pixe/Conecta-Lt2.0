@@ -12,6 +12,8 @@ import { ProfilePage } from '@/components/conecta/ProfilePage';
 import { AdminDashboard } from '@/components/conecta/admin/AdminDashboard';
 import { OwnerDashboard } from '@/components/conecta/owner/OwnerDashboard';
 import { AgeGate } from '@/components/conecta/AgeGate';
+import { LegalPage } from '@/components/conecta/LegalPage';
+import { Footer } from '@/components/conecta/Footer';
 
 // ── Age verification external store ───────────────────────────
 // We use `useSyncExternalStore` to read sessionStorage without
@@ -102,36 +104,12 @@ export default function Home() {
           {view === 'profile' && <ProfilePage key="profile" />}
           {view === 'admin' && <AdminDashboard key="admin" />}
           {view === 'owner' && <OwnerDashboard key="owner" />}
+          {view === 'privacy' && <LegalPage key="privacy" kind="privacy" />}
+          {view === 'terms' && <LegalPage key="terms" kind="terms" />}
         </AnimatePresence>
       </main>
 
-      <footer className="mt-auto border-t border-white/5 bg-obsidian/80 backdrop-blur-sm relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg overflow-hidden bg-white border border-gold/30 flex items-center justify-center shrink-0">
-              <img
-                src="/images/logo.png"
-                alt="Logo Conecta-LT"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <span className="font-mono tracking-wider">
-              CONECTA-LT © 2026 · Los Teques, Miranda
-            </span>
-          </div>
-          <div className="flex items-center gap-4 font-mono tracking-wider text-center sm:text-right">
-            <span>Directorio de vida nocturna</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="hidden sm:inline">Hecho con ✨ en Venezuela</span>
-          </div>
-        </div>
-        {/* Alcohol responsibility disclaimer */}
-        <div className="border-t border-white/5 bg-obsidian/95 py-3 text-center">
-          <p className="text-[10px] text-amber/70 font-mono tracking-wider px-4">
-            ⚠ BEBIDAS ALCOHÓLICAS · SOLO MAYORES DE 18 AÑOS · SI BEBES, NO CONDUZCAS · CONSUMO RESPONSABLE
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
