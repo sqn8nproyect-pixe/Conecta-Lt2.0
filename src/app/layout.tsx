@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://conecta-lt.losteques.app";
+const siteUrl = "https://conectalt.com";
 const ogImage = "/images/hero.png";
 
 export const metadata: Metadata = {
