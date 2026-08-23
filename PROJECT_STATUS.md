@@ -3,9 +3,72 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-08-22
-**HEAD commit:** `1600c60` — `d58463c8-b324-4595-ba3e-8e1e368d7db7` (automated worklog update)
-**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`.
+**Última actualización:** 2026-08-23
+**HEAD commit:** `9173cbe` — Push de políticas de privacidad + canonical URL fix a conectalt.com
+**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`. Políticas de Privacidad y Términos de Uso desplegados.
+
+---
+
+## 🔁 Protocolo de Sesión (LEER PRIMERO)
+
+> **Cada nueva sesión de chat debe empezar con este protocolo para no perder contexto.**
+
+### Paso 1 — Recuperar contexto
+El usuario envía como primer mensaje:
+```
+Lee PROJECT_STATUS.md y la cola de worklog.md para recuperar contexto.
+```
+El agente DEBE:
+1. Leer `/home/z/my-project/PROJECT_STATUS.md` completo
+2. Leer las últimas 5-10 entradas de `/home/z/my-project/worklog.md` (cola)
+3. Detectar tareas pendientes, decisiones tomadas y gotchas conocidos
+4. Confirmar al usuario qué versión del proyecto tiene y qué quedó pendiente
+
+### Paso 2 — Especificar la tarea
+Después del mensaje de recuperación, el usuario pega la petición concreta.
+- ❌ Mal: "arregla el bug" (sin contexto)
+- ✅ Bien: "arregla el bug del rating que muestra muchos decimales en la Licocería Don Sancho"
+
+### Paso 3 — Trabajo
+El agente ejecuta la tarea siguiendo las reglas del proyecto (ver "Reglas del agente" abajo).
+
+### Paso 4 — Registro en worklog.md
+Al terminar cada tarea, el agente DEBE agregar una entrada a `worklog.md` con el formato:
+```markdown
+---
+Task ID: <identificador-descriptivo-YYYY-MM-DD>
+Agent: <nombre>
+Task: <qué se pidió>
+
+Work Log:
+- paso 1
+- paso 2
+
+Stage Summary:
+- resultados clave
+- artifacts producidos
+- pendientes
+```
+**Importante:** Append (no sobrescribir). Cada sección empieza con `---`.
+
+### Paso 5 — Actualizar PROJECT_STATUS.md
+Si la tarea cambia el estado global (nuevo commit, nuevo despliegue, nuevo gotcha, nueva URL), el agente actualiza los campos correspondientes aquí.
+
+### Paso 6 — Push a GitHub (si aplica)
+Si la tarea generó commits que deben desplegarse a producción, el usuario provee un PAT temporal y el agente hace push. **Después el usuario revoca el PAT** en https://github.com/settings/tokens.
+
+---
+
+## 🤖 Reglas del agente
+
+- **Nunca** uses `bun run build` (prohibido por spec del sandbox)
+- **Nunca** uses colores indigo/blue salvo pedido explícito
+- **Nunca** escribas en otras rutas que `/` salvo indicación contraria (SPA con views internas)
+- **Siempre** usa `api` routes, no server actions
+- **Siempre** frontend primero, luego backend (para que el usuario vea resultados)
+- **Siempre** verifica con Agent Browser antes de declarar completada una tarea
+- **Siempre** lee `dev.log` al final para detectar errores runtime
+- **z-ai-web-dev-sdk** solo en backend, nunca en client side
 
 ---
 

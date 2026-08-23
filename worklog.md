@@ -5455,3 +5455,28 @@ Stage Summary:
 - ⚠️ SEGURIDAD: El PAT ghp_dKyiFaDE8... AÚN FUNCIONA — no ha sido revocado. Debe rotarse URGENTE.
 - ⚠️ Pendiente: solicitar review de Google Safe Browsing para conectalt.com tras despliegue del canonical fix
 - Local dev server corriendo en :3000, lint PASS, pages render OK
+
+---
+Task ID: session-protocol-doc-2026-08-23
+Agent: main
+Task: Documentar permanentemente el Protocolo de Sesión en PROJECT_STATUS.md
+
+Work Log:
+- Leído PROJECT_STATUS.md (375 líneas) para entender estructura actual
+- Identificado punto de inserción óptimo: después del header de estado y antes de "Qué es este proyecto"
+- Añadida sección "🔁 Protocolo de Sesión (LEER PRIMERO)" con 6 pasos:
+  1. Recuperar contexto (mensaje inicial estándar)
+  2. Especificar la tarea (con ejemplos bueno/malo)
+  3. Trabajo (siguiendo reglas del proyecto)
+  4. Registro en worklog.md (con template explícito)
+  5. Actualizar PROJECT_STATUS.md (si cambia estado global)
+  6. Push a GitHub (con revocación de PAT)
+- Añadida sección "🤖 Reglas del agente" con 7 reglas core del sandbox
+- Actualizado header: Última actualización → 2026-08-23, HEAD commit → 9173cbe, estado general menciona políticas desplegadas
+- Pendiente: commit + push de este cambio a GitHub (requiere PAT del usuario)
+
+Stage Summary:
+- PROJECT_STATUS.md ahora documenta el protocolo de sesión como sección permanente
+- Cualquier sesión futura que lea este archivo sabrá exactamente cómo proceder
+- Las reglas del agente están centralizadas en un solo lugar
+- Header actualizado al estado real post-push (9173cbe, 2026-08-23)
