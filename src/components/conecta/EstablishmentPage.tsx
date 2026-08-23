@@ -629,7 +629,7 @@ export function EstablishmentPage() {
           </h2>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base md:text-lg">
             <div className="flex items-center gap-1.5 text-gold font-bold">
-              <Star fill="#D4AF37" size={18} /> {avg}
+              <Star fill="#D4AF37" size={18} /> {avg.toFixed(1)}
             </div>
             <span className="text-white/60">
               ({count} reseñas de la comunidad)
@@ -893,7 +893,7 @@ export function EstablishmentPage() {
                 </h4>
                 <div className="grid md:grid-cols-12 gap-6 items-center">
                   <div className="md:col-span-4 text-center">
-                    <div className="text-6xl font-serif text-white font-black">{avg}</div>
+                    <div className="text-6xl font-serif text-white font-black">{avg.toFixed(1)}</div>
                     <div className="flex justify-center text-gold my-1.5 text-lg">
                       {'★'.repeat(Math.round(avg))}
                       {'☆'.repeat(5 - Math.round(avg))}
@@ -1297,7 +1297,7 @@ export function EstablishmentPage() {
                   RESUMEN DE VALORACIONES
                 </h4>
                 <div className="text-center py-2">
-                  <div className="text-6xl font-serif text-white font-black">{avg}</div>
+                  <div className="text-6xl font-serif text-white font-black">{avg.toFixed(1)}</div>
                   <div className="flex justify-center text-gold my-2 text-2xl">
                     {'★'.repeat(Math.round(avg))}
                     {'☆'.repeat(5 - Math.round(avg))}
