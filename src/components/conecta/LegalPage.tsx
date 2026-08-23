@@ -136,12 +136,49 @@ export function LegalPage({ kind }: LegalPageProps) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Named exports matching the task spec naming convention.
+//
+// Both <PrivacyPolicy /> and <TermsOfUse /> are drop-in wrappers
+// around <LegalPage kind="privacy|terms" />. We keep `LegalPage`
+// as the canonical implementation so the existing `page.tsx`
+// dispatch (which uses kind="privacy|terms") keeps working
+// unchanged. New consumers should prefer the named exports.
+// ─────────────────────────────────────────────────────────────
+export function PrivacyPolicy() {
+  return <LegalPage kind="privacy" />;
+}
+
+export function TermsOfUse() {
+  return <LegalPage kind="terms" />;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Contenido: Política de Privacidad
 // ─────────────────────────────────────────────────────────────
 
 function PrivacyContent() {
   return (
     <>
+      {/* Responsable del tratamiento (data controller) */}
+      <section className="glass-card border border-gold/20 bg-gold/5 rounded-2xl p-5 not-prose">
+        <div className="text-[10px] tracking-[3px] font-mono text-gold/80 mb-2">
+          RESPONSABLE DEL TRATAMIENTO
+        </div>
+        <p className="text-sm leading-relaxed">
+          El responsable del tratamiento de tus datos personales es{' '}
+          <strong className="text-white">CONECTA-LT</strong>, con domicilio en
+          Los Teques, Miranda, Venezuela. Para cualquier solicitud relacionada
+          con tus datos personales puedes contactarnos en{' '}
+          <a
+            href="mailto:sqn8nproyect@gmail.com"
+            className="text-gold hover:underline"
+          >
+            sqn8nproyect@gmail.com
+          </a>
+          .
+        </p>
+      </section>
+
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
           1. Información que recopilamos
@@ -157,18 +194,27 @@ function PrivacyContent() {
             Google OAuth 2.0 cuando eliges &quot;Continuar con Google&quot;.
           </li>
           <li>
+            <strong className="text-white">Reseñas y valoraciones:</strong>{' '}
+            calificaciones (ambiente, servicio, precio-calidad) y comentarios que
+            publicas sobre cada comercio.
+          </li>
+          <li>
             <strong className="text-white">Reservas:</strong> fecha, hora, número
-            de invitados y datos de contacto que proporciones al reservar.
+            de invitados, nombre y teléfono que proporciones al reservar.
           </li>
           <li>
-            <strong className="text-white">Reseñas y favoritos:</strong> contenido
-            que publicas sobre los comercios y lista de locales marcados como
-            favoritos.
+            <strong className="text-white">Favoritos:</strong> lista de locales
+            que marcas como favoritos en tu perfil.
           </li>
           <li>
-            <strong className="text-white">Datos de uso:</strong> páginas
-            visitadas, eventos analíticos anónimos (apertura del planner,
-            recomendaciones vistas) y métricas de rendimiento.
+            <strong className="text-white">Reportes de aforo:</strong> cuando
+            reportas el nivel de ocupación de un comercio (tranquilo / moderado
+            / lleno) para ayudar a otros usuarios.
+          </li>
+          <li>
+            <strong className="text-white">Datos de navegación:</strong> eventos
+            analíticos anónimos (apertura del Night Planner, vistas de comercios,
+            clics en WhatsApp, búsquedas) y métricas de rendimiento.
           </li>
           <li>
             <strong className="text-white">Datos técnicos:</strong> cookies de
@@ -228,8 +274,15 @@ function PrivacyContent() {
           </li>
           <li>
             <strong className="text-white">Comercios afiliados:</strong> cuando
-            haces una reserva, el negocio recibe tu nombre y datos de contacto
-            para gestionar la reservación.
+            haces una reserva o canjeas una promoción, el negocio recibe tu
+            nombre y datos de contacto para gestionar la reservación.
+          </li>
+          <li>
+            <strong className="text-white">WhatsApp:</strong> los botones de
+            contacto directo con cada negocio abren WhatsApp mediante un enlace{' '}
+            <code className="font-mono text-gold">wa.me</code>. Al usarlos, los
+            datos que compartas (nombre, mensaje) salen del ámbito de
+            CONECTA-LT y quedan sujetos a la política de WhatsApp.
           </li>
           <li>
             <strong className="text-white">Vercel Inc.:</strong> proveedor de
