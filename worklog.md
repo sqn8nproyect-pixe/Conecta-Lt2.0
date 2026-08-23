@@ -5390,3 +5390,37 @@ Stage Summary:
   * 7704d12 - security: redact Neon password (higiene)
   * 8c54b56 - fix(seo): canonical URL conectalt.com (bug crítico)
   * 3697c53 - feat(legal): páginas legales (nueva feature)
+
+---
+Task ID: legal-pages-1
+Agent: full-stack-developer
+Task: Create Privacy Policy and Terms of Use as internal views
+
+Work Log:
+- Recovered context: read PROJECT_STATUS.md (375 lines) + last 2 sections of worklog.md (oauth-fix-deploy-2026-08-23, legal-pages-2026-08-23).
+- Discovered prior session (task ID legal-pages-2026-08-23) had already shipped v1 of the legal pages and committed at 3697c53.
+- Verified integration points already in place:
+  * src/lib/types.ts → View type includes 'privacy' | 'terms' ✅
+  * src/components/conecta/LegalPage.tsx → single LegalPage({ kind }) component renders both pages
+  * src/components/conecta/Footer.tsx → centralized site-wide footer with clickable "Privacidad" + "Términos" buttons calling setView('privacy' | 'terms') + alcohol disclaimer strip below
+  * src/app/page.tsx → dispatches view==='privacy'|'terms' to <LegalPage kind="..." /> + renders <Footer />
+  * src/components/conecta/AgeGate.tsx → "política de privacidad" and "términos de uso" are real <button> elements that call setView
+- Confirmed Navbar.tsx has NO site footer (only a sub-component comment); EstablishmentPage.tsx has NO <footer>. The Footer.tsx in page.tsx is the only site-wide footer, so no changes needed there.
+- Closed spec gaps in src/components/conecta/LegalPage.tsx:
+  * Added named exports PrivacyPolicy() and TermsOfUse() as drop-in wrappers around <LegalPage kind="privacy|terms" /> — matches task spec naming convention without breaking the existing page.tsx dispatch.
+  * Added "Responsable del tratamiento" intro card at the top of PrivacyContent — explicitly names CONECTA-LT as data controller + sqn8nproyect@gmail.com contact (spec #1).
+  * Expanded "Datos que recopilamos" list to explicitly mention: Reseñas y valoraciones, Favoritos, Reportes de aforo, Datos de navegación (renamed from "Datos de uso" to better match spec #2).
+  * Added WhatsApp as explicit third-party recipient in the "Compartición de datos" section — explains wa.me link handoff (spec #5).
+- Ran bun run lint → 0 errors, 0 warnings (exit 0).
+- Started dev server via ./start-dev.sh (handles the SQLite→Neon env var override per PROJECT_STATUS gotcha #6).
+- Verified curl -sS -o /dev/null -w "%{http_code}" http://localhost:3000/ → HTTP 200 OK.
+- Wrote agent record at /home/z/my-project/agent-ctx/legal-pages-1-full-stack-developer.md.
+- Committed refinements at c343e40 on top of existing 3697c53 legal-pages commit. Push deferred per task spec.
+
+Stage Summary:
+- 🎉 LEGAL PAGES VERIFIED + REFINED — feature complete against the legal-pages-1 spec.
+- All 12 sections of Privacy Policy cover the spec items (responsable del tratamiento, datos recopilados incl. aforo reports, finalidad, base legal Constitución VE Art. 60 + Ley Delitos Informáticos, compartición con Google/Vercel/Neon/WhatsApp/comercios, duración, derechos ARCO with sqn8nproyect@gmail.com, cookies, menores de edad, cambios, fecha 23-Ago-2026, jurisdicción Venezuela).
+- All 15 sections of Terms of Use cover the spec items (aceptación, descripción, edad 18+ con AgeGate, registro Google OAuth, contenido del usuario, propiedad intelectual, responsabilidad del negocio, reservas/promociones, prohibiciones, limitación de responsabilidad, modificaciones, suspensión, alcohol consumo responsable, jurisdicción tribunales Miranda, fecha 23-Ago-2026).
+- Single commit on top of prior work (c343e40): LegalPage.tsx 62 insertions / 9 deletions.
+- HTTP 200 on http://localhost:3000/, lint PASS.
+- Pending: push of local commits (7704d12, 8c54b56, 3697c53, c343e40, automated) to GitHub — deferred per task spec ("DO NOT push to GitHub — we'll do that separately").
