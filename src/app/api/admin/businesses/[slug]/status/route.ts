@@ -1,21 +1,12 @@
 // ─────────────────────────────────────────────────────────────
-// CONECTA-LT 3.0 — PATCH /api/admin/businesses/[id]/status (Etapa 7.C.1)
+// CONECTA-LT 3.0 — PATCH /api/admin/businesses/[slug]/status
 //
 // Change a business's status (DRAFT / PENDING_REVIEW / ACTIVE /
-// SUSPENDED / ARCHIVED). ADMIN-ONLY — MODERATOR can view the list
-// but cannot change business status (defensive: status changes are
-// the most destructive admin op, so we lock them to ADMIN).
+// SUSPENDED / ARCHIVED). ADMIN-ONLY.
 //
-// Body: { status: 'DRAFT' | 'PENDING_REVIEW' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED' }
-//
-// Side effect: if the business has an owner, notify them:
-//   - status === 'SUSPENDED' → "Tu local X fue suspendido" /
-//                              "Contacta al equipo de soporte para más información."
-//   - status === 'ACTIVE' (from PENDING_REVIEW) → "¡Tu local X fue aprobado!" /
-//                              "Ya es visible en el directorio público."
-//
-// The client is responsible for invalidating the relevant React Query
-// caches (['businesses'], ['business', slug], ['admin', 'businesses']).
+// NOTE: This route accepts the business id via the `slug` URL param
+// (kept the param name `slug` for consistency with the other admin
+// business routes, even though we treat it as an id here).
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
@@ -35,12 +26,12 @@ const VALID_STATUSES: ReadonlySet<FrontendBusinessStatus> = new Set([
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     await requireRole('ADMIN' as UserRole);
 
-    const { id } = await params;
+    const { slug: id } = await params;
 
     let body: unknown;
     try {
@@ -67,8 +58,6 @@ export async function PATCH(
     }
     const status = rawStatus as FrontendBusinessStatus;
 
-    // 404 if the business doesn't exist (fetch the prior status too so
-    // we can decide whether to fire the "approved!" notification).
     const existing = await db.business.findUnique({
       where: { id },
       select: { id: true, name: true, status: true, ownerId: true },
@@ -86,9 +75,6 @@ export async function PATCH(
       select: { id: true, status: true },
     });
 
-    // ── Side effect: notify the owner (best-effort) ──────────────
-    // Fire-and-forget — the status update itself has already committed,
-    // so a notification DB error must NOT roll it back.
     if (existing.ownerId) {
       try {
         const owner = await db.user.findUnique({
@@ -125,9 +111,8 @@ export async function PATCH(
       status: updated.status as FrontendBusinessStatus,
     });
   } catch (e) {
-    // 401 / 403 from requireRole() propagate directly.
     if (e instanceof Response) return e;
-    console.error('PATCH /api/admin/businesses/[id]/status error:', e);
+    console.error('PATCH /api/admin/businesses/[slug]/status error:', e);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 },
