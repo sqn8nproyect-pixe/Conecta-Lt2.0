@@ -9,12 +9,19 @@
 //        Only allowed if:
 //          - business.ownerId === user.id OR user is ADMIN
 //          - no PENDING proposal exists for same business+field
+//
+// BusinessProposal table is NOT in Prisma schema — all proposal
+// operations use raw SQL.
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
-import type { UserRole, ProposalField } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 import { requireRole } from '@/server/auth';
 import { db } from '@/lib/db';
+import { randomUUID } from 'crypto';
+
+// ProposalField enum is no longer in Prisma schema — define locally
+type ProposalField = 'INFO' | 'HOURS' | 'SOCIALS' | 'PROMOTION' | 'NEW_PROMOTION';
 
 const VALID_FIELDS: ReadonlySet<ProposalField> = new Set([
   'INFO',
@@ -23,6 +30,19 @@ const VALID_FIELDS: ReadonlySet<ProposalField> = new Set([
   'PROMOTION',
   'NEW_PROMOTION',
 ]);
+
+interface ProposalRow {
+  id: string;
+  businessId: string;
+  proposerId: string;
+  field: string;
+  data: string;
+  status: string;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export async function GET(
   _req: Request,
@@ -35,6 +55,7 @@ export async function GET(
     );
     const { slug } = await params;
 
+    // Verify business exists (Prisma — only reads id which is in schema)
     const business = await db.business.findUnique({
       where: { slug },
       select: { id: true },
@@ -47,13 +68,14 @@ export async function GET(
       );
     }
 
-    const proposals = await db.businessProposal.findMany({
-      where: {
-        businessId: business.id,
-        proposerId: user.id,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    // Query proposals via raw SQL
+    const proposals = await db.$queryRawUnsafe<ProposalRow[]>(
+      `SELECT * FROM "BusinessProposal"
+       WHERE "businessId" = $1 AND "proposerId" = $2
+       ORDER BY "createdAt" DESC`,
+      business.id,
+      user.id,
+    );
 
     return NextResponse.json(proposals);
   } catch (e) {
@@ -109,7 +131,7 @@ export async function POST(
 
     const field = body.field as ProposalField;
 
-    // Verify business and ownership
+    // Verify business and ownership (Prisma — ownerId is in schema)
     const business = await db.business.findUnique({
       where: { slug },
       select: { id: true, ownerId: true },
@@ -129,33 +151,44 @@ export async function POST(
       );
     }
 
-    // Check for existing PENDING proposal on same business+field
-    const existing = await db.businessProposal.findFirst({
-      where: {
-        businessId: business.id,
-        field,
-        status: 'PENDING',
-      },
-    });
+    // Check for existing PENDING proposal on same business+field (raw SQL)
+    const existing = await db.$queryRawUnsafe<ProposalRow[]>(
+      `SELECT "id" FROM "BusinessProposal"
+       WHERE "businessId" = $1 AND "field" = $2 AND "status" = 'PENDING'
+       LIMIT 1`,
+      business.id,
+      field,
+    );
 
-    if (existing) {
+    if (existing.length > 0) {
       return NextResponse.json(
         { error: 'Ya existe una propuesta pendiente para este campo' },
         { status: 409 },
       );
     }
 
-    // Create the proposal
-    const proposal = await db.businessProposal.create({
-      data: {
-        businessId: business.id,
-        proposerId: user.id,
-        field,
-        data: JSON.stringify(body.data),
-      },
-    });
+    // Create the proposal via raw SQL
+    const proposalId = randomUUID();
+    const now = new Date();
+    await db.$executeRawUnsafe(
+      `INSERT INTO "BusinessProposal" ("id", "businessId", "proposerId", "field", "data", "status", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7)`,
+      proposalId,
+      business.id,
+      user.id,
+      field,
+      JSON.stringify(body.data),
+      now,
+      now,
+    );
 
-    return NextResponse.json(proposal, { status: 201 });
+    // Fetch the created proposal to return
+    const created = await db.$queryRawUnsafe<ProposalRow[]>(
+      `SELECT * FROM "BusinessProposal" WHERE "id" = $1`,
+      proposalId,
+    );
+
+    return NextResponse.json(created[0], { status: 201 });
   } catch (e) {
     if (e instanceof Response) return e;
     console.error(

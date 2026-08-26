@@ -14,6 +14,10 @@
 //
 // On reject: just marks the proposal as REJECTED.
 // Notifies the proposer in both cases.
+//
+// BusinessProposal table is NOT in Prisma schema — all proposal
+// operations use raw SQL. Business/Promotion/etc. are in schema
+// and keep using Prisma.
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
@@ -28,6 +32,23 @@ const VALID_ACTIONS: ReadonlySet<ReviewAction> = new Set([
   'approve',
   'reject',
 ]);
+
+interface ProposalRow {
+  id: string;
+  businessId: string;
+  proposerId: string;
+  field: string;
+  data: string;
+  status: string;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  businessName: string | null;
+  businessSlug: string | null;
+  proposerName: string | null;
+  proposerEmail: string | null;
+}
 
 export async function POST(
   request: Request,
@@ -56,21 +77,26 @@ export async function POST(
 
     const action = body.action as ReviewAction;
 
-    // Fetch the proposal with business name
-    const proposal = await db.businessProposal.findUnique({
-      where: { id },
-      include: {
-        business: { select: { id: true, name: true, slug: true } },
-        proposer: { select: { id: true, name: true, email: true } },
-      },
-    });
+    // Fetch the proposal with business name via raw SQL
+    const rows = await db.$queryRawUnsafe<ProposalRow[]>(
+      `SELECT bp.*,
+              b."name" as "businessName", b."slug" as "businessSlug",
+              u."name" as "proposerName", u."email" as "proposerEmail"
+       FROM "BusinessProposal" bp
+       JOIN "Business" b ON b."id" = bp."businessId"
+       JOIN "User" u ON u."id" = bp."proposerId"
+       WHERE bp."id" = $1`,
+      id,
+    );
 
-    if (!proposal) {
+    if (rows.length === 0) {
       return NextResponse.json(
         { error: 'Propuesta no encontrada' },
         { status: 404 },
       );
     }
+
+    const proposal = rows[0]!;
 
     if (proposal.status !== 'PENDING') {
       return NextResponse.json(
@@ -180,7 +206,7 @@ export async function POST(
         proposal.proposerId,
         'SYSTEM',
         'Propuesta aprobada',
-        `Tu propuesta para ${proposal.business.name} fue aprobada`,
+        `Tu propuesta para ${proposal.businessName ?? 'el negocio'} fue aprobada`,
       );
     } else {
       // Reject
@@ -188,21 +214,19 @@ export async function POST(
         proposal.proposerId,
         'SYSTEM',
         'Propuesta rechazada',
-        `Tu propuesta para ${proposal.business.name} fue rechazada`,
+        `Tu propuesta para ${proposal.businessName ?? 'el negocio'} fue rechazada`,
       );
     }
 
-    // Update proposal status
-    const updated = await db.businessProposal.update({
-      where: { id },
-      data: {
-        status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-        reviewedBy: user.id,
-        reviewedAt: new Date(),
-      },
-    });
+    // Update proposal status via raw SQL
+    const updatedRows = await db.$queryRawUnsafe<ProposalRow[]>(
+      `UPDATE "BusinessProposal" SET "status" = $1, "reviewedBy" = $2, "reviewedAt" = NOW() WHERE "id" = $3 RETURNING *`,
+      action === 'approve' ? 'APPROVED' : 'REJECTED',
+      user.id,
+      id,
+    );
 
-    return NextResponse.json(updated);
+    return NextResponse.json(updatedRows[0]);
   } catch (e) {
     if (e instanceof Response) return e;
     console.error(

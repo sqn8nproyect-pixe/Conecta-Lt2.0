@@ -5760,3 +5760,62 @@ Stage Summary:
 - 0 archivos nuevos, 0 errores de lint
 - Funcionalidad de propuestas completa para BUSINESS_OWNER (no admin): propuesta en vez de edición directa, tab de propuestas, banners de pendientes
 - Admin conserva comportamiento original de edición directa sin cambios visibles
+
+---
+Task ID: fix-raw-sql
+Agent: main
+Task: Replace all Prisma ORM calls for BusinessProposal / proposedOwnerId / ownerStatus with raw SQL
+
+Work Log:
+- Leído worklog.md (últimas 50 líneas) para contexto del proyecto
+- Leídos los 8 archivos a modificar y el migrate-db route para entender la estructura de la tabla
+- Confirmado que la base de datos es PostgreSQL (Neon), no SQLite
+- Confirmado que ProposalField/ProposalStatus/BusinessProposal ya NO están en prisma/schema.prisma
+- Modificados 8 archivos API para usar $executeRawUnsafe / $queryRawUnsafe en lugar de Prisma ORM:
+
+1. src/app/api/admin/businesses/[slug]/assign-owner/route.ts
+   - db.business.update({ data: { proposedOwnerId, ownerStatus } }) → $executeRawUnsafe UPDATE
+   - db.user.* y notificationService se mantienen con Prisma (modelos sin cambios)
+   - Se rebusca el negocio con Prisma para devolver el objeto actualizado
+
+2. src/app/api/admin/businesses/[slug]/approve-owner/route.ts
+   - db.business.findUnique({ select: { proposedOwnerId } }) → $queryRawUnsafe SELECT (columna no en schema)
+   - db.business.update({ data: { ownerId, proposedOwnerId: null, ownerStatus } }) → $executeRawUnsafe UPDATE
+   - Interfaz BusinessOwnerRow definida localmente para tipar el resultado
+
+3. src/app/api/admin/businesses/[slug]/reject-owner/route.ts
+   - Mismo patrón que approve-owner: raw SQL para leer proposedOwnerId y para actualizar
+
+4. src/app/api/admin/businesses/[slug]/proposals/route.ts
+   - db.businessProposal.findMany → $queryRawUnsafe con JOIN a User para proposerName/proposerEmail
+   - Interfaz ProposalRow definida localmente
+   - db.business.findUnique para verificar existencia se mantiene (solo lee id)
+
+5. src/app/api/admin/businesses/proposals/[id]/review/route.ts
+   - db.businessProposal.findUnique → $queryRawUnsafe con JOINs a Business y User
+   - db.businessProposal.update → $executeRawUnsafe UPDATE con RETURNING *
+   - Las actualizaciones a Business/BusinessHours/BusinessSocial/Promotion se mantienen con Prisma (modelos en schema)
+   - Interfaz ProposalRow extendida con businessName/businessSlug/proposerName/proposerEmail
+
+6. src/app/api/owner/businesses/[slug]/proposals/route.ts
+   - GET: db.businessProposal.findMany → $queryRawUnsafe SELECT por businessId + proposerId
+   - POST: db.businessProposal.findFirst (duplicate check) → $queryRawUnsafe SELECT
+   - POST: db.businessProposal.create → $executeRawUnsafe INSERT con randomUUID() para ID
+   - Tipo ProposalField definido localmente (ya no existe en @prisma/client)
+   - db.business.findUnique para verificar existencia/ownerId se mantiene con Prisma
+
+7. src/app/api/owner/businesses/proposals/[id]/route.ts
+   - PUT: db.businessProposal.findUnique → $queryRawUnsafe SELECT, update → $queryRawUnsafe UPDATE ... RETURNING *
+   - DELETE: db.businessProposal.findUnique → $queryRawUnsafe SELECT, delete → $executeRawUnsafe DELETE
+   - Interfaz ProposalRow definida localmente
+
+- Todas las verificaciones de auth, manejo de errores y notificaciones se mantienen sin cambios
+- Lint pasa sin errores
+- Dev server compila correctamente
+
+Stage Summary:
+- 8 archivos modificados, 0 archivos nuevos
+- Todas las operaciones sobre columnas/tablas no en Prisma schema (proposedOwnerId, ownerStatus, BusinessProposal) ahora usan raw SQL
+- Las operaciones sobre modelos Prisma existentes (User, Business, BusinessHours, BusinessSocial, Promotion, Notification) se mantienen con ORM
+- Tipos ProposalField y ProposalRow definidos localmente donde se necesitan
+- 0 errores de lint
