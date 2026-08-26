@@ -39,6 +39,7 @@ import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
 import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import { useAnalytics } from '@/lib/hooks/use-analytics';
+import { isAdminEmail } from '@/lib/admin-config';
 import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity, claimBusiness } from '@/lib/api';
 import type { BookingData, CapacityLevel, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
@@ -659,7 +660,7 @@ export function EstablishmentPage() {
                 <CheckCircle2 size={12} /> Gestionando este local
               </span>
             )}
-            {!est.ownerId && user?.role === 'BUSINESS_OWNER' && (
+            {!est.ownerId && (user?.role === 'BUSINESS_OWNER' || isAdminEmail(user?.email)) && (
               <button
                 type="button"
                 onClick={handleClaim}
