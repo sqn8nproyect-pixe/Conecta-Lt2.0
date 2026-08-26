@@ -75,6 +75,7 @@ import {
   rejectOwner,
   fetchBusinessProposals,
   reviewProposal,
+  migrateOwnership,
 } from '@/lib/api';
 import type {
   AdminBusiness,
@@ -1935,13 +1936,16 @@ export function AdminDashboard() {
             {user?.email}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setView('home')}
-          className="border-white/15 text-white hover:bg-white/5 hover:border-gold/40"
-        >
-          Salir
-        </Button>
+        <div className="flex items-center gap-2">
+          <MigrateOwnershipButton />
+          <Button
+            variant="outline"
+            onClick={() => setView('home')}
+            className="border-white/15 text-white hover:bg-white/5 hover:border-gold/40"
+          >
+            Salir
+          </Button>
+        </div>
       </header>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
@@ -2032,5 +2036,103 @@ function ResumenTabWrapper({
       isError={isError}
       onNavigateTab={navigateTab}
     />
+  );
+}
+
+// ─── MigrateOwnershipButton ───────────────────────────────────
+// One-time action: assigns the admin as owner of all businesses
+// that currently have no ownerId. Safe to click multiple times —
+// only businesses with ownerId === null get updated.
+//
+// Shows a confirmation dialog → calls /api/admin/businesses/migrate-ownership
+// → displays the count of businesses migrated.
+function MigrateOwnershipButton() {
+  const [open, setOpen] = useState(false);
+  const [result, setResult] = useState<{ count: number } | null>(null);
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: migrateOwnership,
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'businesses'] });
+      queryClient.invalidateQueries({ queryKey: QK_STATS });
+    },
+  });
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setResult(null);
+          setOpen(true);
+        }}
+        className="border-gold/40 text-gold hover:bg-gold/10 hover:border-gold/60"
+      >
+        <UserPlus size={14} className="mr-1.5" />
+        Migrar Dueños
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-obsidian border-gold/30 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-white">
+              Migrar Dueños de Negocios
+            </DialogTitle>
+            <DialogDescription className="text-white/60">
+              Esta acción te asigna como dueño de todos los negocios que
+              actualmente no tienen dueño. Es segura de ejecutar múltiples
+              veces — solo afecta negocios sin ownerId.
+            </DialogDescription>
+          </DialogHeader>
+
+          {result ? (
+            <div className="py-4 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                <CheckCircle2 className="text-emerald-300" size={24} />
+              </div>
+              <p className="text-white text-sm">
+                {result.count === 0
+                  ? 'Todos los negocios ya tienen dueño asignado.'
+                  : `Se te asignó como dueño de ${result.count} negocio(s).`}
+              </p>
+              <Button
+                onClick={() => setOpen(false)}
+                className="mt-4 bg-gold text-obsidian hover:bg-gold/80"
+              >
+                Listo
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={mutation.isPending}
+                className="border-white/15 text-white hover:bg-white/5 flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => mutation.mutate()}
+                disabled={mutation.isPending}
+                className="bg-gold text-obsidian hover:bg-gold/80 flex-1"
+              >
+                {mutation.isPending
+                  ? 'Migrando...'
+                  : 'Confirmar Migración'}
+              </Button>
+            </div>
+          )}
+
+          {mutation.isError && (
+            <p className="text-red-400 text-xs mt-2 text-center">
+              Error: {(mutation.error as Error)?.message || 'desconocido'}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
