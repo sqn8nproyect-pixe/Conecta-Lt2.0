@@ -3,9 +3,9 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-08-23
-**HEAD commit:** `9173cbe` — Push de políticas de privacidad + canonical URL fix a conectalt.com
-**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`. Políticas de Privacidad y Términos de Uso desplegados.
+**Última actualización:** 2026-08-24
+**HEAD commit:** `5b8f839` (pushed a GitHub, desplegado en Vercel)
+**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`. Políticas de Privacidad y Términos de Uso desplegados. ✅ Bloqueo de Google Safe Browsing LEVANTADO (notificación 24-Ago). ✅ Todos los PATs de GitHub revocados.
 
 ---
 
@@ -140,6 +140,8 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 - ✅ GitHub PAT `[REDACTED-GITHUB-PAT-DEL-CHAT-REVOCAR]` (18-Ago) — REVOCADO por el usuario
 - ✅ Vercel token `vcp_7tRx...` — REVOCADO por el usuario
 - ✅ Vercel token `vcp_7yJf...` (22-Ago, usado para configurar dominio) — REVOCADO por el usuario
+- ✅ GitHub PAT `ghp_dKyiFaDE8...` (23-Ago, push políticas + canonical fix) — REVOCADO por el usuario
+- ✅ GitHub PAT `[REDACTED-PAT-REVOCADO]` (23-Ago, push protocolo sesión) — REVOCADO por el usuario
 - ⏳ **Contactar a GitHub Support** para purge de commits viejos en cached views/forks (los commits antiguos siguen accesibles por SHA en GitHub hasta que hagan GC)
 
 **Estado actual del historial git:** 100% limpio. Búsqueda de los 7 patrones de secretos en todos los commits y mensajes → 0 coincidencias. Solo quedan las versiones redactadas (`[REDACTED-NEON-PWD-ROTATED]`, etc.).
@@ -165,6 +167,8 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 - ✅ RBAC (USER / BUSINESS_OWNER / ADMIN)
 - ✅ **Night Planner v2** (Sprint 1-5 completados 12-15 Ago, ver abajo)
 - ✅ **Dominio custom `conectalt.com` configurado** (22-Ago, ver worklog Task ID `domain-setup-1`)
+- ✅ **Páginas legales** (Política de Privacidad + Términos de Uso) desplegadas (23-Ago, commits `3697c53` + `c343e40`)
+- ✅ **Dominio limpio en Google Safe Browsing** — bloqueo levantado el 24-Ago tras deploy del canonical URL fix (commit `8c54b56`)
 
 ## 🆕 Night Planner v2 (Sprint 1-5, 12-15 Ago)
 
@@ -294,11 +298,14 @@ Esto funciona para: `conectalt.com`, `*.vercel.app`, y localhost. Ver commit `80
 
 ### Alta prioridad (seguridad)
 - **Rotar** `NEXTAUTH_SECRET` en Vercel (ver "Cómo rotar NEXTAUTH_SECRET" abajo) — pendiente desde el incidente del 18-Ago
-- **Verificar y revocar** GitHub PAT `ghp_uhK...` si sigue activo
+- **Verificar y revocar** GitHub PAT `ghp_uhK...` si sigue activo (PAT viejo del 10-Ago, posiblemente ya expirado)
 - **Contactar a GitHub Support** para purge de commits viejos en cached views/forks (los commits antiguos siguen accesibles por SHA en GitHub hasta que hagan GC)
 - ✅ ~~REVOCAR GitHub PAT del 18-Ago~~ — Hecho
 - ✅ ~~REVOCAR Vercel token `vcp_7tRx...`~~ — Hecho
 - ✅ ~~REVOCAR Vercel token `vcp_7yJf...` (22-Ago)~~ — Hecho
+- ✅ ~~REVOCAR GitHub PAT `ghp_dKyiFaDE8...` (23-Ago)~~ — Hecho
+- ✅ ~~REVOCAR GitHub PAT `ghp_mwDI...` (23-Ago)~~ — Hecho
+- ✅ ~~Solicitar review a Google Safe Browsing~~ — Resuelto: bloqueo levantado el 24-Ago, conectalt.com vuelve a ser accesible desde Chrome
 
 ### Media prioridad (mejoras)
 - **Migrar a Auth.js v5** (~2-3 horas): eliminaría la dependencia del patch script de openid-client y daría soporte oficial a Next.js 16. NextAuth v4 no tiene soporte oficial para Next 16.
