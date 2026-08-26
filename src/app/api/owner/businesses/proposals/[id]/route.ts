@@ -6,28 +6,12 @@
 //
 // DELETE — Cancel a PENDING proposal.
 //          Only the proposer can delete, only if status is PENDING.
-//
-// BusinessProposal table is NOT in Prisma schema — all proposal
-// operations use raw SQL.
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
 import type { UserRole } from '@prisma/client';
 import { requireRole } from '@/server/auth';
 import { db } from '@/lib/db';
-
-interface ProposalRow {
-  id: string;
-  proposerId: string;
-  status: string;
-  data: string;
-  businessId: string;
-  field: string;
-  reviewedBy: string | null;
-  reviewedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export async function PUT(
   request: Request,
@@ -40,20 +24,22 @@ export async function PUT(
     );
     const { id } = await params;
 
-    // Fetch proposal and verify ownership (raw SQL)
-    const rows = await db.$queryRawUnsafe<ProposalRow[]>(
-      `SELECT * FROM "BusinessProposal" WHERE "id" = $1`,
-      id,
-    );
+    // Fetch proposal and verify ownership
+    const proposal = await db.businessProposal.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        proposerId: true,
+        status: true,
+      },
+    });
 
-    if (rows.length === 0) {
+    if (!proposal) {
       return NextResponse.json(
         { error: 'Propuesta no encontrada' },
         { status: 404 },
       );
     }
-
-    const proposal = rows[0]!;
 
     if (proposal.proposerId !== user.id && user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -86,14 +72,14 @@ export async function PUT(
       );
     }
 
-    // Update via raw SQL, return updated row
-    const updated = await db.$queryRawUnsafe<ProposalRow[]>(
-      `UPDATE "BusinessProposal" SET "data" = $1, "updatedAt" = NOW() WHERE "id" = $2 RETURNING *`,
-      JSON.stringify(body.data),
-      id,
-    );
+    const updated = await db.businessProposal.update({
+      where: { id },
+      data: {
+        data: JSON.stringify(body.data),
+      },
+    });
 
-    return NextResponse.json(updated[0]);
+    return NextResponse.json(updated);
   } catch (e) {
     if (e instanceof Response) return e;
     console.error('PUT /api/owner/businesses/proposals/[id] error:', e);
@@ -115,20 +101,22 @@ export async function DELETE(
     );
     const { id } = await params;
 
-    // Fetch proposal and verify ownership (raw SQL)
-    const rows = await db.$queryRawUnsafe<ProposalRow[]>(
-      `SELECT * FROM "BusinessProposal" WHERE "id" = $1`,
-      id,
-    );
+    // Fetch proposal and verify ownership
+    const proposal = await db.businessProposal.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        proposerId: true,
+        status: true,
+      },
+    });
 
-    if (rows.length === 0) {
+    if (!proposal) {
       return NextResponse.json(
         { error: 'Propuesta no encontrada' },
         { status: 404 },
       );
     }
-
-    const proposal = rows[0]!;
 
     if (proposal.proposerId !== user.id && user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -144,11 +132,7 @@ export async function DELETE(
       );
     }
 
-    // Delete via raw SQL
-    await db.$executeRawUnsafe(
-      `DELETE FROM "BusinessProposal" WHERE "id" = $1`,
-      id,
-    );
+    await db.businessProposal.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (e) {

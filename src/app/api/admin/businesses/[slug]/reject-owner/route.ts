@@ -12,12 +12,6 @@ import { requireRole } from '@/server/auth';
 import { db } from '@/lib/db';
 import { notificationService } from '@/server/services/notification.service';
 
-interface BusinessOwnerRow {
-  id: string;
-  name: string;
-  proposedOwnerId: string | null;
-}
-
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -26,20 +20,18 @@ export async function POST(
     await requireRole('ADMIN' as UserRole);
     const { slug } = await params;
 
-    // Verify business exists and has a proposed owner (raw SQL — proposedOwnerId not in Prisma schema)
-    const rows = await db.$queryRawUnsafe<BusinessOwnerRow[]>(
-      `SELECT "id", "name", "proposedOwnerId" FROM "Business" WHERE "slug" = $1`,
-      slug,
-    );
+    // Verify business exists and has a proposed owner
+    const business = await db.business.findUnique({
+      where: { slug },
+      select: { id: true, name: true, proposedOwnerId: true },
+    });
 
-    if (rows.length === 0) {
+    if (!business) {
       return NextResponse.json(
         { error: 'Negocio no encontrado' },
         { status: 404 },
       );
     }
-
-    const business = rows[0]!;
 
     if (!business.proposedOwnerId) {
       return NextResponse.json(
@@ -50,11 +42,14 @@ export async function POST(
 
     const rejectedUserId = business.proposedOwnerId;
 
-    // Reject the proposal via raw SQL
-    await db.$executeRawUnsafe(
-      `UPDATE "Business" SET "proposedOwnerId" = NULL, "ownerStatus" = 'REJECTED' WHERE "slug" = $1`,
-      slug,
-    );
+    // Reject the proposal
+    const updated = await db.business.update({
+      where: { slug },
+      data: {
+        proposedOwnerId: null,
+        ownerStatus: 'REJECTED',
+      },
+    });
 
     // Notify the rejected user (best-effort)
     await notificationService.notify(
@@ -64,8 +59,6 @@ export async function POST(
       `Tu solicitud de dueño para ${business.name} fue rechazada`,
     );
 
-    // Refetch via Prisma to return full business object
-    const updated = await db.business.findUnique({ where: { slug } });
     return NextResponse.json(updated);
   } catch (e) {
     if (e instanceof Response) return e;

@@ -6,7 +6,7 @@
 //
 // - Finds user by email (404 if not found)
 // - Promotes user to BUSINESS_OWNER if needed
-// - Sets business.proposedOwnerId + ownerStatus = PENDING (raw SQL)
+// - Sets business.proposedOwnerId + ownerStatus = PENDING
 // - Notifies the proposed owner
 // - Returns the updated business
 // ─────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ export async function POST(
       );
     }
 
-    // Find user by email (Prisma — User model unchanged)
+    // Find user by email
     const targetUser = await db.user.findUnique({
       where: { email: body.email.trim().toLowerCase() },
       select: { id: true, role: true, name: true },
@@ -55,7 +55,7 @@ export async function POST(
       );
     }
 
-    // Promote to BUSINESS_OWNER if needed (Prisma — User model unchanged)
+    // Promote to BUSINESS_OWNER if needed
     if (targetUser.role !== 'BUSINESS_OWNER') {
       await db.user.update({
         where: { id: targetUser.id },
@@ -63,7 +63,7 @@ export async function POST(
       });
     }
 
-    // Verify business exists (Prisma — only reads fields in schema)
+    // Verify business exists
     const business = await db.business.findUnique({
       where: { slug },
     });
@@ -74,15 +74,14 @@ export async function POST(
       );
     }
 
-    // Set proposed owner + ownerStatus via raw SQL (columns not in Prisma schema)
-    await db.$executeRawUnsafe(
-      `UPDATE "Business" SET "proposedOwnerId" = $1, "ownerStatus" = 'PENDING' WHERE "slug" = $2`,
-      targetUser.id,
-      slug,
-    );
-
-    // Refetch the business to return updated data
-    const updated = await db.business.findUnique({ where: { slug } });
+    // Set proposed owner
+    const updated = await db.business.update({
+      where: { slug },
+      data: {
+        proposedOwnerId: targetUser.id,
+        ownerStatus: 'PENDING',
+      },
+    });
 
     // Notify proposed owner (best-effort)
     await notificationService.notify(

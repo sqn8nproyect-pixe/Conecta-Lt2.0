@@ -100,6 +100,8 @@ model User {
   notifications Notification[]
   analyticsEvents AnalyticsEvent[]
   ownedBusinesses    Business[]  @relation("BusinessOwner")
+  proposedBusinesses  Business[]  @relation("ProposedOwner")
+  proposals         BusinessProposal[] @relation("ProposalAuthor")
   couponRedemptions CouponRedemption[]
 }
 
@@ -202,6 +204,11 @@ model Business {
   currentCapacity CapacityLevel? // aforo en tiempo real (Etapa 3.6)
   claimedAt       DateTime? // fecha en que el dueño reclamó el perfil
 
+  // Owner management (Fase Dueños)
+  ownerStatus     OwnerApprovalStatus @default(APPROVED)
+  proposedOwner   User?  @relation("ProposedOwner", fields: [proposedOwnerId], references: [id])
+  proposedOwnerId String?
+
   // Relaciones
   category        Category       @relation(fields: [categoryId], references: [id])
   categoryId      String
@@ -220,6 +227,7 @@ model Business {
   reviews         Review[]
   favorites       Favorite[]
   reservations    Reservation[]
+  proposals       BusinessProposal[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -451,4 +459,44 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+}
+
+// ── OWNER MANAGEMENT ───────────────────────────────────────
+
+enum OwnerApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProposalField {
+  INFO
+  HOURS
+  SOCIALS
+  PROMOTION
+  NEW_PROMOTION
+}
+
+model BusinessProposal {
+  id          String         @id @default(cuid())
+  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  proposer    User           @relation("ProposalAuthor", fields: [proposerId], references: [id])
+  proposerId  String
+  field       ProposalField
+  data        String         // JSON con los cambios propuestos
+  status      ProposalStatus @default(PENDING)
+  reviewedBy  String?        // admin que aprobó/rechazó
+  reviewedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([businessId, status])
+  @@index([proposerId, status])
 }
