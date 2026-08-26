@@ -29,6 +29,13 @@ export function Footer() {
         </div>
         <div className="flex items-center gap-4 font-mono tracking-wider text-center sm:text-right">
           <button
+            onClick={() => setView('about')}
+            className="text-white/40 hover:text-gold transition-colors"
+          >
+            Quiénes Somos
+          </button>
+          <span className="text-white/20">·</span>
+          <button
             onClick={() => setView('privacy')}
             className="text-white/40 hover:text-gold transition-colors"
           >

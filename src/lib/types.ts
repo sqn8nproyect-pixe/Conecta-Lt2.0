@@ -258,7 +258,7 @@ export type BusinessStatus =
 //   enum ReviewStatus { PENDING, PUBLISHED, HIDDEN, FLAGGED }
 export type ReviewStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'FLAGGED';
 
-export type View = 'home' | 'map' | 'detail' | 'profile' | 'admin' | 'owner' | 'privacy' | 'terms';
+export type View = 'home' | 'map' | 'detail' | 'profile' | 'admin' | 'owner' | 'privacy' | 'terms' | 'about';
 
 export type NotificationType = 'success' | 'info';
 

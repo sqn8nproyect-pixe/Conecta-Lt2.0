@@ -13,6 +13,7 @@ import { AdminDashboard } from '@/components/conecta/admin/AdminDashboard';
 import { OwnerDashboard } from '@/components/conecta/owner/OwnerDashboard';
 import { AgeGate } from '@/components/conecta/AgeGate';
 import { LegalPage } from '@/components/conecta/LegalPage';
+import { AboutPage } from '@/components/conecta/AboutPage';
 import { Footer } from '@/components/conecta/Footer';
 
 // ── Age verification external store ───────────────────────────
@@ -106,6 +107,7 @@ export default function Home() {
           {view === 'owner' && <OwnerDashboard key="owner" />}
           {view === 'privacy' && <LegalPage key="privacy" kind="privacy" />}
           {view === 'terms' && <LegalPage key="terms" kind="terms" />}
+          {view === 'about' && <AboutPage key="about" />}
         </AnimatePresence>
       </main>
 
