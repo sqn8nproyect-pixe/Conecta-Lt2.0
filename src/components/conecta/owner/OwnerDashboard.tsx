@@ -45,8 +45,12 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Send,
+  Clock,
+  CheckCircle,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { isAdminEmail } from '@/lib/admin-config';
 import {
   fetchBusinesses,
   fetchOwnerBusiness,
@@ -58,6 +62,10 @@ import {
   fetchOwnerPromotions,
   createOwnerPromotion,
   updateOwnerPromotion,
+  fetchOwnerProposals,
+  createOwnerProposal,
+  updateOwnerProposal,
+  deleteOwnerProposal,
 } from '@/lib/api';
 import type {
   OwnerBusiness,
@@ -111,6 +119,28 @@ const QK_OWNER_RESERVATIONS = (slug: string, status: string, date: string) =>
   ['owner', 'reservations', slug, status, date] as const;
 const QK_OWNER_PROMOTIONS = (slug: string) =>
   ['owner', 'promotions', slug] as const;
+const QK_OWNER_PROPOSALS = (slug: string) =>
+  ['owner', 'proposals', slug] as const;
+
+// Proposal field labels (Spanish)
+const PROPOSAL_FIELD_LABELS: Record<string, string> = {
+  INFO: 'Información',
+  HOURS: 'Horarios',
+  SOCIALS: 'Redes sociales',
+  PROMOTION: 'Promoción (editar)',
+  NEW_PROMOTION: 'Promoción (nueva)',
+};
+
+type ProposalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+type OwnerProposal = {
+  id: string;
+  field: string;
+  data: string;
+  status: ProposalStatus;
+  createdAt: string;
+  updatedAt: string;
+};
 
 // ─── Day-of-week helpers ──────────────────────────────────────
 // Schema: 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
@@ -228,7 +258,16 @@ function PromotionStatusBadge({ status }: { status: PromotionStatus }) {
 
 // ─── Tab 1: Info ───────────────────────────────────────────────
 
-function InfoTab({ slug }: { slug: string }) {
+function PendingProposalBanner({ fieldLabel }: { fieldLabel: string }) {
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+      <AlertCircle size={14} className="inline mr-1.5 -mt-0.5" />
+      Ya tienes una propuesta pendiente para <span className="font-bold">{fieldLabel}</span>. Espera la revisión del administrador o edita la propuesta existente.
+    </div>
+  );
+}
+
+function InfoTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const addNotification = useAppStore((s) => s.addNotification);
 
@@ -237,6 +276,20 @@ function InfoTab({ slug }: { slug: string }) {
     queryFn: () => fetchOwnerBusiness(slug),
     staleTime: 30_000,
   });
+
+  // Fetch proposals for pending-banner check (non-admin only)
+  const { data: proposals = [] } = useQuery({
+    queryKey: QK_OWNER_PROPOSALS(slug),
+    queryFn: () => fetchOwnerProposals(slug),
+    staleTime: 15_000,
+    enabled: !isAdmin,
+  });
+
+  const pendingFields = new Set(
+    proposals
+      .filter((p: OwnerProposal) => p.status === 'PENDING')
+      .map((p: OwnerProposal) => p.field),
+  );
 
   // Local form state — initialized from the fetched business. We
   // keep the state separate from the cache so the user can edit
@@ -294,12 +347,20 @@ function InfoTab({ slug }: { slug: string }) {
 
   // ── Mutations ─────────────────────────────────────────────────
   const infoMutation = useMutation({
-    mutationFn: (data: typeof basicInfo) => updateOwnerBusiness(slug, data),
+    mutationFn: (data: typeof basicInfo) =>
+      isAdmin
+        ? updateOwnerBusiness(slug, data)
+        : createOwnerProposal(slug, 'INFO', data),
     onSuccess: () => {
-      addNotification('Cambios guardados', 'success');
-      void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
-      void queryClient.invalidateQueries({ queryKey: ['businesses'] });
-      void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      if (isAdmin) {
+        addNotification('Cambios guardados', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
+        void queryClient.invalidateQueries({ queryKey: ['businesses'] });
+        void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      } else {
+        addNotification('Propuesta enviada. El administrador la revisará.', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROPOSALS(slug) });
+      }
     },
     onError: (err) => {
       addNotification(
@@ -310,11 +371,19 @@ function InfoTab({ slug }: { slug: string }) {
   });
 
   const hoursMutation = useMutation({
-    mutationFn: (data: typeof hours) => updateOwnerHours(slug, data),
+    mutationFn: (data: typeof hours) =>
+      isAdmin
+        ? updateOwnerHours(slug, data)
+        : createOwnerProposal(slug, 'HOURS', data),
     onSuccess: () => {
-      addNotification('Horarios guardados', 'success');
-      void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
-      void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      if (isAdmin) {
+        addNotification('Horarios guardados', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
+        void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      } else {
+        addNotification('Propuesta enviada. El administrador la revisará.', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROPOSALS(slug) });
+      }
     },
     onError: (err) => {
       addNotification(
@@ -325,11 +394,19 @@ function InfoTab({ slug }: { slug: string }) {
   });
 
   const socialsMutation = useMutation({
-    mutationFn: (data: typeof socials) => updateOwnerSocials(slug, data),
+    mutationFn: (data: typeof socials) =>
+      isAdmin
+        ? updateOwnerSocials(slug, data)
+        : createOwnerProposal(slug, 'SOCIALS', data),
     onSuccess: () => {
-      addNotification('Redes sociales guardadas', 'success');
-      void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
-      void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      if (isAdmin) {
+        addNotification('Redes sociales guardadas', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
+        void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      } else {
+        addNotification('Propuesta enviada. El administrador la revisará.', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROPOSALS(slug) });
+      }
     },
     onError: (err) => {
       addNotification(
@@ -386,6 +463,9 @@ function InfoTab({ slug }: { slug: string }) {
   return (
     <div className="space-y-6">
       {/* ─── Section 1: Datos básicos ────────────────────────── */}
+      {!isAdmin && pendingFields.has('INFO') && (
+        <PendingProposalBanner fieldLabel="Información" />
+      )}
       <section className="glass-card rounded-2xl p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <Store size={16} className="text-gold" />
@@ -480,13 +560,25 @@ function InfoTab({ slug }: { slug: string }) {
             disabled={infoMutation.isPending}
             className="bg-gold text-obsidian hover:bg-gold/80"
           >
-            <Save size={14} className="mr-1" />
-            {infoMutation.isPending ? 'Guardando…' : 'Guardar cambios'}
+            {isAdmin ? (
+              <>
+                <Save size={14} className="mr-1" />
+                {infoMutation.isPending ? 'Guardando…' : 'Guardar cambios'}
+              </>
+            ) : (
+              <>
+                <Send size={14} className="mr-1" />
+                {infoMutation.isPending ? 'Enviando…' : 'Enviar propuesta'}
+              </>
+            )}
           </Button>
         </div>
       </section>
 
       {/* ─── Section 2: Horarios ─────────────────────────────── */}
+      {!isAdmin && pendingFields.has('HOURS') && (
+        <PendingProposalBanner fieldLabel="Horarios" />
+      )}
       <section className="glass-card rounded-2xl p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <CalendarClock size={16} className="text-gold" />
@@ -547,13 +639,25 @@ function InfoTab({ slug }: { slug: string }) {
             disabled={hoursMutation.isPending}
             className="bg-gold text-obsidian hover:bg-gold/80"
           >
-            <Save size={14} className="mr-1" />
-            {hoursMutation.isPending ? 'Guardando…' : 'Guardar horarios'}
+            {isAdmin ? (
+              <>
+                <Save size={14} className="mr-1" />
+                {hoursMutation.isPending ? 'Guardando…' : 'Guardar horarios'}
+              </>
+            ) : (
+              <>
+                <Send size={14} className="mr-1" />
+                {hoursMutation.isPending ? 'Enviando…' : 'Enviar propuesta'}
+              </>
+            )}
           </Button>
         </div>
       </section>
 
       {/* ─── Section 3: Redes sociales ──────────────────────── */}
+      {!isAdmin && pendingFields.has('SOCIALS') && (
+        <PendingProposalBanner fieldLabel="Redes sociales" />
+      )}
       <section className="glass-card rounded-2xl p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <Ticket size={16} className="text-gold" />
@@ -614,8 +718,17 @@ function InfoTab({ slug }: { slug: string }) {
             disabled={socialsMutation.isPending}
             className="bg-gold text-obsidian hover:bg-gold/80"
           >
-            <Save size={14} className="mr-1" />
-            {socialsMutation.isPending ? 'Guardando…' : 'Guardar redes'}
+            {isAdmin ? (
+              <>
+                <Save size={14} className="mr-1" />
+                {socialsMutation.isPending ? 'Guardando…' : 'Guardar redes'}
+              </>
+            ) : (
+              <>
+                <Send size={14} className="mr-1" />
+                {socialsMutation.isPending ? 'Enviando…' : 'Enviar propuesta'}
+              </>
+            )}
           </Button>
         </div>
       </section>
@@ -945,7 +1058,7 @@ function emptyPromotionForm(): PromotionFormState {
   };
 }
 
-function PromotionsTab({ slug }: { slug: string }) {
+function PromotionsTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const addNotification = useAppStore((s) => s.addNotification);
   const [modalOpen, setModalOpen] = useState(false);
@@ -958,10 +1071,24 @@ function PromotionsTab({ slug }: { slug: string }) {
     staleTime: 30_000,
   });
 
+  // Fetch proposals for pending-banner check (non-admin only)
+  const { data: proposals = [] } = useQuery({
+    queryKey: QK_OWNER_PROPOSALS(slug),
+    queryFn: () => fetchOwnerProposals(slug),
+    staleTime: 15_000,
+    enabled: !isAdmin,
+  });
+
+  const pendingPromoFields = new Set(
+    proposals
+      .filter((p: OwnerProposal) => p.status === 'PENDING' && (p.field === 'PROMOTION' || p.field === 'NEW_PROMOTION'))
+      .map((p: OwnerProposal) => p.field),
+  );
+
   // ── Mutations ─────────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: (data: PromotionFormState) =>
-      createOwnerPromotion(slug, {
+    mutationFn: (data: PromotionFormState) => {
+      const payload = {
         title: data.title,
         description: data.description,
         price: data.price || undefined,
@@ -973,11 +1100,21 @@ function PromotionsTab({ slug }: { slug: string }) {
         maxRedemptions: data.maxRedemptions
           ? Number.parseInt(data.maxRedemptions, 10)
           : undefined,
-      }),
+      };
+      if (isAdmin) {
+        return createOwnerPromotion(slug, payload);
+      }
+      return createOwnerProposal(slug, 'NEW_PROMOTION', payload);
+    },
     onSuccess: () => {
-      addNotification('Promoción creada', 'success');
-      void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROMOTIONS(slug) });
-      void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      if (isAdmin) {
+        addNotification('Promoción creada', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROMOTIONS(slug) });
+        void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      } else {
+        addNotification('Propuesta enviada. El administrador la revisará.', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROPOSALS(slug) });
+      }
       setModalOpen(false);
     },
     onError: (err) => {
@@ -995,8 +1132,8 @@ function PromotionsTab({ slug }: { slug: string }) {
     }: {
       id: string;
       data: PromotionFormState;
-    }) =>
-      updateOwnerPromotion(slug, id, {
+    }) => {
+      const payload = {
         title: data.title || undefined,
         description: data.description || undefined,
         price: data.price || undefined,
@@ -1008,11 +1145,34 @@ function PromotionsTab({ slug }: { slug: string }) {
         maxRedemptions: data.maxRedemptions
           ? Number.parseInt(data.maxRedemptions, 10)
           : undefined,
-      }),
+        promotionId: id,
+      };
+      if (isAdmin) {
+        return updateOwnerPromotion(slug, id, {
+          title: data.title || undefined,
+          description: data.description || undefined,
+          price: data.price || undefined,
+          discount: data.discount || undefined,
+          image: data.image || undefined,
+          code: data.code || undefined,
+          startDate: data.startDate || undefined,
+          endDate: data.endDate || undefined,
+          maxRedemptions: data.maxRedemptions
+            ? Number.parseInt(data.maxRedemptions, 10)
+            : undefined,
+        });
+      }
+      return createOwnerProposal(slug, 'PROMOTION', payload);
+    },
     onSuccess: () => {
-      addNotification('Promoción actualizada', 'success');
-      void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROMOTIONS(slug) });
-      void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      if (isAdmin) {
+        addNotification('Promoción actualizada', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROMOTIONS(slug) });
+        void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+      } else {
+        addNotification('Propuesta enviada. El administrador la revisará.', 'success');
+        void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROPOSALS(slug) });
+      }
       setModalOpen(false);
     },
     onError: (err) => {
@@ -1097,13 +1257,21 @@ function PromotionsTab({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Pending proposal banners */}
+      {!isAdmin && pendingPromoFields.has('NEW_PROMOTION') && (
+        <PendingProposalBanner fieldLabel="nueva promoción" />
+      )}
+      {!isAdmin && pendingPromoFields.has('PROMOTION') && (
+        <PendingProposalBanner fieldLabel="edición de promoción" />
+      )}
+
       {/* Header with create button */}
       <div className="flex justify-end">
         <Button
           onClick={openCreateModal}
           className="bg-gold text-obsidian hover:bg-gold/80"
         >
-          <Plus size={14} className="mr-1" /> Nueva promoción
+          <Plus size={14} className="mr-1" /> {isAdmin ? 'Nueva promoción' : 'Proponer promoción'}
         </Button>
       </div>
 
@@ -1383,16 +1551,144 @@ function PromotionsTab({ slug }: { slug: string }) {
               disabled={createMutation.isPending || updateMutation.isPending}
               className="bg-gold text-obsidian hover:bg-gold/80"
             >
-              <Save size={14} className="mr-1" />
-              {createMutation.isPending || updateMutation.isPending
-                ? 'Guardando…'
-                : editingPromo
-                  ? 'Guardar cambios'
-                  : 'Crear promoción'}
+              {isAdmin ? (
+                <>
+                  <Save size={14} className="mr-1" />
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Guardando…'
+                    : editingPromo
+                      ? 'Guardar cambios'
+                      : 'Crear promoción'}
+                </>
+              ) : (
+                <>
+                  <Send size={14} className="mr-1" />
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Enviando…'
+                    : editingPromo
+                      ? 'Enviar propuesta'
+                      : 'Enviar propuesta'}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─── Tab 4: Mis Propuestas (non-admin only) ──────────────────
+
+function ProposalStatusBadge({ status }: { status: ProposalStatus }) {
+  const config: Record<ProposalStatus, { icon: typeof Clock; cls: string; label: string }> = {
+    PENDING: { icon: Clock, cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30', label: 'PENDIENTE' },
+    APPROVED: { icon: CheckCircle, cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30', label: 'APROBADA' },
+    REJECTED: { icon: XCircle, cls: 'bg-red-500/15 text-red-300 border-red-500/30', label: 'RECHAZADA' },
+  };
+  const c = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest border ${c.cls}`}>
+      <c.icon size={12} />
+      {c.label}
+    </span>
+  );
+}
+
+function PropuestasTab({ slug }: { slug: string }) {
+  const queryClient = useQueryClient();
+  const addNotification = useAppStore((s) => s.addNotification);
+
+  const { data: proposals = [], isLoading, isError } = useQuery({
+    queryKey: QK_OWNER_PROPOSALS(slug),
+    queryFn: () => fetchOwnerProposals(slug),
+    staleTime: 15_000,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (proposalId: string) => deleteOwnerProposal(proposalId),
+    onSuccess: () => {
+      addNotification('Propuesta cancelada', 'success');
+      void queryClient.invalidateQueries({ queryKey: QK_OWNER_PROPOSALS(slug) });
+    },
+    onError: (err) => {
+      addNotification(
+        err instanceof Error ? err.message : 'Error al cancelar la propuesta',
+        'info',
+      );
+    },
+  });
+
+  const handleEditProposal = (proposal: OwnerProposal) => {
+    addNotification('Ve a la pestaña correspondiente para editar esta propuesta.', 'info');
+  };
+
+  if (isLoading) {
+    return <TableSkeleton rows={4} />;
+  }
+  if (isError) {
+    return (
+      <div className="glass-card rounded-2xl p-8 text-center text-white/60">
+        Error al cargar las propuestas. Intenta de nuevo.
+      </div>
+    );
+  }
+  if (proposals.length === 0) {
+    return (
+      <div className="glass-card rounded-2xl p-10 text-center">
+        <Send size={32} className="mx-auto text-white/20 mb-4" />
+        <h2 className="font-serif text-xl text-white mb-2">Sin propuestas</h2>
+        <p className="text-white/50 text-sm max-w-md mx-auto">
+          Aún no has enviado ninguna propuesta de cambio. Usa las pestañas Info o Promociones para enviar tus primeras propuestas.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {proposals.map((p: OwnerProposal) => (
+        <div
+          key={p.id}
+          className="glass-card rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-gold text-xs font-mono font-bold tracking-wider">
+                {PROPOSAL_FIELD_LABELS[p.field] ?? p.field}
+              </span>
+              <ProposalStatusBadge status={p.status} />
+            </div>
+            <div className="text-[11px] text-white/40 font-mono">
+              {formatRelativeTime(p.createdAt)}
+            </div>
+            <div className="text-white/50 text-xs mt-1.5 truncate max-w-md font-mono">
+              {p.data.length > 150 ? `${p.data.slice(0, 150)}…` : p.data}
+            </div>
+          </div>
+          {p.status === 'PENDING' && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditProposal(p)}
+                className="border-white/15 text-white hover:bg-white/5 hover:border-gold/40 text-xs"
+              >
+                <Pencil size={12} className="mr-1" /> Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => deleteMutation.mutate(p.id)}
+                disabled={deleteMutation.isPending}
+                className="border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs"
+              >
+                <Trash2 size={12} className="mr-1" /> Cancelar
+              </Button>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1402,6 +1698,7 @@ function PromotionsTab({ slug }: { slug: string }) {
 export function OwnerDashboard() {
   const user = useAppStore((s) => s.user);
   const setView = useAppStore((s) => s.setView);
+  const isAdmin = !!user && isAdminEmail(user?.email);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [tab, setTab] = useState<string>('info');
 
@@ -1531,17 +1828,30 @@ export function OwnerDashboard() {
                 >
                   Promociones
                 </TabsTrigger>
+                {!isAdmin && (
+                  <TabsTrigger
+                    value="propuestas"
+                    className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+                  >
+                    Mis Propuestas
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="info" className="mt-6">
-                <InfoTab slug={selectedSlug} />
+                <InfoTab slug={selectedSlug} isAdmin={isAdmin} />
               </TabsContent>
               <TabsContent value="reservas" className="mt-6">
                 <ReservasTab slug={selectedSlug} />
               </TabsContent>
               <TabsContent value="promociones" className="mt-6">
-                <PromotionsTab slug={selectedSlug} />
+                <PromotionsTab slug={selectedSlug} isAdmin={isAdmin} />
               </TabsContent>
+              {!isAdmin && (
+                <TabsContent value="propuestas" className="mt-6">
+                  <PropuestasTab slug={selectedSlug} />
+                </TabsContent>
+              )}
             </Tabs>
           )}
         </>

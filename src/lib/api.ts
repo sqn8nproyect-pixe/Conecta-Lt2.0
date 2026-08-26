@@ -756,6 +756,103 @@ export async function createOwnerPromotion(
   return res.json();
 }
 
+// ─── Owner management (admin) ──────────────────────────────
+
+export async function migrateOwnership() {
+  const res = await fetch('/api/admin/businesses/migrate-ownership', {
+    method: 'POST',
+  });
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function assignOwner(slug: string, email: string) {
+  const res = await fetch(
+    `/api/admin/businesses/${slug}/assign-owner`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+    },
+  );
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function approveOwner(slug: string) {
+  const res = await fetch(
+    `/api/admin/businesses/${slug}/approve-owner`,
+    { method: 'POST' },
+  );
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function rejectOwner(slug: string) {
+  const res = await fetch(
+    `/api/admin/businesses/${slug}/reject-owner`,
+    { method: 'POST' },
+  );
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function fetchBusinessProposals(slug: string) {
+  const res = await fetch(`/api/admin/businesses/${slug}/proposals`);
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function reviewProposal(
+  proposalId: string,
+  action: 'approve' | 'reject',
+) {
+  const res = await fetch(
+    `/api/admin/businesses/proposals/${proposalId}/review`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action }),
+    },
+  );
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+// ─── Owner proposals (owner-side) ──────────────────────────────
+
+export async function fetchOwnerProposals(slug: string) {
+  const res = await fetch(`/api/owner/businesses/${slug}/proposals`);
+  if (!res.ok) throw new Error((await res.json()).error || 'Error al cargar propuestas');
+  return res.json();
+}
+
+export async function createOwnerProposal(slug: string, field: string, data: object) {
+  const res = await fetch(`/api/owner/businesses/${slug}/proposals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ field, data }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Error al crear propuesta');
+  return res.json();
+}
+
+export async function updateOwnerProposal(proposalId: string, data: object) {
+  const res = await fetch(`/api/owner/businesses/proposals/${proposalId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Error al actualizar propuesta');
+  return res.json();
+}
+
+export async function deleteOwnerProposal(proposalId: string) {
+  const res = await fetch(`/api/owner/businesses/proposals/${proposalId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error((await res.json()).error || 'Error al eliminar propuesta');
+  return res.json();
+}
+
 /**
  * PATCH /api/owner/businesses/[slug]/promotions/[id] — update
  * promotion fields AND/OR change status. Body is a partial. Returns

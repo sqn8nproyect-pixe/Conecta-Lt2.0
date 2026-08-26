@@ -26,8 +26,6 @@ import {
   Scale,
   Loader2,
   Eye,
-  CheckCircle2,
-  KeyRound,
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
@@ -39,8 +37,7 @@ import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
 import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import { useAnalytics } from '@/lib/hooks/use-analytics';
-import { isAdminEmail } from '@/lib/admin-config';
-import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity, claimBusiness } from '@/lib/api';
+import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity } from '@/lib/api';
 import type { BookingData, CapacityLevel, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
@@ -216,14 +213,6 @@ export function EstablishmentPage() {
   );
   const [isReporting, setIsReporting] = useState(false);
 
-  // Etapa 7.B — Business claim flow. `isClaiming` drives the button
-  // spinner while the POST is in flight. We don't need a local mirror
-  // of `est.ownerId` because the queryClient invalidation below will
-  // refetch the business with the new ownerId set, and the UI will
-  // naturally switch from "Reclamar este local" → "Gestionando este
-  // local" once the cache updates.
-  const [isClaiming, setIsClaiming] = useState(false);
-
   // Sync localCapacity whenever the server-fetched est.currentCapacity
   // changes (initial load, navigation between establishments, mutation
   // invalidation). Using useEffect keeps this single-directional:
@@ -392,43 +381,6 @@ export function EstablishmentPage() {
       setLocalCapacity(previous); // rollback
     } finally {
       setIsReporting(false);
-    }
-  };
-
-  // Etapa 7.B — Claim this business (assert ownership). Only visible to
-  // BUSINESS_OWNER users when the business has no `ownerId` set. On
-  // success we invalidate the business query so the page refetches with
-  // `ownerId` populated, which makes the claim button disappear and the
-  // "Gestionando este local" badge take its place.
-  const handleClaim = async () => {
-    if (!user) {
-      addNotification('Inicia sesión para reclamar este local.', 'info');
-      return;
-    }
-    if (isClaiming) return; // debounce double-clicks
-    setIsClaiming(true);
-    try {
-      await claimBusiness(est.slug);
-      addNotification(
-        '¡Local reclamado! Ahora puedes gestionarlo desde tu perfil.',
-      );
-      // Refetch the business so ownerId + claimedAt populate, which
-      // flips the UI from "Reclamar" button → "Gestionando" badge.
-      queryClient.invalidateQueries({ queryKey: ['business', slug] });
-      queryClient.invalidateQueries({ queryKey: ['businesses'] });
-    } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : 'No se pudo reclamar el local.';
-      addNotification(
-        msg === 'NOT_AUTHENTICATED'
-          ? 'Inicia sesión para reclamar este local.'
-          : msg === 'Acceso denegado'
-            ? 'Tu cuenta no tiene permisos para reclamar locales.'
-            : msg,
-        'info',
-      );
-    } finally {
-      setIsClaiming(false);
     }
   };
 
@@ -650,40 +602,7 @@ export function EstablishmentPage() {
                 variant="inline"
               />
             )}
-            {/* Etapa 7.B — Business claim flow.
-                - If est.ownerId === user.id → show "Gestionando este local" gold badge.
-                - Else if est.ownerId is null AND user.role === 'BUSINESS_OWNER' → show "Reclamar este local" button.
-                - Else if est.ownerId is null AND no user / role === 'USER' → subtle hint text.
-                - Else (someone else owns it) → render nothing. */}
-            {est.ownerId && est.ownerId === user?.id && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/15 border border-gold/40 text-gold text-xs font-semibold">
-                <CheckCircle2 size={12} /> Gestionando este local
-              </span>
-            )}
-            {!est.ownerId && (user?.role === 'BUSINESS_OWNER' || isAdminEmail(user?.email)) && (
-              <button
-                type="button"
-                onClick={handleClaim}
-                disabled={isClaiming}
-                aria-label={`Reclamar ${est.name}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gold/40 bg-gold/10 text-gold text-xs font-semibold hover:bg-gold/20 transition disabled:opacity-50 disabled:cursor-wait"
-              >
-                {isClaiming ? (
-                  <>
-                    <Loader2 size={12} className="animate-spin" /> Reclamando...
-                  </>
-                ) : (
-                  <>
-                    <KeyRound size={12} /> Reclamar este local
-                  </>
-                )}
-              </button>
-            )}
-            {!est.ownerId && (!user || user.role === 'USER') && (
-              <span className="text-white/40 text-xs">
-                Local sin dueño gestionando
-              </span>
-            )}
+
           </div>
         </div>
 

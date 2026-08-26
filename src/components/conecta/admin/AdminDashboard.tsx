@@ -54,6 +54,11 @@ import {
   KeyRound,
   AlertCircle,
   BarChart3,
+  UserPlus,
+  Check,
+  X,
+  FileText,
+  Clock,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -65,6 +70,11 @@ import {
   updateBusinessStatus,
   updateReviewStatus,
   updateUserRole,
+  assignOwner,
+  approveOwner,
+  rejectOwner,
+  fetchBusinessProposals,
+  reviewProposal,
 } from '@/lib/api';
 import type {
   AdminBusiness,
@@ -111,6 +121,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { AdminMetricsTab } from '@/components/conecta/admin/AdminMetricsTab';
 
 // Query keys — kept here (rather than in a dedicated hooks file)
@@ -121,6 +139,25 @@ const QK_STATS = ['admin', 'stats'] as const;
 const QK_BUSINESSES = ['admin', 'businesses'] as const;
 const QK_REVIEWS = ['admin', 'reviews'] as const;
 const QK_USERS = ['admin', 'users'] as const;
+
+// Extended admin business type — includes owner management fields
+// that exist on the Prisma model but aren't yet in the public AdminBusiness
+// interface. Once the admin GET /businesses endpoint is updated to
+// include these, the type assertion can be removed.
+type AdminBusinessExt = AdminBusiness & {
+  ownerStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  proposedOwner?: { id: string; name: string | null; email: string } | null;
+  proposedOwnerId?: string | null;
+};
+
+// Proposal field → friendly label
+const PROPOSAL_FIELD_LABELS: Record<string, string> = {
+  INFO: 'Información general',
+  HOURS: 'Horarios',
+  SOCIALS: 'Redes sociales',
+  PROMOTION: 'Promoción',
+  NEW_PROMOTION: 'Nueva promoción',
+};
 
 // ─── AccessDenied ──────────────────────────────────────────────
 // Defense-in-depth: the Navbar hides the "Admin" entry for non-admin
@@ -248,6 +285,46 @@ function Stars({ rating, size = 12 }: { rating: number; size?: number }) {
       ))}
     </div>
   );
+}
+
+// ─── Owner status badge ──────────────────────────────────────
+function OwnerStatusBadge({ business }: { business: AdminBusinessExt }) {
+  const status = business.ownerStatus;
+
+  if (status === 'PENDING') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest border bg-amber-500/15 text-amber-300 border-amber-500/30">
+        <Clock size={10} />
+        Dueño pendiente
+      </span>
+    );
+  }
+  if (status === 'APPROVED' && business.ownerId) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest border bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
+        <CheckCircle2 size={10} />
+        {business.owner?.email ?? 'Aprobado'}
+      </span>
+    );
+  }
+  if (status === 'REJECTED') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest border bg-red-500/15 text-red-300 border-red-500/30">
+        <X size={10} />
+        Rechazado
+      </span>
+    );
+  }
+  // No owner status or APPROVED without ownerId
+  if (business.owner) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest border bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
+        <CheckCircle2 size={10} />
+        {business.owner.email}
+      </span>
+    );
+  }
+  return <span className="text-white/30 text-xs">Sin dueño asignado</span>;
 }
 
 // ─── Skeleton helpers ──────────────────────────────────────────
@@ -570,17 +647,239 @@ function ResumenTab({
   );
 }
 
+// ─── Proposals Dialog ──────────────────────────────────────
+
+interface Proposal {
+  id: string;
+  field: string;
+  data: string;
+  status: string;
+  createdAt: string;
+  proposer: { name: string | null; email: string };
+}
+
+function ProposalsDialog({
+  open,
+  onOpenChange,
+  slug,
+  businessName,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  slug: string;
+  businessName: string;
+}) {
+  const queryClient = useQueryClient();
+  const addNotification = useAppStore((s) => s.addNotification);
+
+  const { data: proposals = [], isLoading } = useQuery({
+    queryKey: ['admin', 'proposals', slug],
+    queryFn: () => fetchBusinessProposals(slug),
+    enabled: open && !!slug,
+    staleTime: 30_000,
+  });
+
+  const reviewMutation = useMutation({
+    mutationFn: ({
+      proposalId,
+      action,
+    }: {
+      proposalId: string;
+      action: 'approve' | 'reject';
+    }) => reviewProposal(proposalId, action),
+    onSuccess: (_data, vars) => {
+      addNotification(
+        vars.action === 'approve'
+          ? 'Propuesta aprobada'
+          : 'Propuesta rechazada',
+        'success',
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ['admin', 'proposals', slug],
+      });
+      void queryClient.invalidateQueries({ queryKey: QK_BUSINESSES });
+    },
+    onError: (err) => {
+      addNotification(
+        err instanceof Error ? err.message : 'Error al revisar propuesta',
+        'info',
+      );
+    },
+  });
+
+  const pendingProposals = proposals.filter(
+    (p: Proposal) => p.status === 'PENDING',
+  );
+  const reviewedProposals = proposals.filter(
+    (p: Proposal) => p.status !== 'PENDING',
+  );
+
+  function truncateJson(data: string, max = 200): string {
+    try {
+      const formatted = JSON.stringify(JSON.parse(data), null, 2);
+      return formatted.length > max
+        ? formatted.slice(0, max) + '…'
+        : formatted;
+    } catch {
+      return data.length > max ? data.slice(0, max) + '…' : data;
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-lg max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-white">Propuestas de contenido</DialogTitle>
+          <DialogDescription className="text-white/60">
+            <span className="text-gold font-medium">{businessName}</span>
+            {pendingProposals.length > 0 && (
+              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                {pendingProposals.length} pendiente{pendingProposals.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto -mx-6 px-6 space-y-3">
+          {isLoading ? (
+            <TableSkeleton rows={3} />
+          ) : proposals.length === 0 ? (
+            <div className="glass-card p-4 rounded-xl border border-white/5 text-center text-white/40 text-sm py-8">
+              No hay propuestas para este negocio.
+            </div>
+          ) : (
+            <>
+              {pendingProposals.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[10px] font-mono tracking-widest text-amber-400 uppercase">
+                    Pendientes de revisión
+                  </h3>
+                  {pendingProposals.map((p: Proposal) => (
+                    <div
+                      key={p.id}
+                      className="glass-card p-4 rounded-xl border border-white/5 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="border-gold/30 text-gold text-[10px] font-mono"
+                          >
+                            {PROPOSAL_FIELD_LABELS[p.field] ?? p.field}
+                          </Badge>
+                          <span className="text-[10px] text-white/40">
+                            {formatRelativeTime(p.createdAt)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                            onClick={() =>
+                              reviewMutation.mutate({
+                                proposalId: p.id,
+                                action: 'approve',
+                              })
+                            }
+                            disabled={reviewMutation.isPending}
+                          >
+                            <Check size={12} className="mr-1" />
+                            Aprobar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            onClick={() =>
+                              reviewMutation.mutate({
+                                proposalId: p.id,
+                                action: 'reject',
+                              })
+                            }
+                            disabled={reviewMutation.isPending}
+                          >
+                            <X size={12} className="mr-1" />
+                            Rechazar
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-xs text-white/70">
+                        <span className="text-white/50">Por: </span>
+                        {p.proposer.name ?? '—'}{' '}
+                        <span className="text-white/40">({p.proposer.email})</span>
+                      </div>
+                      <pre className="text-[10px] font-mono text-white/40 bg-white/5 rounded-lg p-2 overflow-x-auto max-h-24">
+                        {truncateJson(p.data)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {reviewedProposals.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[10px] font-mono tracking-widest text-white/40 uppercase">
+                    Revisadas
+                  </h3>
+                  {reviewedProposals.map((p: Proposal) => (
+                    <div
+                      key={p.id}
+                      className="glass-card p-4 rounded-xl border border-white/5 opacity-60 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="border-white/10 text-white/50 text-[10px] font-mono"
+                          >
+                            {PROPOSAL_FIELD_LABELS[p.field] ?? p.field}
+                          </Badge>
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border ${
+                              p.status === 'APPROVED'
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : 'bg-red-500/15 text-red-300 border-red-500/30'
+                            }`}
+                          >
+                            {p.status === 'APPROVED' ? 'APROBADA' : 'RECHAZADA'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-white/30">
+                          {formatRelativeTime(p.createdAt)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-white/40">
+                        {p.proposer.name ?? '—'} ({p.proposer.email})
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Tab 2: Negocios ───────────────────────────────────────────
 
-function NegociosTab({
-  isAdmin,
-}: {
-  isAdmin: boolean;
-}) {
+function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const addNotification = useAppStore((s) => s.addNotification);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [assignDialog, setAssignDialog] = useState<{
+    slug: string;
+    name: string;
+  } | null>(null);
+  const [assignEmail, setAssignEmail] = useState('');
+  const [proposalsDialog, setProposalsDialog] = useState<{
+    slug: string;
+    name: string;
+  } | null>(null);
 
   const { data: businesses = [], isLoading, isError } = useQuery({
     queryKey: [...QK_BUSINESSES, statusFilter, search],
@@ -592,16 +891,12 @@ function NegociosTab({
     staleTime: 30_000,
   });
 
+  const extBusinesses = businesses as AdminBusinessExt[];
+
   const statusMutation = useMutation({
-    mutationFn: ({
-      id,
-      status,
-    }: {
-      id: string;
-      status: BusinessStatus;
-    }) => updateBusinessStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: BusinessStatus }) =>
+      updateBusinessStatus(id, status),
     onMutate: async ({ id, status }) => {
-      // Optimistic update — patch the row's status in the cache.
       const queryKey = [...QK_BUSINESSES, statusFilter, search];
       await queryClient.cancelQueries({ queryKey });
       const prev = queryClient.getQueryData<AdminBusiness[]>(queryKey);
@@ -614,7 +909,6 @@ function NegociosTab({
       return { prev, queryKey };
     },
     onError: (err, _vars, ctx) => {
-      // Roll back on error.
       if (ctx?.prev !== undefined) {
         queryClient.setQueryData(ctx.queryKey, ctx.prev);
       }
@@ -625,21 +919,62 @@ function NegociosTab({
     },
     onSuccess: (_data, vars) => {
       addNotification('Estado actualizado', 'success');
-      // Invalidate the admin list (so the filter re-applies) AND the
-      // public ['businesses'] / ['business', slug] queries so the
-      // user-facing pages reflect the new status.
       void queryClient.invalidateQueries({ queryKey: QK_BUSINESSES });
       void queryClient.invalidateQueries({ queryKey: ['businesses'] });
       void queryClient.invalidateQueries({ queryKey: ['business'] });
-      // Stats may also change (pending count shifted).
       void queryClient.invalidateQueries({ queryKey: QK_STATS });
-      // Also invalidate the affected business's slug-keyed query.
       const affected = businesses.find((b) => b.id === vars.id);
       if (affected) {
         void queryClient.invalidateQueries({
           queryKey: ['business', affected.slug],
         });
       }
+    },
+  });
+
+  // Owner management mutations
+  const assignOwnerMutation = useMutation({
+    mutationFn: ({ slug, email }: { slug: string; email: string }) =>
+      assignOwner(slug, email),
+    onSuccess: () => {
+      addNotification('Dueño propuesto correctamente', 'success');
+      setAssignDialog(null);
+      setAssignEmail('');
+      void queryClient.invalidateQueries({ queryKey: QK_BUSINESSES });
+    },
+    onError: (err) => {
+      addNotification(
+        err instanceof Error ? err.message : 'Error al asignar dueño',
+        'info',
+      );
+    },
+  });
+
+  const approveOwnerMutation = useMutation({
+    mutationFn: (slug: string) => approveOwner(slug),
+    onSuccess: () => {
+      addNotification('Dueño aprobado', 'success');
+      void queryClient.invalidateQueries({ queryKey: QK_BUSINESSES });
+    },
+    onError: (err) => {
+      addNotification(
+        err instanceof Error ? err.message : 'Error al aprobar dueño',
+        'info',
+      );
+    },
+  });
+
+  const rejectOwnerMutation = useMutation({
+    mutationFn: (slug: string) => rejectOwner(slug),
+    onSuccess: () => {
+      addNotification('Propuesta de dueño rechazada', 'success');
+      void queryClient.invalidateQueries({ queryKey: QK_BUSINESSES });
+    },
+    onError: (err) => {
+      addNotification(
+        err instanceof Error ? err.message : 'Error al rechazar dueño',
+        'info',
+      );
     },
   });
 
@@ -711,7 +1046,7 @@ function NegociosTab({
                 </tr>
               </thead>
               <tbody>
-                {businesses.map((b) => (
+                {extBusinesses.map((b) => (
                   <tr
                     key={b.id}
                     className="border-b border-white/5 hover:bg-white/5 transition-colors"
@@ -743,18 +1078,50 @@ function NegociosTab({
                       <BusinessStatusBadge status={b.status} />
                     </td>
                     <td className="px-4 py-3">
-                      {b.owner ? (
-                        <div className="min-w-[160px]">
-                          <div className="text-white text-sm truncate">
-                            {b.owner.name ?? '—'}
+                      <div className="flex flex-col gap-1.5 min-w-[180px]">
+                        <OwnerStatusBadge business={b} />
+                        {isAdmin && (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {!b.proposedOwnerId && b.ownerStatus !== 'PENDING' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px] text-gold hover:bg-gold/10 hover:text-gold"
+                                onClick={() =>
+                                  setAssignDialog({ slug: b.slug, name: b.name })
+                                }
+                              >
+                                <UserPlus size={11} className="mr-1" />
+                                Asignar
+                              </Button>
+                            )}
+                            {b.ownerStatus === 'PENDING' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                  onClick={() => approveOwnerMutation.mutate(b.slug)}
+                                  disabled={approveOwnerMutation.isPending}
+                                >
+                                  <Check size={11} className="mr-1" />
+                                  Aprobar
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                                  onClick={() => rejectOwnerMutation.mutate(b.slug)}
+                                  disabled={rejectOwnerMutation.isPending}
+                                >
+                                  <X size={11} className="mr-1" />
+                                  Rechazar
+                                </Button>
+                              </>
+                            )}
                           </div>
-                          <div className="text-[10px] text-white/40 truncate">
-                            {b.owner.email}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-white/30">—</span>
-                      )}
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {b.claimedAt ? (
@@ -767,84 +1134,97 @@ function NegociosTab({
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-white/80 hover:text-gold hover:bg-gold/10"
-                              disabled={statusMutation.isPending}
-                            >
-                              Acciones
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="bg-zinc-900 border-white/10 text-white"
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white/60 hover:text-gold hover:bg-gold/10"
+                            onClick={() =>
+                              setProposalsDialog({ slug: b.slug, name: b.name })
+                            }
+                            title="Ver propuestas"
                           >
-                            <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-widest">
-                              Cambiar estado
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-white/10" />
-                            {b.status === 'PENDING_REVIEW' && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  statusMutation.mutate({
-                                    id: b.id,
-                                    status: 'ACTIVE',
-                                  })
-                                }
-                                className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
+                            <FileText size={14} />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-white/80 hover:text-gold hover:bg-gold/10"
+                                disabled={statusMutation.isPending}
                               >
-                                <CheckCircle2 size={14} className="mr-2" />
-                                Aprobar
-                              </DropdownMenuItem>
-                            )}
-                            {b.status === 'ACTIVE' && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  statusMutation.mutate({
-                                    id: b.id,
-                                    status: 'SUSPENDED',
-                                  })
-                                }
-                                className="hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
-                              >
-                                <Ban size={14} className="mr-2" />
-                                Suspender
-                              </DropdownMenuItem>
-                            )}
-                            {(b.status === 'SUSPENDED' ||
-                              b.status === 'ARCHIVED') && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  statusMutation.mutate({
-                                    id: b.id,
-                                    status: 'ACTIVE',
-                                  })
-                                }
-                                className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
-                              >
-                                <RotateCcw size={14} className="mr-2" />
-                                Reactivar
-                              </DropdownMenuItem>
-                            )}
-                            {b.status !== 'ARCHIVED' && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  statusMutation.mutate({
-                                    id: b.id,
-                                    status: 'ARCHIVED',
-                                  })
-                                }
-                                className="hover:bg-zinc-500/10 hover:text-zinc-300 cursor-pointer"
-                              >
-                                <Archive size={14} className="mr-2" />
-                                Archivar
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                Acciones
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="bg-zinc-900 border-white/10 text-white"
+                            >
+                              <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-widest">
+                                Cambiar estado
+                              </DropdownMenuLabel>
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              {b.status === 'PENDING_REVIEW' && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    statusMutation.mutate({
+                                      id: b.id,
+                                      status: 'ACTIVE',
+                                    })
+                                  }
+                                  className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
+                                >
+                                  <CheckCircle2 size={14} className="mr-2" />
+                                  Aprobar
+                                </DropdownMenuItem>
+                              )}
+                              {b.status === 'ACTIVE' && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    statusMutation.mutate({
+                                      id: b.id,
+                                      status: 'SUSPENDED',
+                                    })
+                                  }
+                                  className="hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+                                >
+                                  <Ban size={14} className="mr-2" />
+                                  Suspender
+                                </DropdownMenuItem>
+                              )}
+                              {(b.status === 'SUSPENDED' ||
+                                b.status === 'ARCHIVED') && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    statusMutation.mutate({
+                                      id: b.id,
+                                      status: 'ACTIVE',
+                                    })
+                                  }
+                                  className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
+                                >
+                                  <RotateCcw size={14} className="mr-2" />
+                                  Reactivar
+                                </DropdownMenuItem>
+                              )}
+                              {b.status !== 'ARCHIVED' && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    statusMutation.mutate({
+                                      id: b.id,
+                                      status: 'ARCHIVED',
+                                    })
+                                  }
+                                  className="hover:bg-zinc-500/10 hover:text-zinc-300 cursor-pointer"
+                                >
+                                  <Archive size={14} className="mr-2" />
+                                  Archivar
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -854,6 +1234,84 @@ function NegociosTab({
           </div>
         </div>
       )}
+
+      {/* Assign Owner Dialog */}
+      <Dialog
+        open={assignDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAssignDialog(null);
+            setAssignEmail('');
+          }
+        }}
+      >
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Asignar dueño</DialogTitle>
+            <DialogDescription className="text-white/60">
+              Propone un dueño para{' '}
+              <span className="text-gold font-medium">{assignDialog?.name}</span>.
+              El usuario deberá ser aprobado después.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="text-[10px] font-mono tracking-widest text-white/40 uppercase block mb-1.5">
+              Email del usuario
+            </label>
+            <Input
+              type="email"
+              placeholder="usuario@ejemplo.com"
+              value={assignEmail}
+              onChange={(e) => setAssignEmail(e.target.value)}
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && assignDialog && assignEmail.trim()) {
+                  assignOwnerMutation.mutate({
+                    slug: assignDialog.slug,
+                    email: assignEmail.trim(),
+                  });
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-white/15 text-white hover:bg-white/5"
+              onClick={() => {
+                setAssignDialog(null);
+                setAssignEmail('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-gold text-obsidian hover:bg-gold/80"
+              disabled={!assignEmail.trim() || assignOwnerMutation.isPending}
+              onClick={() => {
+                if (assignDialog) {
+                  assignOwnerMutation.mutate({
+                    slug: assignDialog.slug,
+                    email: assignEmail.trim(),
+                  });
+                }
+              }}
+            >
+              {assignOwnerMutation.isPending ? 'Asignando…' : 'Asignar Dueño'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Proposals Dialog */}
+      <ProposalsDialog
+        open={proposalsDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setProposalsDialog(null);
+        }}
+        slug={proposalsDialog?.slug ?? ''}
+        businessName={proposalsDialog?.name ?? ''}
+      />
     </div>
   );
 }
@@ -1329,6 +1787,82 @@ function UsuariosTab({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+// ─── Tab 6: Propuestas ───────────────────────────────────────
+
+function PropuestasTab() {
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+
+  const { data: businesses = [], isLoading } = useQuery({
+    queryKey: QK_BUSINESSES,
+    queryFn: () => fetchAdminBusinesses(),
+    staleTime: 30_000,
+  });
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+        PROPUESTAS DE CONTENIDO
+      </h2>
+      <p className="text-white/50 text-sm">
+        Selecciona un negocio para ver y revisar las propuestas de cambios de contenido.
+      </p>
+
+      {isLoading ? (
+        <TableSkeleton rows={6} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+          {businesses.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => setSelectedSlug(b.slug)}
+              className={`glass-card p-4 rounded-xl border text-left transition-colors ${
+                selectedSlug === b.slug
+                  ? 'border-gold/40 bg-gold/5'
+                  : 'border-white/5 hover:border-gold/20'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {b.coverImage ? (
+                  <img
+                    src={b.coverImage}
+                    alt={b.name}
+                    className="w-8 h-8 rounded-lg object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                    <Store size={12} className="text-white/40" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-sm text-white font-medium truncate">
+                    {b.name}
+                  </div>
+                  <div className="text-[10px] text-white/40 font-mono truncate">
+                    {b.slug}
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedSlug && (
+        <ProposalsDialog
+          open={!!selectedSlug}
+          onOpenChange={(open) => {
+            if (!open) setSelectedSlug(null);
+          }}
+          slug={selectedSlug}
+          businessName={
+            businesses.find((b) => b.slug === selectedSlug)?.name ?? ''
+          }
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Main AdminDashboard ──────────────────────────────────────
 
 export function AdminDashboard() {
@@ -1443,6 +1977,13 @@ export function AdminDashboard() {
             <BarChart3 size={14} className="mr-1.5" />
             Métricas
           </TabsTrigger>
+          <TabsTrigger
+            value="proposals"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+          >
+            <FileText size={14} className="mr-1.5" />
+            Propuestas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen" className="mt-6">
@@ -1459,6 +2000,9 @@ export function AdminDashboard() {
         </TabsContent>
         <TabsContent value="metrics" className="mt-6">
           <AdminMetricsTab />
+        </TabsContent>
+        <TabsContent value="proposals" className="mt-6">
+          <PropuestasTab />
         </TabsContent>
       </Tabs>
     </motion.div>

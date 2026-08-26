@@ -5626,3 +5626,137 @@ Stage Summary:
 - Archivo modificado: src/components/conecta/Footer.tsx
 - Archivo creado: public/images/logo-cerotraba.png (copiado de upload/)
 - Verificado: lint clean, logo servido correctamente, estructura JSX correcta
+---
+Task ID: 1c
+Agent: main
+Task: Create 8 API routes for admin owner management and business proposals
+
+Work Log:
+- Leído worklog.md (últimas 100 líneas) y archivos de referencia para entender patrones del proyecto
+- Leídos: claim/route.ts, auth.ts, admin-config.ts, notification.service.ts, schema.prisma, db.ts, admin/businesses/route.ts, [id]/status/route.ts
+- Creados 8 archivos de API routes:
+  1. src/app/api/admin/businesses/[slug]/assign-owner/route.ts — POST, ADMIN only. Busca user por email, promueve a BUSINESS_OWNER si necesario, asigna proposedOwnerId + PENDING, notifica.
+  2. src/app/api/admin/businesses/[slug]/approve-owner/route.ts — POST, ADMIN only. Transfiere proposedOwnerId a ownerId, limpia proposedOwnerId, setea APPROVED, notifica nuevo dueño.
+  3. src/app/api/admin/businesses/[slug]/reject-owner/route.ts — POST, ADMIN only. Limpia proposedOwnerId, setea REJECTED, notifica usuario rechazado.
+  4. src/app/api/admin/businesses/migrate-ownership/route.ts — POST, ADMIN only. Migración one-time: asigna admin como dueño de todos los negocios sin ownerId. Retorna { count }.
+  5. src/app/api/admin/businesses/[slug]/proposals/route.ts — GET, ADMIN only. Retorna todas las propuestas de un negocio ordenadas por createdAt desc, con nombre/email del proposer.
+  6. src/app/api/admin/businesses/proposals/[id]/review/route.ts — POST, ADMIN only. Aprueba/rechaza propuesta. En approve, aplica datos según field (INFO→update, HOURS→delete+create, SOCIALS→delete+create, PROMOTION→update, NEW_PROMOTION→create). Notifica proposer.
+  7. src/app/api/owner/businesses/[slug]/proposals/route.ts — GET+POST, BUSINESS_OWNER o ADMIN. GET: propuestas del usuario para ese negocio. POST: crea propuesta si es dueño y no existe PENDING para mismo business+field. Data almacenada como JSON.stringify.
+  8. src/app/api/owner/businesses/proposals/[id]/route.ts — PUT+DELETE, BUSINESS_OWNER o ADMIN. PUT: actualiza data de propuesta PENDING (solo el autor). DELETE: cancela propuesta PENDING (solo el autor).
+- Todos los endpoints siguen el patrón: requireRole, params: Promise<>, try/catch con instanceof Response, NextResponse.json, notificaciones best-effort.
+- Lint pasa sin errores.
+- Dev server compila correctamente.
+
+Stage Summary:
+- 8 archivos creados, 0 modificados, 0 errores de lint
+- Patrón consistente con el resto del codebase (requireRole, db, notificationService)
+- Proposals almacenadas con data como JSON.stringify (String type en Prisma)
+
+---
+Task ID: 2a
+Agent: main
+Task: Add owner management UI to AdminDashboard and API functions to api.ts
+
+Work Log:
+- Leído worklog.md (últimas 100 líneas) para contexto de la sesión anterior (task 1c creó 8 API routes de owner management)
+- Leído src/lib/api.ts (791 líneas) para entender patrones de fetch (throwAdminError, headers, etc.)
+- Leído AdminDashboard.tsx (1493 líneas) para entender estructura: tabs (Resumen, Negocios, Reseñas, Usuarios, Métricas), query keys, mutations, componentes auxiliares
+- Leído types.ts para entender AdminBusiness type (no tiene ownerStatus ni proposedOwner)
+- Leído prisma/schema.prisma para verificar OwnerApprovalStatus enum (PENDING, APPROVED, REJECTED) y BusinessProposal model
+- Leído admin/businesses/route.ts para entender que el GET endpoint no retorna ownerStatus/proposedOwner (no se puede modificar por restricciones)
+- Verificada la disponibilidad del componente Dialog en shadcn/ui
+
+Modificaciones a src/lib/api.ts (+62 líneas):
+- Agregada sección "Owner management (admin)" con 6 funciones:
+  1. migrateOwnership() — POST /api/admin/businesses/migrate-ownership
+  2. assignOwner(slug, email) — POST /api/admin/businesses/[slug]/assign-owner
+  3. approveOwner(slug) — POST /api/admin/businesses/[slug]/approve-owner
+  4. rejectOwner(slug) — POST /api/admin/businesses/[slug]/reject-owner
+  5. fetchBusinessProposals(slug) — GET /api/admin/businesses/[slug]/proposals
+  6. reviewProposal(proposalId, action) — POST /api/admin/businesses/proposals/[id]/review
+- Todas usan throwAdminError para manejo de errores consistente
+
+Modificaciones a AdminDashboard.tsx (+543 líneas netas, 1493→2036):
+- Imports nuevos: UserPlus, Check, X, FileText, Clock (lucide-react); assignOwner, approveOwner, rejectOwner, fetchBusinessProposals, reviewProposal (api); Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter (ui/dialog)
+- Tipo local AdminBusinessExt = AdminBusiness & { ownerStatus?, proposedOwner?, proposedOwnerId? } para manejar campos de Prisma no incluidos en el endpoint actual
+- Constante PROPOSAL_FIELD_LABELS para mapear enum → label en español
+- Componente OwnerStatusBadge: badge condicional según ownerStatus (PENDING→amarillo, APPROVED+ownerId→verde con email, REJECTED→rojo, sin dueño→gris)
+- Componente ProposalsDialog: dialog reutilizable que muestra propuestas de un negocio, separadas en pendientes y revisadas. Cada propuesta muestra campo (badge), fecha, proponente, JSON truncado a 200 chars, botones Aprobar/Rechazar
+- NegociosTab modificada:
+  * Columna "Dueño" ahora muestra OwnerStatusBadge + botones inline (Asignar Dueño, Aprobar, Rechazar)
+  * Botón FileText en columna Acciones para abrir ProposalsDialog
+  * 3 mutations nuevas: assignOwnerMutation, approveOwnerMutation, rejectOwnerMutation (todas invalidan QK_BUSINESSES)
+  * Dialog de Asignar Dueño con input de email
+  * ProposalsDialog integrado al final del componente
+- PropuestasTab (Tab 6): grid de negocios seleccionable para ver propuestas, usa ProposalsDialog
+- Tab "Propuestas" agregado al TabsList (después de Métricas) con ícono FileText
+
+- Lint pasa sin errores
+- Dev server compila correctamente
+
+Stage Summary:
+- Archivos modificados: src/lib/api.ts, src/components/conecta/admin/AdminDashboard.tsx
+- 0 archivos nuevos, 0 errores de lint
+- UI lista para owner management una vez que el GET /api/admin/businesses incluya ownerStatus/proposedOwner en la respuesta
+- Los mutations ya funcionan contra los endpoints creados en task 1c
+
+---
+Task ID: 3a
+Agent: main
+Task: Add proposal-based editing to OwnerDashboard for non-admin owners
+
+Work Log:
+- Leído worklog.md (últimas 50 líneas) para contexto de tareas anteriores (2a: AdminDashboard con owner management, 1c: 8 API routes)
+- Leído OwnerDashboard.tsx completo (1552 líneas) para entender estructura: InfoTab, ReservasTab, PromotionsTab, OwnerDashboard
+- Leído api.ts completo (855 líneas) para entender patrones de fetch (throwAdminError, throwOwnerError)
+- Verificado isAdminEmail en src/lib/admin-config.ts (función existente)
+
+Modificaciones a src/lib/api.ts (+33 líneas):
+- Agregada sección "Owner proposals (owner-side)" con 4 funciones:
+  1. fetchOwnerProposals(slug) — GET /api/owner/businesses/[slug]/proposals
+  2. createOwnerProposal(slug, field, data) — POST /api/owner/businesses/[slug]/proposals
+  3. updateOwnerProposal(proposalId, data) — PUT /api/owner/businesses/proposals/[id]
+  4. deleteOwnerProposal(proposalId) — DELETE /api/owner/businesses/proposals/[id]
+
+Modificaciones a src/components/conecta/owner/OwnerDashboard.tsx (+348 líneas netas, 1552→~1900):
+- Imports nuevos: Send, Clock, CheckCircle (lucide-react); isAdminEmail (admin-config); fetchOwnerProposals, createOwnerProposal, updateOwnerProposal, deleteOwnerProposal (api)
+- Tipos nuevos: ProposalStatus, OwnerProposal
+- Constante PROPOSAL_FIELD_LABELS para mapear field enum → label en español
+- Query key QK_OWNER_PROPOSALS para TanStack Query
+
+- PendingProposalBanner: componente reutilizable que muestra advertencia ámbar cuando hay propuesta pendiente para un campo
+
+- InfoTab ahora recibe prop isAdmin:
+  * Si admin: comportamiento original (save directo con updateOwnerBusiness/updateOwnerHours/updateOwnerSocials)
+  * Si no admin: cada save crea una propuesta via createOwnerProposal con field 'INFO', 'HOURS', 'SOCIALS'
+  * Botones cambian texto/icono: admin → "Guardar cambios" con Save, no-admin → "Enviar propuesta" con Send
+  * Notificación cambia: admin → "Cambios guardados", no-admin → "Propuesta enviada. El administrador la revisará."
+  * Banners amarillos de propuesta pendiente aparecen antes de cada sección (INFO, HOURS, SOCIALS)
+  * Query de propuestas (enabled solo para no-admin) para detectar campos pendientes
+
+- PromotionsTab ahora recibe prop isAdmin:
+  * Si admin: comportamiento original (create/update directo)
+  * Si no admin: create → createOwnerProposal con field 'NEW_PROMOTION', update → createOwnerProposal con field 'PROMOTION'
+  * Botón "Nueva promoción" → "Proponer promoción" para no-admin
+  * Modal save button: admin → "Guardar cambios"/"Crear promoción", no-admin → "Enviar propuesta"
+  * Banners para 'NEW_PROMOTION' y 'PROMOTION' pendientes
+
+- PropuestasTab (Tab 4, solo no-admin):
+  * Lista de propuestas del owner con ProposalStatusBadge (PENDING→amarillo+Clock, APPROVED→verde+CheckCircle, REJECTED→rojo+XCircle)
+  * Cada propuesta muestra: field label, status badge, fecha relativa, JSON truncado (150 chars)
+  * Acciones para PENDING: "Editar" (info notification) y "Cancelar" (deleteOwnerProposal)
+  * Empty state con ícono Send y mensaje instruccional
+
+- OwnerDashboard:
+  * Agregado `const isAdmin = !!user && isAdminEmail(user?.email)`
+  * Tab 4 "Mis Propuestas" agregado condicionalmente (!isAdmin)
+  * InfoTab y PromotionsTab reciben prop isAdmin
+
+- Lint pasa sin errores
+- Dev server compila correctamente
+
+Stage Summary:
+- Archivos modificados: src/lib/api.ts, src/components/conecta/owner/OwnerDashboard.tsx
+- 0 archivos nuevos, 0 errores de lint
+- Funcionalidad de propuestas completa para BUSINESS_OWNER (no admin): propuesta en vez de edición directa, tab de propuestas, banners de pendientes
+- Admin conserva comportamiento original de edición directa sin cambios visibles
