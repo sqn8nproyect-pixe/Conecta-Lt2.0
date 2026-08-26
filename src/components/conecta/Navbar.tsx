@@ -481,7 +481,7 @@ export function Navbar() {
             {navItem('Directorio', 'home')}
             {navItem('Mapa', 'map')}
             {user && navItem('Mi Perfil', 'profile')}
-            {(user?.role === 'BUSINESS_OWNER' || isAdminEmail(user.email)) && ownerNavItem()}
+            {(user?.role === 'BUSINESS_OWNER' || isAdminEmail(user?.email)) && ownerNavItem()}
             {user && isAdminEmail(user.email) && adminNavItem()}
           </div>
 
