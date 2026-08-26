@@ -47,6 +47,24 @@ export function Footer() {
           <span className="hidden sm:inline">Hecho con ✨ en Venezuela</span>
         </div>
       </div>
+      {/* Agencia CeroTraba credit */}
+      <div className="border-t border-white/5 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-center gap-3 text-xs text-white/30">
+          <a
+            href="https://cerotraba.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 group"
+          >
+            <span className="font-mono tracking-wider">Desarrollado por</span>
+            <img
+              src="/images/logo-cerotraba.png"
+              alt="Agencia CeroTraba"
+              className="h-6 w-auto object-contain opacity-60 group-hover:opacity-90 transition-opacity"
+            />
+          </a>
+        </div>
+      </div>
       {/* Alcohol responsibility disclaimer */}
       <div className="border-t border-white/5 bg-obsidian/95 py-3 text-center">
         <p className="text-[10px] text-amber/70 font-mono tracking-wider px-4">

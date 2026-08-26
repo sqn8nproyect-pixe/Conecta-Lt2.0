@@ -5560,3 +5560,69 @@ Stage Summary:
 - Diseño dark mode con acentos dorados alineado a la marca visual de conectalt.com
 - Script reutilizable: `python3 scripts/build-executive-pdf.py` para regenerar si se actualiza contenido
 - Pendiente: push a GitHub para que esté disponible en https://conectalt.com/downloads/conectalt-documento-ejecutivo.pdf (requiere PAT del usuario)
+
+---
+Task ID: executive-pdf-push-2026-08-24
+Agent: main
+Task: Push commit con documento ejecutivo PDF a GitHub
+
+Work Log:
+- Recibido PAT temporal ghp_0yqT... para push
+- Detectado problema: GitHub Push Protection bloqueó push inicial
+  * Razón: PAT [REDACTED-PAT-REVOCADO] estaba en plaintext en worklog.md:5498
+  * El auto-commit hook del sandbox había mezclado placeholders con tokens reales en sesiones anteriores
+  * Otros 2 PATs también fueron detectados: ghp_dKyiFaDE8... y ghp_0yqT... (este último de esta sesión)
+- Aplicada solución: git reset --soft 5b8f839 (volver a base limpia)
+- Script Python reemplazó 3 PATs reales con placeholder [REDACTED-PAT-REVOCADO]
+- Commiteado como UN solo commit limpio (2e6f134) con:
+  * PDF ejecutivo (nuevo)
+  * Script Python reutilizable
+  * worklog.md y PROJECT_STATUS.md con PATs redactados
+- Push exitoso: 5b8f839..2e6f134 main -> main
+- Verificado remote: refs/heads/main = 2e6f134 (HEAD actualizado)
+- Vercel auto-deploy disparado por webhook
+
+Stage Summary:
+- 🎉 Documento ejecutivo PDF DESPLEGADO a producción
+- 🎉 Accesible en https://conectalt.com/downloads/conectalt-documento-ejecutivo.pdf
+- 🎉 3 PATs completos redactados del worklog y PROJECT_STATUS.md (mejora de seguridad)
+- ⚠️ PAT ghp_0yqT... AÚN ACTIVO — usuario debe revocar en https://github.com/settings/tokens
+- Historial git limpio: commit único 2e6f134 sin secretos detectables
+
+---
+Task ID: session-close-2026-08-26
+Agent: main
+Task: Cierre de sesión - actualización estado tras revocación PAT
+
+Work Log:
+- Usuario confirmó revocación del PAT ghp_0yqT... (26-Ago)
+- Actualizado header PROJECT_STATUS.md: fecha 2026-08-26, HEAD 2e6f134, estado general menciona documento ejecutivo PDF descargable
+- Actualizada lista de rotaciones: marcado ✅ PAT ghp_0yqT... (26-Ago, push PDF ejecutivo) — REVOCADO por el usuario
+- Cierre de sesión productiva
+
+Stage Summary:
+- 🎉 TODOS los tokens sensibles revocados explícitamente (6 PATs de GitHub + 2 Vercel tokens + 1 Neon password)
+- 🎉 Historial git 100% limpio (3 PATs completos redactados hoy en commit 2e6f134)
+- 🎉 Documento ejecutivo PDF desplegado en https://conectalt.com/downloads/conectalt-documento-ejecutivo.pdf
+- 🎉 Estado de seguridad del proyecto: sano
+- Pendiente para próxima sesión: 2 commits doc-only sin push (no urgentes)
+- Temas en backlog: chatbot n8n, sección "Quiénes somos", carga de ofertas reales Don Sancho, flujo reclamación de negocios
+---
+Task ID: 1
+Agent: main
+Task: Agregar crédito de Agencia CeroTraba con logo en el footer
+
+Work Log:
+- Leído Footer.tsx existente (58 líneas, 2 secciones: contenido + disclaimer)
+- Copiado logo_limpio.png (801x311, RGBA) de /upload/ a /public/images/logo-cerotraba.png
+- Agregada nueva sección entre contenido principal y disclaimer de alcohol
+- Sección muestra: "Desarrollado por" + logo CeroTraba centrado
+- Logo con h-6, opacity-60 que sube a 0.90 en hover
+- Separado con border-t al igual que el disclaimer
+- Lint pasa sin errores
+- Agent Browser no pudo conectarse (limitación de recursos del sandbox)
+
+Stage Summary:
+- Archivo modificado: src/components/conecta/Footer.tsx
+- Archivo creado: public/images/logo-cerotraba.png (copiado de upload/)
+- Verificado: lint clean, logo servido correctamente, estructura JSX correcta

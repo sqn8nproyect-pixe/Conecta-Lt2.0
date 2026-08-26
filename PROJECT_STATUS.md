@@ -3,9 +3,9 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-08-24
-**HEAD commit:** `5b8f839` (pushed a GitHub, desplegado en Vercel)
-**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`. Políticas de Privacidad y Términos de Uso desplegados. ✅ Bloqueo de Google Safe Browsing LEVANTADO (notificación 24-Ago). ✅ Todos los PATs de GitHub revocados.
+**Última actualización:** 2026-08-26
+**HEAD commit:** `2e6f134` (pushed a GitHub, desplegado en Vercel)
+**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`. Políticas de Privacidad y Términos de Uso desplegados. ✅ Bloqueo de Google Safe Browsing LEVANTADO (24-Ago). ✅ Todos los PATs de GitHub revocados. ✅ Documento ejecutivo PDF descargable.
 
 ---
 
@@ -305,6 +305,7 @@ Esto funciona para: `conectalt.com`, `*.vercel.app`, y localhost. Ver commit `80
 - ✅ ~~REVOCAR Vercel token `vcp_7yJf...` (22-Ago)~~ — Hecho
 - ✅ ~~REVOCAR GitHub PAT `ghp_dKyiFaDE8...` (23-Ago)~~ — Hecho
 - ✅ ~~REVOCAR GitHub PAT `ghp_mwDI...` (23-Ago)~~ — Hecho
+- ✅ ~~REVOCAR GitHub PAT `ghp_0yqT...` (26-Ago, push PDF ejecutivo)~~ — Hecho
 - ✅ ~~Solicitar review a Google Safe Browsing~~ — Resuelto: bloqueo levantado el 24-Ago, conectalt.com vuelve a ser accesible desde Chrome
 
 ### Media prioridad (mejoras)
