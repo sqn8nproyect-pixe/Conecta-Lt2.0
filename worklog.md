@@ -5819,3 +5819,32 @@ Stage Summary:
 - Las operaciones sobre modelos Prisma existentes (User, Business, BusinessHours, BusinessSocial, Promotion, Notification) se mantienen con ORM
 - Tipos ProposalField y ProposalRow definidos localmente donde se necesitan
 - 0 errores de lint
+---
+Task ID: protocol-verify
+Agent: main
+Task: Protocolo de verificación post-sesión — configurar DB local, verificar compilación y E2E con Agent Browser
+
+Work Log:
+- Encontrado que .env tenía DATABASE_URL=file:.../custom.db (SQLite) pero schema.prisma decía postgresql (Neon)
+- La URL de Neon no estaba disponible localmente (hostname redactado en git, password expuesto pendiente rotación)
+- Cambiado schema.prisma de provider "postgresql" a "sqlite" (eliminado directUrl)
+- Descubierto que el shell tenía DATABASE_URL=file:.../custom.db como env var que sobreescribía .env
+- Limpieza: unset DATABASE_URL, eliminado custom.db, actualizado .env a dev.db
+- Ejecutado prisma db push + seed (21 negocios, 42 promos, 84 reviews, 16 users) + seed-roles (admin, moderator, Ana como BUSINESS_OWNER)
+- Agregadas variables NEXTAUTH_SECRET, NEXTAUTH_URL, AUTH_SECRET, AUTH_URL al .env para desarrollo local
+- bun run lint → 0 errores, 0 warnings
+- Verificación Agent Browser exitosa:
+  1. Home Page: Age Gate visible, 21 negocios listados, filtros por categoría/precio, buscador, PLANIFICAR NOCHE
+  2. Age Gate: Click "SOY MAYOR DE EDAD" → se cierra correctamente
+  3. Footer: Logo, copyright, Quiénes Somos, Privacidad, Términos, Crédito CeroTraba, disclaimer alcohol
+  4. Detail Page (Vinos del Valle): Galería 10 fotos, aforo en tiempo real, pestañas Info/Promos(2)/Reseñas(4), RESERVAR MESA, WhatsApp, Instagram, Cómo Llegar, ratings
+  5. Todos los endpoints API responden 200 (businesses, analytics/popular, auth/session, track, views, categories)
+  6. 0 errores de consola en navegador
+
+Stage Summary:
+- DB local SQLite funcional en file:/home/z/my-project/db/dev.db
+- Schema prisma adaptado a SQLite (provider=sqlite, sin directUrl)
+- .env configurado con DATABASE_URL + NEXTAUTH vars
+- Aplicación verificada end-to-end con Agent Browser: home, age gate, detail, footer
+- 0 errores de compilación, 0 errores de runtime, 0 errores de consola
+- NOTA: Para despliegue en Vercel, el schema debe volver a postgresql y DATABASE_URL debe apuntar a Neon
