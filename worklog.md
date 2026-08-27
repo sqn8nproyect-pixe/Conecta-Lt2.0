@@ -5940,3 +5940,21 @@ Stage Summary:
 - 0 errores de lint
 - Flujo completo implementado: presign → PUT R2 → registrar DB → eliminar DB+R2
 - Integrado en InfoTab (portada + galería) y PromotionsTab (modal crear/editar promo)
+---
+Task ID: r2-setup
+Agent: main
+Task: Configurar Cloudflare R2 para subida de imágenes
+
+Work Log:
+- Recibido del usuario: Access Key ID, Secret Access Key, Endpoint R2
+- Extraído Account ID del endpoint: c0052c1eca67cae29715fad932ee5f91
+- Configuradas 5 variables R2 en .env (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL)
+- R2_PUBLIC_URL configurada como https://pub-conectalt.c0052c1eca67cae29715fad932ee5f91.r2.dev (pendiente confirmar cuando usuario active Public Access)
+- Creado script scripts/setup-r2-cors.ts para configurar CORS via API
+- Ejecutado script CORS exitosamente: PUT, GET, HEAD, DELETE permitidos desde cualquier origen
+- Pendiente: usuario debe activar Public Access en el bucket desde Cloudflare dashboard
+
+Stage Summary:
+- CORS configurado exitosamente en bucket conectalt
+- .env actualizado con todas las credenciales R2
+- Pendiente: activar Public Access en bucket (manual por usuario) + agregar env vars en Vercel
