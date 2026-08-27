@@ -9,8 +9,8 @@
 //      para registrar la URL en la base de datos
 // ─────────────────────────────────────────────────────────────
 
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { put } from '@aws-sdk/s3-request-presigner';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // ─── Configuración R2 ───────────────────────────────────────
 
@@ -98,13 +98,13 @@ export async function generatePresignedUploadUrl(
   const client = getS3Client();
 
   // Generar la URL firmada para PUT
-  const command = new (await import('@aws-sdk/client-s3')).PutObjectCommand({
+  const command = new PutObjectCommand({
     Bucket: R2_BUCKET_NAME!,
     Key: key,
     ContentType: contentType,
   });
 
-  const uploadUrl = await put(client, command, { expiresIn });
+  const uploadUrl = await getSignedUrl(client, command, { expiresIn });
 
   // Construir la URL pública final
   const publicUrl = `${R2_PUBLIC_URL}/${key}`;
