@@ -5958,3 +5958,21 @@ Stage Summary:
 - CORS configurado exitosamente en bucket conectalt
 - .env actualizado con todas las credenciales R2
 - Pendiente: activar Public Access en bucket (manual por usuario) + agregar env vars en Vercel
+
+---
+Task ID: deploy-r2
+Agent: main
+Task: Deploy a Vercel con sistema R2 de subida de imágenes
+
+Work Log:
+- Detectado error de build: import incorrecto `put` en @aws-sdk/s3-request-presigner
+- Corregido a `getSignedUrl` + importación directa de `PutObjectCommand`
+- Variables R2 configuradas en Vercel via API (5 vars: ACCOUNT_ID, ACCESS_KEY_ID, SECRET_ACCESS_KEY, BUCKET_NAME, PUBLIC_URL)
+- Push exitoso a GitHub, deploy automático en Vercel
+- Token Vercel revocado por seguridad
+- Usuario confirma deploy exitoso en producción
+
+Stage Summary:
+- Deploy en Vercel: READY ✅
+- R2 integración completa en producción
+- Sistema de subida de imágenes listo para usar por dueños de negocios
