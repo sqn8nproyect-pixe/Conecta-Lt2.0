@@ -48,6 +48,8 @@ import {
   Send,
   Clock,
   CheckCircle,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -66,6 +68,8 @@ import {
   createOwnerProposal,
   updateOwnerProposal,
   deleteOwnerProposal,
+  fetchBusinessImages,
+  deleteBusinessImage,
 } from '@/lib/api';
 import type {
   OwnerBusiness,
@@ -111,6 +115,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImageUploadZone, SingleImageUpload } from '@/components/ui/image-upload-zone';
+import type { CurrentImage } from '@/components/ui/image-upload-zone';
 
 // Query keys — kept here because they're only consumed by this component.
 const QK_OWNER_BUSINESSES = ['owner', 'businesses'] as const;
@@ -121,6 +127,8 @@ const QK_OWNER_PROMOTIONS = (slug: string) =>
   ['owner', 'promotions', slug] as const;
 const QK_OWNER_PROPOSALS = (slug: string) =>
   ['owner', 'proposals', slug] as const;
+const QK_OWNER_IMAGES = (slug: string) =>
+  ['owner', 'images', slug] as const;
 
 // Proposal field labels (Spanish)
 const PROPOSAL_FIELD_LABELS: Record<string, string> = {
@@ -732,7 +740,110 @@ function InfoTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
           </Button>
         </div>
       </section>
+
+      {/* ─── Section 4: Imagen de portada ──────────────────── */}
+      <section className="glass-card rounded-2xl p-5 sm:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ImageIcon size={16} className="text-gold" />
+          <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+            IMAGEN DE PORTADA
+          </h2>
+        </div>
+        <SingleImageUpload
+          businessSlug={slug}
+          imageType="COVER"
+          currentUrl={business.coverImage || undefined}
+          onUploadComplete={(url) => {
+            // Actualizar el campo local y refrescar
+            setBasicInfo((prev) => ({ ...prev, coverImage: url }));
+            void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
+            void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+          }}
+          onClear={() => {
+            setBasicInfo((prev) => ({ ...prev, coverImage: '' }));
+          }}
+          label="Sube una imagen de portada para tu negocio"
+        />
+      </section>
+
+      {/* ─── Section 5: Galería de fotos ────────────────────── */}
+      <GallerySection slug={slug} />
     </div>
+  );
+}
+
+// ─── Galería de fotos (sub-componente de InfoTab) ─────────
+
+function GallerySection({ slug }: { slug: string }) {
+  const queryClient = useQueryClient();
+  const addNotification = useAppStore((s) => s.addNotification);
+
+  const { data: images = [], isLoading } = useQuery({
+    queryKey: QK_OWNER_IMAGES(slug),
+    queryFn: () => fetchBusinessImages(slug),
+    staleTime: 30_000,
+  });
+
+  // Filtrar solo imágenes de tipo GALLERY
+  const galleryImages: CurrentImage[] = images
+    .filter((img) => img.type === 'GALLERY')
+    .map((img) => ({ id: img.id, url: img.url, type: img.type }));
+
+  const deleteMutation = useMutation({
+    mutationFn: (imageId: string) => deleteBusinessImage(slug, imageId),
+    onMutate: async (imageId) => {
+      const queryKey = QK_OWNER_IMAGES(slug);
+      await queryClient.cancelQueries({ queryKey });
+      const prev = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(
+        queryKey,
+        (prev: typeof images) => prev.filter((img) => img.id !== imageId),
+      );
+      return { prev, queryKey };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev !== undefined) {
+        queryClient.setQueryData(ctx.queryKey, ctx.prev);
+      }
+      addNotification(
+        err instanceof Error ? err.message : 'Error al eliminar la imagen',
+        'info',
+      );
+    },
+    onSuccess: () => {
+      addNotification('Imagen eliminada', 'success');
+    },
+  });
+
+  return (
+    <section className="glass-card rounded-2xl p-5 sm:p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <ImageIcon size={16} className="text-gold" />
+        <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+          GALERÍA DE FOTOS
+        </h2>
+      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <ImageUploadZone
+          businessSlug={slug}
+          imageType="GALLERY"
+          maxFiles={20}
+          currentImages={galleryImages}
+          onImageDelete={(imageId) => deleteMutation.mutate(imageId)}
+          onUploadComplete={() => {
+            void queryClient.invalidateQueries({ queryKey: QK_OWNER_IMAGES(slug) });
+            void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+          }}
+          label={`Fotos subidas: ${galleryImages.length}/20`}
+        />
+      )}
+    </section>
   );
 }
 
@@ -1491,13 +1602,52 @@ function PromotionsTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-white/70 text-xs">Imagen (URL)</Label>
-              <Input
-                value={form.image}
-                onChange={(e) => setForm({ ...form, image: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                placeholder="https://..."
-              />
+              <Label className="text-white/70 text-xs">Imagen</Label>
+              {form.image ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                    { }
+                    <img
+                      src={form.image}
+                      alt="Promoción"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Limpiar URL para mostrar el upload zone
+                        setForm((prev) => ({ ...prev, image: '' }));
+                      }}
+                      className="border-white/15 text-white hover:bg-white/5 hover:border-amber-400/40 text-xs"
+                    >
+                      <ImageIcon size={12} className="mr-1" /> Cambiar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
+                      className="border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs"
+                    >
+                      <X size={12} className="mr-1" /> Quitar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <ImageUploadZone
+                  businessSlug={slug}
+                  imageType="PROMOTION"
+                  maxFiles={1}
+                  compact
+                  onUploadComplete={(url) => {
+                    setForm((prev) => ({ ...prev, image: url }));
+                  }}
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">Código</Label>

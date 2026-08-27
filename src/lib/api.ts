@@ -886,3 +886,67 @@ export async function updateOwnerPromotion(
   return res.json();
 }
 
+// ─── Imágenes (upload R2) ──────────────────────────────────
+
+/**
+ * POST /api/upload/presign — obtiene URL firmada para subir a R2.
+ * Retorna { uploadUrl, publicUrl, key } o lanza error.
+ */
+export async function presignUpload(
+  businessSlug: string,
+  fileType: string,
+  imageType: 'COVER' | 'GALLERY' | 'PROMOTION',
+): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
+  const res = await fetch('/api/upload/presign', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ businessSlug, fileType, imageType }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error || `Error ${res.status} al obtener URL de subida`);
+  }
+  return res.json();
+}
+
+/**
+ * GET /api/owner/businesses/[slug]/images — lista imágenes del negocio.
+ */
+export async function fetchBusinessImages(
+  slug: string,
+): Promise<Array<{ id: string; url: string; type: string; sortOrder: number; storageKey: string }>> {
+  const res = await fetch(`/api/owner/businesses/${slug}/images`);
+  if (!res.ok) await throwOwnerError(res);
+  return res.json();
+}
+
+/**
+ * POST /api/owner/businesses/[slug]/images — registra imagen en DB.
+ */
+export async function saveBusinessImage(
+  slug: string,
+  data: { url: string; type: string; storageKey: string; sortOrder?: number },
+): Promise<{ id: string; url: string }> {
+  const res = await fetch(`/api/owner/businesses/${slug}/images`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await throwOwnerError(res);
+  return res.json();
+}
+
+/**
+ * DELETE /api/owner/businesses/[slug]/images?imageId=xxx — elimina imagen.
+ */
+export async function deleteBusinessImage(
+  slug: string,
+  imageId: string,
+): Promise<void> {
+  const res = await fetch(
+    `/api/owner/businesses/${slug}/images?imageId=${encodeURIComponent(imageId)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) await throwOwnerError(res);
+}
+

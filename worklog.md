@@ -5848,3 +5848,95 @@ Stage Summary:
 - Aplicación verificada end-to-end con Agent Browser: home, age gate, detail, footer
 - 0 errores de compilación, 0 errores de runtime, 0 errores de consola
 - NOTA: Para despliegue en Vercel, el schema debe volver a postgresql y DATABASE_URL debe apuntar a Neon
+---
+Task ID: 6-backend
+Agent: full-stack-developer
+Task: Implementar el backend completo de subida de imágenes con Cloudflare R2
+
+Work Log:
+- Leído worklog.md (últimas 50 líneas) para contexto del proyecto CONECTA-LT
+- Verificado auth (requireRole, assertBusinessOwnership), db, admin-config, schema (BusinessImage, ImageType enum)
+- Confirmado paquetes @aws-sdk/client-s3 y @aws-sdk/s3-request-presigner ya instalados
+- Creado src/lib/r2.ts:
+  * isR2Configured() → verifica que todas las vars R2_* estén presentes
+  * S3Client singleton con endpoint R2 (region 'auto')
+  * generatePresignedUploadUrl(key, contentType, expiresIn=300) → { uploadUrl, publicUrl, key }
+  * deleteObject(key) → elimina objeto de R2
+  * ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  * MAX_IMAGE_SIZE = 5MB (exportado para validación en endpoints)
+- Creado src/app/api/upload/presign/route.ts:
+  * POST: requireRole('BUSINESS_OWNER', 'ADMIN')
+  * Verifica R2 configurado (503 si no)
+  * Valida fileType en ALLOWED_TYPES, imageType en COVER|GALLERY|PROMOTION
+  * Verifica ownership (ownerId o isAdminEmail)
+  * Construye key según imageType: promotions/... | businesses/.../cover/... | businesses/.../gallery/...
+  * Retorna { uploadUrl, publicUrl, key }
+- Creado src/app/api/owner/businesses/[slug]/images/route.ts:
+  * GET: lista BusinessImages por businessId ordenadas por sortOrder
+  * POST: registra URL en DB después de upload exitoso
+    - Si type=COVER y ya existe, actualiza la existente en vez de crear nueva
+    - Siempre actualiza business.coverImage cuando type=COVER
+  * DELETE: elimina imagen por query param imageId
+    - Verifica ownership via assertBusinessOwnership
+    - Elimina de R2 si hay storageKey y R2 configurado (falla silenciosamente si ya no existe)
+    - Elimina de DB con db.businessImage.delete
+    - Si era COVER, limpia business.coverImage si apuntaba a la misma URL
+- Todos los errores usan el patrón: throw new Response(JSON.stringify({error}), {status, headers})
+- try/catch con `if (e instanceof Response) return e` en cada handler
+- Comentarios en español
+- bun run lint → 0 errores, 0 warnings
+- Dev server compila correctamente sin errores
+
+Stage Summary:
+- 3 archivos creados: src/lib/r2.ts, src/app/api/upload/presign/route.ts, src/app/api/owner/businesses/[slug]/images/route.ts
+- 0 archivos modificados
+- 0 errores de lint
+- Flujo completo: presign → upload directo a R2 → registrar en DB → eliminar de DB+R2
+---
+Task ID: 6-frontend
+Agent: full-stack-developer
+Task: Crear componente ImageUploadZone reutilizable e integrarlo en OwnerDashboard
+
+Work Log:
+- Leído worklog.md (últimas 80 líneas) para contexto del proyecto CONECTA-LT
+- Leído api.ts completo (~887 líneas) para conocer patrones existentes
+- Leído OwnerDashboard.tsx completo (~1862 líneas) para identificar puntos de integración
+- Verificado que no existe tipo BusinessImage en types.ts
+
+- Añadidas 4 funciones de fetch a src/lib/api.ts:
+  * presignUpload(businessSlug, fileType, imageType) → POST /api/upload/presign
+  * fetchBusinessImages(slug) → GET /api/owner/businesses/[slug]/images
+  * saveBusinessImage(slug, data) → POST /api/owner/businesses/[slug]/images
+  * deleteBusinessImage(slug, imageId) → DELETE /api/owner/businesses/[slug]/images?imageId=xxx
+
+- Creado src/components/ui/image-upload-zone.tsx con dos componentes:
+  * ImageUploadZone: componente principal de drag & drop, soporta múltiples archivos
+    - Props: businessSlug, imageType, maxFiles, onUploadComplete, currentImages, onImageDelete, label, compact
+    - Validación: tipo (jpg/png/webp), tamaño (5 MB), límite de archivos
+    - Flujo: presign → PUT R2 → save DB → callback + toast
+    - Error 503: toast informativo sobre configurar R2 en .env
+    - Drag & drop con zona visual (borde punteado, icono Upload)
+    - Preview local durante subida con spinner
+    - Grid de thumbnails con botón X para eliminar (hover reveal)
+    - Estilo: glass-card (bg-white/5, border-white/10, rounded-xl)
+  * SingleImageUpload: variante para cover/promo (una sola imagen)
+    - Si hay imagen: thumbnail + botones Cambiar/Eliminar
+    - Si no hay imagen: delega a ImageUploadZone en modo compacto
+
+- Modificado src/components/conecta/owner/OwnerDashboard.tsx:
+  * Añadido import de Image, X (lucide-react), fetchBusinessImages, deleteBusinessImage (api), ImageUploadZone, SingleImageUpload, CurrentImage
+  * Añadida query key QK_OWNER_IMAGES(slug)
+  * InfoTab: añadida Section 4 (Imagen de portada) con SingleImageUpload
+  * InfoTab: añadida Section 5 (Galería de fotos) con GallerySection
+  * Creada función GallerySection: fetch imágenes, filtra tipo GALLERY, grid con deleteMutation optimista
+  * PromotionsTab: reemplazado Input de URL por ImageUploadZone compacto + thumbnail con botones Cambiar/Quitar
+
+- bun run lint → 0 errores, 0 warnings (después de fix automático de eslint-disable innecesarios)
+- Comentarios en español en todo el código nuevo
+
+Stage Summary:
+- 1 archivo creado: src/components/ui/image-upload-zone.tsx
+- 2 archivos modificados: src/lib/api.ts (+66 líneas), src/components/conecta/owner/OwnerDashboard.tsx
+- 0 errores de lint
+- Flujo completo implementado: presign → PUT R2 → registrar DB → eliminar DB+R2
+- Integrado en InfoTab (portada + galería) y PromotionsTab (modal crear/editar promo)
