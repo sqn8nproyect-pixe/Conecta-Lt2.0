@@ -124,14 +124,10 @@ export async function requireRole(
       headers: { 'content-type': 'application/json' },
     });
   }
-  // Defense in depth: if ADMIN is being required, the email MUST be
-  // in ADMIN_EMAILS. This is checked here (server-side, on every
-  // request) in addition to the JWT callback (which only runs on
-  // sign-in). This prevents any stale JWT from granting admin access.
-  if (
-    allowedRoles.includes('ADMIN') &&
-    !isAdminEmail(user.email)
-  ) {
+  // Defense in depth: if the user's JWT role is ADMIN, re-verify the
+  // email is in ADMIN_EMAILS. This catches the case where the DB role
+  // was changed but the JWT hasn't been refreshed yet.
+  if (user.role === 'ADMIN' && !isAdminEmail(user.email)) {
     throw new Response(JSON.stringify({ error: 'Acceso denegado' }), {
       status: 403,
       headers: { 'content-type': 'application/json' },
