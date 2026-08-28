@@ -5976,3 +5976,23 @@ Stage Summary:
 - Deploy en Vercel: READY ✅
 - R2 integración completa en producción
 - Sistema de subida de imágenes listo para usar por dueños de negocios
+
+---
+Task ID: credential-rotation
+Agent: main
+Task: Rotar credenciales Neon y actualizar Vercel
+
+Work Log:
+- Usuario rotó contraseña de Neon y revocó PAT de GitHub
+- Recibida nueva URL de Neon con password npg_wCaURxpW72QP
+- Actualizado .env local con nueva DATABASE_URL y DIRECT_URL
+- Actualizado Vercel: DATABASE_URL, DIRECT_URL, AUTH_SECRET, NEXTAUTH_SECRET
+- Generado nuevo secret de producción para AUTH_SECRET/NEXTAUTH_SECRET
+- Intentado redeploy via API + push (PAT revocado, no se pudo)
+- Usuario hizo redeploy manual desde Vercel dashboard
+
+Stage Summary:
+- Credenciales Neon rotadas en .env local y Vercel
+- AUTH_SECRET/NEXTAUTH_SECRET actualizados a valor de producción
+- PAT de GitHub revocado (seguridad completada)
+- Token Vercel vcp_6vrK... debe ser revocado por usuario
