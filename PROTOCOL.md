@@ -1,6 +1,5 @@
 # CONECTA-LT 3.0 — PROTOCOLO DE VERIFICACIÓN COMPLETO
-# Generado: $(date -u +'%Y-%m-%d %H:%M:%S') UTC
-# Zona horaria usuario: America/Caracas
+# Última actualización: 2026-08-28 (credenciales rotadas)
 
 ## 1. IDENTIDAD DEL PROYECTO
 
