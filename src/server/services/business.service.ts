@@ -401,10 +401,16 @@ export function transformBusiness(
   business: BusinessWithRelations,
 ): EstablishmentWithRelations {
   // ── Images ────────────────────────────────────────────────
-  const galleryImages = business.images
+  // Solo mostrar imágenes APPROVED en la API pública.
+  // Las PENDING (subidas por dueño, esperando admin) y REJECTED
+  // no se exponen al público.
+  const approvedImages = business.images.filter(
+    (img) => img.approvalStatus === 'APPROVED',
+  );
+  const galleryImages = approvedImages
     .filter((img) => img.type === 'GALLERY')
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  const coverImages = business.images
+  const coverImages = approvedImages
     .filter((img) => img.type === 'COVER')
     .sort((a, b) => a.sortOrder - b.sortOrder);
 

@@ -108,6 +108,27 @@ export async function POST(
     const storageKey = typeof b.storageKey === 'string' ? b.storageKey.trim() : null;
     const sortOrder = typeof b.sortOrder === 'number' ? b.sortOrder : 0;
 
+    // ── Límite: máx 10 imágenes GALLERY por negocio ─────────
+    if (imageType === 'GALLERY') {
+      const galleryCount = await db.businessImage.count({
+        where: {
+          businessId: biz.id,
+          type: 'GALLERY' as ImageType,
+        },
+      });
+      if (galleryCount >= 10) {
+        return NextResponse.json(
+          { error: 'Has alcanzado el límite de 10 fotos en la galería. Elimina alguna para subir una nueva.' },
+          { status: 409 },
+        );
+      }
+    }
+
+    // ── Determinar estado de aprobación ────────────────────
+    // ADMIN: auto-aprobada. BUSINESS_OWNER: pendiente de revisión.
+    const isAdmin = user.role === 'ADMIN';
+    const approvalStatus = isAdmin ? 'APPROVED' : 'PENDING';
+
     // ── Si es COVER: actualizar existente o crear nueva ─────
     if (imageType === 'COVER') {
       // Buscar si ya existe una imagen COVER para este negocio
@@ -126,14 +147,19 @@ export async function POST(
             url: imageUrl,
             storageKey: storageKey ?? undefined,
             sortOrder,
+            approvalStatus: approvalStatus as never,
+            approvedById: isAdmin ? user.id : null,
+            approvedAt: isAdmin ? new Date() : null,
           },
         });
 
-        // Actualizar también business.coverImage
-        await db.business.update({
-          where: { id: biz.id },
-          data: { coverImage: imageUrl },
-        });
+        // Actualizar también business.coverImage (solo si está aprobada)
+        if (isAdmin) {
+          await db.business.update({
+            where: { id: biz.id },
+            data: { coverImage: imageUrl },
+          });
+        }
 
         return NextResponse.json(updated);
       }
@@ -147,11 +173,14 @@ export async function POST(
         type: imageType as ImageType,
         storageKey: storageKey ?? undefined,
         sortOrder,
+        approvalStatus: approvalStatus as never,
+        approvedById: isAdmin ? user.id : null,
+        approvedAt: isAdmin ? new Date() : null,
       },
     });
 
-    // Si es COVER, también actualizar business.coverImage
-    if (imageType === 'COVER') {
+    // Si es COVER aprobada, también actualizar business.coverImage
+    if (imageType === 'COVER' && isAdmin) {
       await db.business.update({
         where: { id: biz.id },
         data: { coverImage: imageUrl },

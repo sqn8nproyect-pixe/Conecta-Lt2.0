@@ -286,16 +286,30 @@ enum ImageType {
   MENU
 }
 
+enum ImageApprovalStatus {
+  PENDING    // subida por dueño, esperando aprobación del admin
+  APPROVED   // visible al público
+  REJECTED   // rechazada por el admin, no visible
+}
+
 model BusinessImage {
-  id          String     @id @default(cuid())
-  business    Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  businessId  String
-  url         String
-  storageKey  String? // clave en R2 para eliminación (Etapa 3)
-  type        ImageType  @default(GALLERY)
-  sortOrder   Int        @default(0)
+  id              String               @id @default(cuid())
+  business        Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId      String
+  url             String
+  storageKey      String? // clave en R2 para eliminación (Etapa 3)
+  type            ImageType            @default(GALLERY)
+  sortOrder       Int                  @default(0)
+  // ── Aprobación de fotos (Etapa de moderación) ──────────
+  // Las fotos subidas por BUSINESS_OWNER quedan PENDING
+  // hasta que el admin las apruebe. Las subidas por ADMIN
+  // se auto-aprueban. La API pública solo muestra APPROVED.
+  approvalStatus  ImageApprovalStatus  @default(APPROVED)
+  approvedById    String?
+  approvedAt      DateTime?
 
   @@index([businessId])
+  @@index([approvalStatus])
 }
 
 // ── MENÚ DIGITAL (tascas y licobares) ───────────────────

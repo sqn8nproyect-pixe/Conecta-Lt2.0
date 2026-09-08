@@ -49,6 +49,7 @@ import {
   Clock,
   CheckCircle,
   Image as ImageIcon,
+  Info,
   X,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
@@ -118,7 +119,6 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageUploadZone, SingleImageUpload } from '@/components/ui/image-upload-zone';
-import type { CurrentImage } from '@/components/ui/image-upload-zone';
 
 // Query keys — kept here because they're only consumed by this component.
 const QK_OWNER_BUSINESSES = ['owner', 'businesses'] as const;
@@ -151,6 +151,44 @@ type OwnerProposal = {
   createdAt: string;
   updatedAt: string;
 };
+
+// ─── Image approval workflow ──────────────────────────────────
+// Mirrors `ImageApprovalStatus` from `prisma/schema.prisma`:
+//   enum ImageApprovalStatus { PENDING, APPROVED, REJECTED }
+// The owner images API returns ALL images (including PENDING and
+// REJECTED) so the owner sees their full gallery — but only
+// APPROVED ones are visible to the public.
+type ImageApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+// Extension of the BusinessImage shape returned by the owner images
+// API. The response now carries `approvalStatus` and (when approved)
+// `approvedAt`. We type-assert in the queryFn because the shared
+// `fetchBusinessImages` signature in `@/lib/api` hasn't been widened
+// yet — the runtime contract is unchanged, the extra fields are present.
+type BusinessImageWithApproval = {
+  id: string;
+  url: string;
+  type: string;
+  sortOrder: number;
+  storageKey: string;
+  approvalStatus: ImageApprovalStatus;
+  approvedAt?: string | null;
+};
+
+// Shape used internally by GallerySection to render each gallery
+// thumbnail with its approval badge. Carries the same fields as
+// `CurrentImage` (so it can still be passed to `ImageUploadZone` via
+// structural subtyping) plus `approvalStatus`.
+type GalleryImage = {
+  id: string;
+  url: string;
+  type: string;
+  approvalStatus: ImageApprovalStatus;
+};
+
+// Hard cap on gallery images — mirrors the backend limit enforced in
+// POST /api/owner/businesses/[slug]/images (HTTP 409 past 10).
+const MAX_GALLERY_IMAGES = 10;
 
 // ─── Day-of-week helpers ──────────────────────────────────────
 // Schema: 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
@@ -780,16 +818,28 @@ function GallerySection({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
   const addNotification = useAppStore((s) => s.addNotification);
 
-  const { data: images = [], isLoading } = useQuery({
+  // The owner images API returns ALL images (PENDING + APPROVED +
+  // REJECTED) so the owner sees their full gallery. We type-assert
+  // to `BusinessImageWithApproval[]` because the shared
+  // `fetchBusinessImages` signature hasn't been widened yet — the
+  // runtime response already carries `approvalStatus` + `approvedAt`.
+  const { data: images = [], isLoading } = useQuery<BusinessImageWithApproval[]>({
     queryKey: QK_OWNER_IMAGES(slug),
-    queryFn: () => fetchBusinessImages(slug),
+    queryFn: () =>
+      fetchBusinessImages(slug) as Promise<BusinessImageWithApproval[]>,
     staleTime: 30_000,
   });
 
-  // Filtrar solo imágenes de tipo GALLERY
-  const galleryImages: CurrentImage[] = images
+  // Filtrar solo imágenes de tipo GALLERY y proyectar al shape interno
+  // que lleva el estado de aprobación para los badges.
+  const galleryImages: GalleryImage[] = images
     .filter((img) => img.type === 'GALLERY')
-    .map((img) => ({ id: img.id, url: img.url, type: img.type }));
+    .map((img) => ({
+      id: img.id,
+      url: img.url,
+      type: img.type,
+      approvalStatus: img.approvalStatus ?? 'APPROVED',
+    }));
 
   const deleteMutation = useMutation({
     mutationFn: (imageId: string) => deleteBusinessImage(slug, imageId),
@@ -817,14 +867,34 @@ function GallerySection({ slug }: { slug: string }) {
     },
   });
 
+  const hasReachedLimit = galleryImages.length >= MAX_GALLERY_IMAGES;
+
   return (
     <section className="glass-card rounded-2xl p-5 sm:p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <ImageIcon size={16} className="text-gold" />
-        <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
-          GALERÍA DE FOTOS
-        </h2>
+      {/* Header: título + contador X/10 */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ImageIcon size={16} className="text-gold" />
+          <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
+            GALERÍA DE FOTOS
+          </h2>
+        </div>
+        <span className="text-xs font-mono text-white/60">
+          <span className="text-gold font-bold">{galleryImages.length}</span>
+          /{MAX_GALLERY_IMAGES} fotos
+        </span>
       </div>
+
+      {/* Info: las fotos nuevas requieren aprobación del admin */}
+      <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex gap-2">
+        <Info size={14} className="text-amber-300 shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-200 leading-relaxed">
+          Las fotos que subas serán revisadas por el administrador antes de
+          ser visibles al público. Esto asegura que el contenido represente
+          correctamente a CONECTA-LT.
+        </p>
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -832,18 +902,88 @@ function GallerySection({ slug }: { slug: string }) {
           ))}
         </div>
       ) : (
-        <ImageUploadZone
-          businessSlug={slug}
-          imageType="GALLERY"
-          maxFiles={20}
-          currentImages={galleryImages}
-          onImageDelete={(imageId) => deleteMutation.mutate(imageId)}
-          onUploadComplete={() => {
-            void queryClient.invalidateQueries({ queryKey: QK_OWNER_IMAGES(slug) });
-            void queryClient.invalidateQueries({ queryKey: ['business', slug] });
-          }}
-          label={`Fotos subidas: ${galleryImages.length}/20`}
-        />
+        <div className="space-y-4">
+          {/* Upload zone — compacto: solo drop zone, sin thumbnails.
+              Renderizamos los thumbnails nosotros mismos para poder
+              añadirles el badge de estado de aprobación. */}
+          {!hasReachedLimit && (
+            <ImageUploadZone
+              businessSlug={slug}
+              imageType="GALLERY"
+              maxFiles={MAX_GALLERY_IMAGES}
+              currentImages={galleryImages}
+              onImageDelete={(imageId) => deleteMutation.mutate(imageId)}
+              onUploadComplete={() => {
+                void queryClient.invalidateQueries({ queryKey: QK_OWNER_IMAGES(slug) });
+                void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+              }}
+              compact
+            />
+          )}
+          {hasReachedLimit && (
+            <div className="rounded-xl border-2 border-dashed border-white/15 bg-white/5 p-6 text-center">
+              <p className="text-white/50 text-xs">
+                Has alcanzado el límite de {MAX_GALLERY_IMAGES} fotos en la
+                galería. Elimina alguna para subir una nueva.
+              </p>
+            </div>
+          )}
+
+          {/* Thumbnails con badge de aprobación */}
+          {galleryImages.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {galleryImages.map((img) => {
+                const status = img.approvalStatus;
+                const isRejected = status === 'REJECTED';
+                const isPending = status === 'PENDING';
+                return (
+                  <div
+                    key={img.id}
+                    className={`group relative aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/10 ${
+                      isRejected ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <img
+                      src={img.url}
+                      alt="Imagen del negocio"
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Badge de estado de aprobación */}
+                    {isPending && (
+                      <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-amber-950 shadow-sm backdrop-blur-sm">
+                        <Clock size={10} /> Pendiente
+                      </span>
+                    )}
+                    {status === 'APPROVED' && (
+                      <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-950 shadow-sm backdrop-blur-sm">
+                        <CheckCircle size={10} /> Aprobada
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-red-950 shadow-sm backdrop-blur-sm">
+                        <XCircle size={10} /> Rechazada
+                      </span>
+                    )}
+
+                    {/* Botón eliminar (mismo comportamiento que antes) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMutation.mutate(img.id);
+                      }}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Eliminar imagen"
+                    >
+                      <X size={12} className="text-white" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
     </section>
   );

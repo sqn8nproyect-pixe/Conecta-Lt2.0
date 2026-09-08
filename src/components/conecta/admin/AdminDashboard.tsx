@@ -60,6 +60,7 @@ import {
   FileText,
   Clock,
   LogOut,
+  Camera,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -132,6 +133,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { AdminMetricsTab } from '@/components/conecta/admin/AdminMetricsTab';
+import {
+  PendingPhotosTab,
+  QK_PENDING_IMAGES,
+} from '@/components/conecta/admin/PendingPhotosTab';
 
 // Query keys — kept here (rather than in a dedicated hooks file)
 // because they're only consumed by this component. If a future
@@ -1939,12 +1944,31 @@ export function AdminDashboard() {
   const setView = useAppStore((s) => s.setView);
   const [tab, setTab] = useState<string>('resumen');
 
+  // Calculamos el flag de admin antes del early return para poder
+  // usarlo como `enabled` en el useQuery de abajo. Así evitamos
+  // disparar peticiones 401 desde usuarios no-admin que aterricen
+  // aquí (defense-in-depth del Navbar — pero defense-in-depth también
+  // aquí: si el query no corre, no hay 401 en el log).
+  const isAdminByEmail = user ? isAdminEmail(user.email) : false;
+
+  // Conteo de fotos pendientes — se muestra como badge en la pestaña
+  // "Fotos Pendientes". Usa el mismo query key que PendingPhotosTab,
+  // así React Query deduplica y ambas vistas comparten el cache.
+  const { data: pendingPhotosData } = useQuery({
+    queryKey: QK_PENDING_IMAGES,
+    // Solo el campo count nos interesa aquí; la queryFn completa
+    // se ejecuta una sola vez y ambos consumidores la reutilizan.
+    staleTime: 30_000,
+    enabled: isAdminByEmail,
+  });
+  const pendingPhotosCount = pendingPhotosData?.count ?? 0;
+
   // Defense-in-depth: the Navbar hides the Admin entry for non-admin
   // users, but if one lands here via store mutation we render the
   // AccessDenied card. Admin access is granted SOLELY by email
   // allowlist (src/lib/admin-config.ts) — the role in the store is
   // ignored for admin access purposes.
-  if (!user || !isAdminEmail(user.email)) {
+  if (!user || !isAdminByEmail) {
     return <AccessDenied />;
   }
 
@@ -2051,6 +2075,18 @@ export function AdminDashboard() {
             Métricas
           </TabsTrigger>
           <TabsTrigger
+            value="pending-photos"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
+          >
+            <Camera size={14} className="mr-1.5" />
+            Fotos Pendientes
+            {pendingPhotosCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-gold text-obsidian text-[10px] font-bold tabular-nums leading-none">
+                {pendingPhotosCount > 99 ? '99+' : pendingPhotosCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
             value="proposals"
             className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
@@ -2073,6 +2109,9 @@ export function AdminDashboard() {
         </TabsContent>
         <TabsContent value="metrics" className="mt-6">
           <AdminMetricsTab />
+        </TabsContent>
+        <TabsContent value="pending-photos" className="mt-6">
+          <PendingPhotosTab />
         </TabsContent>
         <TabsContent value="proposals" className="mt-6">
           <PropuestasTab />
