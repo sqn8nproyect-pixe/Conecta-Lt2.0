@@ -6301,3 +6301,28 @@ Stage Summary:
 - ⚠️ 14 promos vencidas marcadas ACTIVE (cosmético, API las filtra)
 - ⚠️ 11 prisma:error Closed (cosmético, Neon autosuspend; mitigable con pool_timeout)
 - Pendiente: Neon API key del usuario para chequeos de plataforma (compute, branches, métricas)
+
+---
+Task ID: revision-neon-plataforma
+Agent: main
+Task: Chequeos de plataforma Neon con API key (compute, branches, métricas, autosuspend)
+
+Work Log:
+- Neon API key validado: usuario sqn8nproyect@gmail.com (cuenta Google/keycloak, plan free, projects_limit=0)
+- Org: org-damp-breeze-85043324 "Sqn8nproyectconecta-Lt" (free, creada 2026-08-09)
+- Proyecto: cool-dust-98421116 "conecta-Lt" (region us-east-2, PostgreSQL 18, history retention 21600s)
+- Branches: 1 sola ("production", primary, br-calm-union-ayvsu6c4) — sin branches de prueba consumiendo
+- Endpoint: 1 solo (ep-lingering-hill-ay3mv4lk) — el MISMO host que .env → confirma dev y prod apuntan al mismo endpoint
+- pooler_enabled: false en el endpoint (PgBouncer interno deshabilitado); sin embargo DATABASE_URL usa host -pooler.neon.tech (PgBouncer externo funciona, pero la integración formal del endpoint no está activa)
+- suspend_timeout_seconds: 0 (default Neon free) → autosuspend agresivo tras inactividad
+- currentState: active, lastActive: 2026-09-08T18:39:29Z (mi prueba lo despertó)
+- Operaciones últimos 8 días: 50 suspends + 50 starts (ciclo continuo start/suspend cada 2-5 min de idle)
+- Intento PATCH suspend_timeout_seconds:300 → HTTP 412 "modifying the suspend interval is not permitted on this account" → el plan free NO permite cambiar autosuspend desde la API
+- Endpoints de usage/consumption/limits org no disponibles en plan free vía API
+
+Stage Summary:
+- ✅ Arquitectura Neon verificada: 1 proyecto, 1 branch (production), 1 endpoint, mismo host en dev y prod
+- ✅ Sin branches de prueba que consuman recursos
+- ⚠️ Los prisma:error Closed son INEVITABLES en plan free: Neon suspende el compute cada ~5 min de inactividad y el plan no permite cambiar suspend_timeout
+- ⚠️ Mitigación posible SOLO del lado de Prisma: añadir pool_timeout=10 + connect_timeout=30 + connection_limit=5 al DATABASE_URL (PgBouncer ya en uso) — reduce el ruido pero no elimina el wake-up latency
+- 🔐 Recordar al usuario: REVOCAR el Neon API key cuando termine la revisión (console.neon.tech → Settings → API Keys)
