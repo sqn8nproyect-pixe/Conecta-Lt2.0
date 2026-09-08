@@ -6239,3 +6239,26 @@ Stage Summary:
 - La pestaña "Menú" solo aparece para la categoría del negocio seleccionado (tasca/licobar) y se auto-oculta con reset a Info al cambiar de negocio; en licorerías/discotecas el panel queda como siempre
 - "Vista previa" muestra la carta tal cual la verá el público (mismo orden y reglas de visibilidad), completando el circuito con el sheet público de 5-b
 - ESLint 0/0 en los archivos tocados; dev server compila sin errores; únicos hallazgos ajenos pre-existentes: TS1128 en validator.ts (.next generado) y prisma:error transitorio de conexión idle a Neon en dev.log
+
+---
+Task ID: 2 (Licobar) + 3-5 (Menú)
+Agent: main (+ subagents full-stack-developer x2)
+Task: Ejecutar Licobar (aprobado) + implementar Menú Digital Interactivo completo
+
+Work Log:
+- Licobar: verificado que la sesión previa dejó TODO hecho (imagen, 8 puntos de código, script, 7 locales ya en Neon) — confirmado en DB (4 categorías × 7 = 28 negocios) y API
+- Menú schema: MenuSection/MenuItem (onDelete Cascade) + Business.menuVisible (default false) → db:push en Neon OK
+- Menú backend: src/server/services/menu.service.ts (validaciones, límites 20 secciones/60 ítems, precio 0-999.99) + 7 rutas (pública GET + owner GET/visibility/sections/items×2) con requireRole + assertBusinessOwnership
+- Menú UI dueña: MenuTab.tsx (subagent 5-a) — switch visibilidad, CRUD secciones/ítems, destacados, disponibilidad, reorder, vista previa; pestaña solo para tasca/licobar vía MENU_CATEGORIES
+- Menú UI pública: BusinessMenuSheet.tsx (subagent 5-b) — botón VER MENÚ si est.menuVisible===true, sheet bottom 85vh con tabs de secciones + scroll-spy
+- E2E navegador: chip LICOBARES filtra 7, mapa 7 pins esmeralda + leyenda, detalle licobar OK, planner "Solo tragos" → top-3 licobares (87+)
+- E2E menú como Ana: pestaña Menú visible, crear "Cervezas" (2 ítems, 1 destacado) + "Rones y Whisky" (1 ítem), toggle ON → botón público aparece + sheet con carta (screenshots desktop/móvil), toggle OFF → desaparece al instante, re-activado para pruebas del usuario
+- Admin puede gestionar menú de licobares (verificado API)
+- Fix infra: dev server moría entre tool calls → usar ./start-dev.sh (setsid+disown, PPID=1), documentado en el worklog previo
+- lint limpio, commit e415c85, push a origin/main (Vercel auto-deploy)
+
+Stage Summary:
+- Licobar ✅ completo y verificado E2E
+- Menú Digital ✅ completo: dueña edita carta en su panel, controla visibilidad con un botón, público la ve en la ficha
+- Tasca Los Amigos tiene carta demo activa (2 secciones, 3 ítems) para las pruebas como dueña
+- Pendiente usuario: probar flujo de dueño con Ana + NEXTAUTH_SECRET en Vercel
