@@ -6184,3 +6184,58 @@ Stage Summary:
 - UI dueño: pestaña "Menú" en OwnerDashboard con Switch de visibilidad + editor por secciones/ítems
 - UI pública: botón "Ver Menú" + sheet en EstablishmentPage (SPA, sin rutas nuevas)
 - Orden de ejecución sugerido: Licobar primero (aprobado, pendiente) → Menú después (requiere aprobación del usuario)
+
+---
+Task ID: 5-b
+Agent: full-stack-developer
+Task: Botón público "Ver Menú" en la ficha + visor de carta en sheet inferior (solo frontend; backend ya existente)
+
+Work Log:
+- Leído worklog.md (contexto: plan "Menú Digital Interactivo" task 1 + backend de 5-a ya implementado) y verificado el contrato real de GET /api/businesses/[slug]/menu (route.ts + menu.service.ts): devuelve { visible, sections[] } con secciones/ítems ya ordenados por sortOrder; transformBusiness expone menuVisible en el payload público
+- Leído EstablishmentPage.tsx completo: el establishment llega por React Query (fetchBusinessBySlug → EstablishmentWithRelations, incluye menuVisible), los CTA viven en "Action Buttons" (RESERVAR MESA / WHATSAPP / INSTAGRAM / CÓMO LLEGAR, h-14 rounded-2xl) y los overlays del archivo usan patrón modal custom
+- CREADO src/components/conecta/BusinessMenuSheet.tsx (componente cliente nuevo):
+  * shadcn Sheet side="bottom" h-[85vh] rounded-t-3xl bg-obsidian border-t-gold/30, centrado en desktop (mx-auto sm:max-w-2xl), padding safe-area iOS
+  * Fetch LAZY con React Query (enabled: open && !!slug, queryKey ['business-menu', slug], staleTime 30s) → skeleton de líneas animado mientras carga; nunca fetch al montar la ficha
+  * Cabecera: icono UtensilsCrossed dorado + SheetTitle (nombre) + badge de categoría estilo hero + SheetDescription sr-only; botón cerrar propio (SheetClose, 44px, aria-label español "Cerrar carta") ocultando el close auto-generado de shadcn vía [&>button:last-child]:hidden (evita doble X y el sr-only inglés)
+  * Tabs de secciones fijas bajo la cabecera (efecto sticky), scroll horizontal con scrollbar-none, chip activo dorado (bg-gold + glow-gold) con aria-current
+  * Tap en tab → scroll suave del CONTENIDO INTERNO (container.scrollTo con offsetTop medido, contenedor relative) + flag programmaticUntil (800ms) para que el scroll-spy no pise el resaltado durante la animación; scroll-spy por onScroll marca la sección visible (regla extra: al fondo del scroll activa la última)
+  * Ítems: nombre bold + descripción text-sm atenuada + precio a la derecha con helper local formatMenuPrice ($X.XX); available:false → opacity-50 + line-through + badge "No disponible"; featured → estrella dorada (Star fill #D4AF37) + sr-only "Destacado"
+  * Estados: visible:false → "Esta carta no está disponible"; visible con 0 secciones → "Carta aún no disponible" con icono; sección sin ítems → nota en cursiva; error de red → mensaje + botón Reintentar (refetch)
+  * Al reabrir: scroll arriba + resalta primera sección (deps solo [open]; una revalidación en background NO salta al lector hacia arriba)
+  * Sin `any`, sin dependencias nuevas, comentarios en español, alineado con cn() de @/lib/utils
+- EDITADO src/components/conecta/EstablishmentPage.tsx (5 ediciones quirúrgicas, nada roto): import BookOpen + import BusinessMenuSheet + estado menuOpen + botón "VER MENÚ" (BookOpen, mismo estilo contorno exacto que WHATSAPP/INSTAGRAM, aria-label) colocado JUSTO DESPUÉS de RESERVAR MESA y ANTES de WHATSAPP, renderizado SOLO SI est.menuVisible === true, + <BusinessMenuSheet> montado al final del return (radix no monta nada cerrado)
+- Verificación sin navegador: bunx eslint sobre AMBOS archivos → 0 errores/0 warnings; bunx tsc --noEmit → único error en .next/dev/types/validator.ts (artefacto generado por el dev server, pre-existente, no relacionado); curl a / → 200 con recompilación Turbopack sin errores en dev.log; curl al endpoint del menú → {"visible":false,"sections":[]} (contrato respetado, UI cubre el caso)
+- No se tocó ningún otro archivo, ni APIs/schema/prisma, sin commits
+
+Stage Summary:
+- La ficha muestra "VER MENÚ" solo en locales con menuVisible=true (tascas/licobares que activaron el switch); al pulsarlo abre un sheet inferior 85vh con la carta en modo lectura móvil-primero (dark + dorados, coherente con el app)
+- Carta: tabs pegajosas por sección con scroll-spy y scroll suave interno, ítems con precio $X.XX, destacados con estrella, no-disponibles tachados, estados vacíos/error/reintento y skeletons de carga
+- Fetch lazy al abrir (React Query, caché 30s) → abrir la ficha no penaliza red; reabrir no parpadea
+- ESLint limpio en los 2 archivos; compilación del dev server OK (200); únicos hallazgos ajenos: error TS en validator.ts generado por .next (pre-existente) y un prisma:error transitorio de conexión idle a Neon en dev.log (infra, no relacionado)
+
+---
+Task ID: 5-a
+Agent: full-stack-developer
+Task: Pestaña "Menú" en el panel del dueño — gestión completa de la carta digital (solo frontend; backend ya existente)
+
+Work Log:
+- Leído worklog.md (contexto del proyecto, plan del menú de task 1, categoría licobar, flujo de delegación) y estudiado OwnerDashboard.tsx (2014 líneas): sistema de tabs (selectedSlug/tab, values info/reservas/promociones/propuestas), toasts vía useAppStore.addNotification (types 'success'|'info'), patrón react-query useQuery/useMutation con updates optimistas (onMutate cancelQueries + setQueryData, onError rollback con ctx.prev) e invalidación en onSuccess
+- Verificado contrato backend real: src/server/services/menu.service.ts + 6 rutas bajo /api/owner/businesses/[slug]/menu/ (GET carta completa, PATCH visibility {menuVisible}→{visible}, POST/PATCH/DELETE sections, POST/PATCH/DELETE items); límites del server: nombre 1-60, descripción ≤200, precio 0-999.99 (2 dec), máx 20 secciones / 60 ítems por sección, sortOrder entero ≥0
+- Tipos importados de src/lib/types.ts sin redefinir: BusinessMenu, MenuSectionData, MenuItemData (+ menuVisible opcional en Establishment); establecimientos traen category: Category desde fetchBusinesses (EstablishmentWithRelations)
+- CREADO src/components/conecta/owner/MenuTab.tsx (~900 líneas, 'use client', TS estricto sin any):
+  * fetch helper local menuRequest<T> (relativo same-origin, credentials same-origin, parsea {error} del backend → Error con mensaje del server; 401 → mensaje de sesión expirada) — NO se editó @/lib/api
+  * Cabecera CARTA DIGITAL: Switch de visibilidad con subtítulo dinámico ("El público puede ver tu carta…" / "Tu carta está oculta…"), PATCH visibility OPTIMISTA (onMutate setQueryData, onSuccess confirma con lo que devuelve el server + invalida ['business', slug] y ['businesses'] para sincronizar el botón público "VER MENÚ" de 5-b, onError rollback + toast de error) + hint ámbar si visible con carta vacía
+  * Resumen "X secciones · Y ítems" (números en dorado) + botón "Vista previa" + "Agregar sección" (deshabilitado en 20/20)
+  * Secciones como glass-cards: nombre + contador de ítems, ↑/↓ (PATCH sortOrder intercambiando valores con el vecino, swap optimista en caché + fallback defensivo si hubiese sortOrder duplicado), renombrar con Pencil (dialog), borrar con AlertDialog que advierte "Se borrarán también sus N ítems"
+  * Ítems por sección: nombre + descripción + precio formatPrice $X.XX, Switch "Disponible" (PATCH available → fila opacity-50 + badge NO DISPONIBLE), toggle estrella Destacado (PATCH featured, aria-pressed), editar (dialog nombre/descripción/precio/checkbox destacado), borrar con AlertDialog, ↑/↓ (swap sortOrder con el vecino dentro de la sección, 2 PATCH secuenciales); lista con max-h-96 overflow-y-auto conecta-scroll
+  * Dialogs: sección (crear/renombrar, Enter submit), ítem (crear en sección X / editar, precio inputMode decimal acepta coma o punto con parsePrice → redondeo a 2 dec, validación cliente 0–999.99 + nombre ≤60 + descripción ≤200 con error inline rojo), vista previa (Dialog max-w-2xl con render estilo carta física: encabezados serif dorados + línea punteada, estrella en destacados, no-disponibles atenuados, aviso ámbar si el menú está oculto; reutiliza MenuPreviewContent)
+  * Estados: skeletons mientras carga, error card con botón Reintentar (refetch), empty state motivador ("Tu menú está vacío" + ejemplos Cervezas/Rones y Whisky/Parrilla + CTA)
+  * 10 mutaciones react-query (visibility, sectionSave, sectionDelete, sectionMove, itemCreate, itemEdit, itemToggle, itemMove, itemDelete) con toasts addNotification idénticos al panel; reordenaciones sin toast de éxito (feedback visual inmediato), onSettled invalida para resincronizar con el orden canónico del server; busy global deshabilita acciones mientras hay una en vuelo
+- EDITADO src/components/conecta/owner/OwnerDashboard.tsx (6 ediciones quirúrgicas): import de MenuTab + type Category; const MENU_CATEGORIES = Set('tasca','licobar'); selectedBusiness/showMenuTab derivados de ownedBusinesses (categoría YA viene en el listado, no hizo falta fetch extra); TabsTrigger value="menu" con el estilo exacto de las demás (data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white) renderizado SOLO si showMenuTab; TabsContent value="menu" con <MenuTab key={selectedSlug} slug businessName>; guard en onValueChange del Select de negocio → si se cambia a un local sin pestaña Menú estando en tab 'menu', vuelve a 'info' (evita tab activo sin contenido); nada más tocado, tabs existentes intactas
+- Verificación sin navegador: bunx eslint sobre AMBOS archivos → exit 0, 0 errores/0 warnings (--max-warnings=0); bunx tsc --noEmit → único error en .next/dev/types/validator.ts (artefacto generado del dev server, pre-existente, no relacionado); curl a / → 200 con recompilación Turbopack limpia (page.tsx importa OwnerDashboard → MenuTab compila en el bundle); no se tocó ningún otro archivo, ni APIs/schema/prisma, sin commits
+
+Stage Summary:
+- El dueño de tascas/licobares ya gestiona su carta completa desde el panel: switch de visibilidad pública optimista con rollback, secciones e ítems con CRUD + reordenar (↑/↓) + destacado/disponible, límites y validaciones espejo del backend, toasts consistentes con el resto del panel
+- La pestaña "Menú" solo aparece para la categoría del negocio seleccionado (tasca/licobar) y se auto-oculta con reset a Info al cambiar de negocio; en licorerías/discotecas el panel queda como siempre
+- "Vista previa" muestra la carta tal cual la verá el público (mismo orden y reglas de visibilidad), completando el circuito con el sheet público de 5-b
+- ESLint 0/0 en los archivos tocados; dev server compila sin errores; únicos hallazgos ajenos pre-existentes: TS1128 en validator.ts (.next generado) y prisma:error transitorio de conexión idle a Neon en dev.log

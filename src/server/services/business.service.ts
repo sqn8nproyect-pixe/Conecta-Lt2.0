@@ -534,6 +534,12 @@ export function transformBusiness(
     // the business yet.
     ownerId: business.ownerId ?? null,
     claimedAt: business.claimedAt?.toISOString() ?? null,
+
+    // Etapa Menú — switch del dueño. La ficha pública lo usa para
+    // mostrar (o no) el botón "Ver Menú"; el contenido de la carta
+    // llega por GET /api/businesses/[slug]/menu solo cuando está en
+    // true (ver src/server/services/menu.service.ts).
+    menuVisible: business.menuVisible,
   };
 }
 

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
+  BookOpen,
   Star,
   Calendar,
   Phone,
@@ -44,6 +45,7 @@ import { isAdminEmail } from '@/lib/admin-config';
 import type { BookingData, CapacityLevel, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { imageFallback } from '@/components/conecta/image-fallback';
+import { BusinessMenuSheet } from '@/components/conecta/BusinessMenuSheet';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
 import { SocialContactPanel } from '@/components/establishment/SocialContactPanel';
 import { CapacityBadge } from '@/components/establishment/CapacityBadge';
@@ -236,6 +238,11 @@ export function EstablishmentPage() {
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
   const [bookingOpen, setBookingOpen] = useState(false);
+
+  // Etapa Menú — visor de la carta digital (sheet inferior). Solo se
+  // abre desde el botón "VER MENÚ", visible cuando el dueño activó
+  // `menuVisible` en su panel; el fetch es lazy dentro del sheet.
+  const [menuOpen, setMenuOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [bookingData, setBookingData] = useState<BookingData>(
     defaultBookingData(user),
@@ -831,6 +838,19 @@ export function EstablishmentPage() {
                 >
                   <Calendar size={16} /> RESERVAR MESA
                 </button>
+                {/* Etapa Menú — carta digital pública: solo para locales
+                    con el switch "Menú visible" activado por el dueño.
+                    Mismo estilo contorno que WHATSAPP/INSTAGRAM. */}
+                {est.menuVisible === true && (
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-label={`Ver la carta de ${est.name}`}
+                    className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 bg-white/5 px-5 sm:px-6 h-14 rounded-2xl font-bold text-xs tracking-wider transition-all text-white"
+                  >
+                    <BookOpen size={16} /> VER MENÚ
+                  </button>
+                )}
                 <a
                   href={`https://wa.me/${est.phone.replace('+', '')}`}
                   target="_blank"
@@ -1660,6 +1680,15 @@ export function EstablishmentPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Etapa Menú — visor de la carta en sheet inferior.
+          Fetch lazy al abrir (dentro del componente); cuando está
+          cerrado radix no monta nada. */}
+      <BusinessMenuSheet
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        establishment={est}
+      />
     </motion.div>
   );
 }

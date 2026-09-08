@@ -204,6 +204,11 @@ model Business {
   currentCapacity CapacityLevel? // aforo en tiempo real (Etapa 3.6)
   claimedAt       DateTime? // fecha en que el dueño reclamó el perfil
 
+  // Menú digital (Etapa Menú) — solo tascas y licobares lo exponen.
+  // El dueño lo edita desde su panel y controla la visibilidad
+  // pública con el switch Business.menuVisible.
+  menuVisible     Boolean        @default(false)
+
   // Owner management (Fase Dueños)
   ownerStatus     OwnerApprovalStatus @default(APPROVED)
   proposedOwner   User?  @relation("ProposedOwner", fields: [proposedOwnerId], references: [id])
@@ -228,6 +233,7 @@ model Business {
   favorites       Favorite[]
   reservations    Reservation[]
   proposals       BusinessProposal[]
+  menuSections    MenuSection[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -290,6 +296,37 @@ model BusinessImage {
   sortOrder   Int        @default(0)
 
   @@index([businessId])
+}
+
+// ── MENÚ DIGITAL (tascas y licobares) ───────────────────
+// Carta editable por el dueño desde su panel (secciones →
+// ítems). La visibilidad pública la controla
+// Business.menuVisible: si está en false, el endpoint
+// público no devuelve nada (ni el botón "Ver Menú").
+
+model MenuSection {
+  id         String     @id @default(cuid())
+  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+  name       String // "Cervezas", "Rones y Whisky", "Parrilla"
+  sortOrder  Int        @default(0)
+  items      MenuItem[]
+
+  @@index([businessId])
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  section     MenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId   String
+  name        String
+  description String?
+  price       Float // USD
+  available   Boolean     @default(true) // "se acabó" sin borrar el ítem
+  featured    Boolean     @default(false) // destacado con badge
+  sortOrder   Int         @default(0)
+
+  @@index([sectionId])
 }
 
 // ── PROMOCIONES ─────────────────────────────────────────────

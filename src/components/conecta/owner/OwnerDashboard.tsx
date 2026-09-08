@@ -72,12 +72,14 @@ import {
   deleteBusinessImage,
 } from '@/lib/api';
 import type {
+  Category,
   OwnerBusiness,
   OwnerPromotion,
   OwnerReservation,
   PromotionStatus,
   ReservationStatus,
 } from '@/lib/types';
+import { MenuTab } from '@/components/conecta/owner/MenuTab';
 import { formatRelativeTime } from '@/lib/utils';
 import {
   Tabs,
@@ -1845,6 +1847,14 @@ function PropuestasTab({ slug }: { slug: string }) {
 
 // ─── Main OwnerDashboard ──────────────────────────────────────
 
+// El menú digital (carta) solo aplica a locales donde el cliente se
+// sienta a tomar: tascas y licobares. En licorerías/discotecas la
+// pestaña no se muestra.
+const MENU_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
+  'tasca',
+  'licobar',
+]);
+
 export function OwnerDashboard() {
   const user = useAppStore((s) => s.user);
   const setView = useAppStore((s) => s.setView);
@@ -1865,6 +1875,12 @@ export function OwnerDashboard() {
   const ownedBusinesses = allBusinesses.filter(
     (b) => b.ownerId === user?.id,
   );
+
+  // Negocio actualmente seleccionado (para saber su categoría y
+  // decidir si la pestaña Menú está disponible).
+  const selectedBusiness = ownedBusinesses.find((b) => b.slug === selectedSlug);
+  const showMenuTab =
+    !!selectedBusiness && MENU_CATEGORIES.has(selectedBusiness.category);
 
   // Auto-select the first owned business if none is selected.
   if (selectedSlug === null && ownedBusinesses.length > 0) {
@@ -1941,7 +1957,16 @@ export function OwnerDashboard() {
             ) : (
               <Select
                 value={selectedSlug ?? undefined}
-                onValueChange={(v) => setSelectedSlug(v)}
+                onValueChange={(v) => {
+                  setSelectedSlug(v);
+                  // Si el negocio nuevo no tiene pestaña Menú (categoría
+                  // distinta) y estábamos en ella, volver a Info para no
+                  // quedar con un tab activo sin contenido.
+                  const next = ownedBusinesses.find((b) => b.slug === v);
+                  if (tab === 'menu' && !(next && MENU_CATEGORIES.has(next.category))) {
+                    setTab('info');
+                  }
+                }}
               >
                 <SelectTrigger className="bg-white/5 border-white/10 text-white w-full sm:w-72">
                   <SelectValue placeholder="Selecciona un negocio" />
@@ -1986,6 +2011,14 @@ export function OwnerDashboard() {
                     Mis Propuestas
                   </TabsTrigger>
                 )}
+                {showMenuTab && (
+                  <TabsTrigger
+                    value="menu"
+                    className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+                  >
+                    Menú
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="info" className="mt-6">
@@ -2003,6 +2036,15 @@ export function OwnerDashboard() {
               {!isAdmin && (
                 <TabsContent value="propuestas" className="mt-6">
                   <PropuestasTab key={selectedSlug} slug={selectedSlug!} />
+                </TabsContent>
+              )}
+              {showMenuTab && (
+                <TabsContent value="menu" className="mt-6">
+                  <MenuTab
+                    key={selectedSlug}
+                    slug={selectedSlug!}
+                    businessName={selectedBusiness?.name}
+                  />
                 </TabsContent>
               )}
             </Tabs>

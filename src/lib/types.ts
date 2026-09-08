@@ -94,6 +94,13 @@ export interface Establishment {
   // a glance whether a venue is tranquilo / moderado / lleno right now.
   currentCapacity?: CapacityLevel | null;
 
+  // ─── Etapa Menú — Menú digital (tascas y licobares) ─────────
+  // `true` cuando el dueño activó el switch "Menú visible" en su
+  // panel → la ficha muestra el botón "Ver Menú". El contenido de
+  // la carta llega por GET /api/businesses/[slug]/menu solo cuando
+  // está en true. En otras categorías la UI ni lo muestra.
+  menuVisible?: boolean;
+
   // ─── Etapa 7.B — Business claim flow ────────────────────────
   // `ownerId` is null until a BUSINESS_OWNER (or ADMIN) claims the
   // business via POST /api/businesses/[slug]/claim. Once set,
@@ -471,6 +478,47 @@ export interface OwnerPromotion {
   redemptionCount: number;
   status: PromotionStatus;
   createdAt: string;
+}
+
+// ─── Etapa Menú — Menú digital (tascas y licobares) ─────────────
+//
+// Estructura de la carta: Business → MenuSection[] → MenuItem[].
+// El dueño la edita desde su panel (pestaña "Menú") y controla la
+// visibilidad pública con el switch `menuVisible`. El endpoint
+// público GET /api/businesses/[slug]/menu solo devuelve secciones
+// cuando `visible: true`; el dueño siempre ve la suya completa.
+
+export interface MenuItemData {
+  id: string;
+  sectionId: string;
+  name: string;
+  description: string | null;
+  /** Precio en USD (0–999.99) */
+  price: number;
+  /** false → se muestra "No disponible" (atenuado, sin borrar) */
+  available: boolean;
+  /** Destacado — badge de estrella en la carta pública */
+  featured: boolean;
+  sortOrder: number;
+}
+
+export interface MenuSectionData {
+  id: string;
+  businessId: string;
+  name: string;
+  sortOrder: number;
+  items: MenuItemData[];
+}
+
+/**
+ * Payload de los endpoints de menú (público y dueño).
+ * - Público: `visible` refleja Business.menuVisible — si es false,
+ *   `sections` viene vacío.
+ * - Dueño: `visible` es el estado actual del switch del panel.
+ */
+export interface BusinessMenu {
+  visible: boolean;
+  sections: MenuSectionData[];
 }
 
 export interface AppNotification {
