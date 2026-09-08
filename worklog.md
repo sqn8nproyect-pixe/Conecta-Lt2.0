@@ -6695,3 +6695,27 @@ Stage Summary:
 - ✅ Optimistic update: al rechazar, la fila cambia inmediatamente a REJECTED + se actualiza el `rejectionReason` en cache sin esperar al refetch
 - ✅ Estados terminales (REJECTED, CANCELLED, COMPLETED, NO_SHOW) siguen mostrando "—" en la columna Acciones (no se pueden revertir desde la UI)
 - ✅ ESLint: 0 errores / 0 warnings; dev server compila limpio
+
+---
+Task ID: reservas-bidireccionales-A
+Agent: main + 2 subagents (full-stack-developer)
+Task: Opción A — Notificaciones bidireccionales de reservas CONECTA-LT ↔ dueño
+
+Work Log:
+- Schema: añadido REJECTED al enum ReservationStatus + campo rejectionReason: String? al modelo Reservation. db:push a Neon OK
+- types.ts: ReservationStatus ahora incluye 'REJECTED'; Reservation interface incluye rejectionReason
+- notification.service.ts: añadidos RESERVATION_NEW (al dueño) y RESERVATION_REJECTED (al cliente) al NotificationType union
+- reservation.service.ts (createReservation): cambiada notificación al cliente de 'RESERVATION_CONFIRMED' a 'Reserva recibida' (la reserva está PENDING, no confirmada). Añadida notificación al ownerId del business con tipo RESERVATION_NEW: '[customer] reservó para N personas el [date] a las [time] en [business]. Código: [code]'
+- status route (PATCH): añadido REJECTED a valid statuses + transición PENDING→REJECTED. Acepta rejectionReason en body (max 500 chars). Guarda rejectionReason solo cuando status=REJECTED. Notifica al cliente con RESERVATION_REJECTED + motivo si lo hay
+- Subagent 5 (OwnerDashboard): ReservationStatusBadge con REJECTED (rojo 'RECHAZADA'). Filtro 'Rechazadas'. Dropdown de acciones: PENDING ahora muestra 'Confirmar' + 'Rechazar'. RejectReservationDialog con Textarea (max 500 + contador), descripción contextual, botón destructivo. statusMutation acepta rejectionReason + toast diferenciado. Sección expandida muestra 'MOTIVO DEL RECHAZO' en rojo
+- Subagent 6 (ProfilePage): statusMeta con REJECTED (rojo 'RECHAZADA'). Card opacity-60 para rechazadas. Bloque de motivo con XCircle icon + texto del rejectionReason, solo cuando status=REJECTED y hay motivo
+- api.ts: updateOwnerReservationStatus acepta rejectionReason opcional, lo envía en body cuando status=REJECTED
+- Lint limpio; commit c7246b1 pushed a origin/main
+
+Stage Summary:
+- ✅ Cuando un cliente reserva → el dueño recibe notificación 'Nueva reserva recibida' en su campana
+- ✅ Cuando el dueño confirma → el cliente recibe notificación 'Tu reserva fue confirmada'
+- ✅ Cuando el dueño rechaza → el cliente recibe notificación 'Tu reserva fue rechazada' + motivo
+- ✅ El dueño puede rechazar con motivo (dialog con textarea max 500 chars)
+- ✅ El cliente ve el motivo del rechazo en 'Mis Reservas' (badge roja + caja con el motivo)
+- ⏳ WebSocket en tiempo real (mini-service socket.io): pendiente — las notificaciones funcionan sin él (solo requieren refresh), se puede añadir después si el usuario quiere updates en vivo sin refrescar
