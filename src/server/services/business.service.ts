@@ -419,20 +419,20 @@ export function transformBusiness(
     ...galleryUrls,
   ]).slice(0, 3);
 
-  // gallery[] — up to 10 photos, pad by cycling existing
-  const gallery: string[] = [];
-  const sourcePool =
+  // gallery[] — up to 10 photos, NO cycling/padding.
+  // Shows only the actual gallery images (deduped against cover
+  // so the cover doesn't appear twice in the carousel).
+  // Previously this padded by cycling existing images up to 10,
+  // which caused every uploaded photo to appear duplicated.
+  const gallerySource =
     galleryUrls.length > 0
       ? galleryUrls
       : coverUrls.length > 0
         ? coverUrls
         : business.coverImage
-          ? [business.coverImage]
+          ? [resolveImageUrl(business.coverImage)]
           : [];
-  for (let i = 0; i < 10 && sourcePool.length > 0; i++) {
-    const url = sourcePool[i % sourcePool.length];
-    if (url !== undefined) gallery.push(url);
-  }
+  const gallery: string[] = dedup(gallerySource).slice(0, 10);
 
   // coverImage — prefer business.coverImage, fallback to first COVER image, then first GALLERY
   const coverImage = resolveImageUrl(
