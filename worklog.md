@@ -6119,3 +6119,24 @@ Stage Summary:
 - Flujo de delegación 100% operativo de punta a punta (API + UI)
 - Próximo paso usuario: probar con dueños REALES (instrucciones en chat); verificar NEXTAUTH_SECRET en Vercel
 - Estado DB: 20 negocios owner=admin (sqn8nproyect), tasca-los-amigos owner=ana.rodriguez (usuario de prueba)
+
+---
+Task ID: visibilidad-botones-admin
+Agent: main
+Task: Mejorar la visibilidad de los botones en el panel de administración
+
+Work Log:
+- DIAGNÓSTICO RAÍZ: <html> nunca tenía la clase "dark" → todos los tokens semánticos de shadcn corrían en modo claro sobre la UI oscura custom:
+  * variant="outline" renderizaba fondo BLANCO → botón "Salir" era texto blanco sobre blanco (invisible); "Migrar Dueños" dorado sobre blanco
+  * Select/DropdownMenu usaban bg-popover blanco
+- FIX GLOBAL: className="dark" en <html> (layout.tsx) — activa la paleta .dark ya existente en globals.css. Verificado: dropdowns, diálogos (Cancelar), outline buttons ahora oscuros y legibles
+- Chips de acción en tabla Negocios (Asignar/Aprobar/Rechazar): de ghost h-6 text-[10px] sin borde → h-7 px-3 text-[11px] font-semibold con borde + fondo tintado (gold/esmeralda/rojo) + hover reforzado
+- Extraídos renderOwnerActions/renderRowActions compartidos entre tabla y tarjetas
+- MÓVIL: la tabla se cortaba horizontalmente (botones fuera de pantalla) → nueva lista de tarjetas sm:hidden con las mismas acciones wrap-friendly; tabla oculta en <sm
+- Header: Salir con icono LogOut + borde más marcado; Migrar Dueños con fill dorado; tabs inactivas con hover bg y texto más brillante
+- Verificado en navegador (móvil 390px + desktop 1366px): header, chips, diálogo Asignar, dropdown Acciones, estado PENDING (Aprobar/Rechazar resaltan), home sin regresiones
+- Datos de prueba limpiados (eclipse devuelto a admin); lint OK; commit f1b786b pusheado
+
+Stage Summary:
+- Panel admin totalmente legible en desktop y móvil; flujo de delegación visible de punta a punta
+- La clase dark ahora activa el theming semántico en TODA la app (beneficia también OwnerDashboard y diálogos)
