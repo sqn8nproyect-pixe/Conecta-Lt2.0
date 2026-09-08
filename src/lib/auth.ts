@@ -3,9 +3,11 @@
 // ─────────────────────────────────────────────────────────────
 // Providers:
 //   1. Google OAuth  →  when NEXT_PUBLIC_GOOGLE_CLIENT_ID/SECRET are set
-//   2. Credentials   →  demo fallback (Ana Rodríguez) so the app
-//                       is fully functional in the sandbox without
-//                       real OAuth credentials.
+//   2. Credentials   →  demo fallback for dev/testing when Google
+//                       OAuth is not configured. Only authenticates
+//                       EXISTING users — never creates new users
+//                       with fake data (Google is the single source
+//                       of truth for user identity, name and avatar).
 //
 // Adapter:  @auth/prisma-adapter  (Account, Session, VerificationToken)
 // Strategy: JWT (default) — we read session.user.id on the server
@@ -33,14 +35,6 @@ import { isAdminEmail } from '@/lib/admin-config';
 // The patch comments out the check in node_modules/openid-client/
 // lib/client.js. See scripts/patch-openid-client.js for details.
 // ─────────────────────────────────────────────────────────────
-
-// Demo user used by the Credentials provider fallback so the app
-// is fully functional in the sandbox without real Google creds.
-const DEMO_USER = {
-  name: 'Ana Rodríguez',
-  email: 'ana.rodriguez@gmail.com',
-  image: 'https://i.pravatar.cc/150?img=47',
-};
 
 /**
  * Build the NextAuth options. We instantiate providers conditionally
@@ -163,9 +157,10 @@ export const authOptions: NextAuthOptions = {
           }),
         ]
       : []),
-    // Demo fallback: always available. Creates/reuses the demo user
-    // in the DB so that server-side operations (favorites, reviews)
-    // have a real userId to attach to.
+    // Demo fallback: only authenticates EXISTING users. Never
+    // creates new users (Google OAuth is the single source of truth
+    // for user identity, name, and avatar). Never overwrites
+    // name/image — those come exclusively from Google.
     CredentialsProvider({
       id: 'demo',
       name: 'Cuenta Demo',
@@ -174,17 +169,27 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
-          const email = credentials?.email?.trim() || DEMO_USER.email;
-          const name = DEMO_USER.name;
-          const image = DEMO_USER.image;
+          const email = credentials?.email?.trim().toLowerCase();
+          if (!email) {
+            console.error('[auth.demo.authorize] no email provided');
+            return null;
+          }
 
-          // upsert so the demo user always exists with a stable id
-          const user = await db.user.upsert({
+          // Only authenticate existing users — no upsert, no create.
+          // Google OAuth is responsible for creating users with
+          // their real name and avatar.
+          const user = await db.user.findUnique({
             where: { email },
-            update: { name, image },
-            create: { email, name, image, role: 'USER' },
             select: { id: true, name: true, email: true, image: true },
           });
+
+          if (!user) {
+            console.error(
+              `[auth.demo.authorize] user not found: ${email}. ` +
+              'Users must sign in with Google at least once before the demo login works.',
+            );
+            return null;
+          }
 
           return {
             id: user.id,

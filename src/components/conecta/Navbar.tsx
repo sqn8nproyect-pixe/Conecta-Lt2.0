@@ -26,6 +26,7 @@ import {
 import { useAuthProviders } from '@/lib/hooks/use-auth-providers';
 import { isAdminEmail } from '@/lib/admin-config';
 import { formatRelativeTime } from '@/lib/utils';
+import { DemoLoginModal } from '@/components/conecta/DemoLoginModal';
 import type { View } from '@/lib/types';
 
 /** Google "G" logo (official 4-color mark) — used in the sign-in button. */
@@ -315,6 +316,7 @@ export function Navbar() {
   const setView = useAppStore((s) => s.setView);
   const addNotification = useAppStore((s) => s.addNotification);
   const { googleEnabled } = useAuthProviders();
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // Hydrate favorites + expose toggle() to children via the store.
   // Calling this here means every page has the favorites hydrated
@@ -396,52 +398,54 @@ export function Navbar() {
     //   En localhost usamos redirect:false porque el sandbox puede
     //   tener issues cross-origin (localhost vs 127.0.0.1).
     //
-    // DEMO (Credentials): siempre redirect:false porque authorize()
-    //   corre server-side via fetch y setea la cookie. Necesitamos
-    //   reload() para que el cliente lea la nueva cookie.
-    const provider = googleEnabled ? 'google' : 'demo';
-    // true si estamos en producción (dominio real, no localhost/sandbox).
-    // Aplica tanto a conectalt.com como a vercel.app preview URLs.
-    const isProduction = typeof window !== 'undefined'
-      && !window.location.hostname.includes('localhost')
-      && !window.location.hostname.startsWith('127.0.0.1')
+    // DEMO (Credentials): abre un modal para que el usuario escriba
+    //   su email. Solo autentica usuarios ya existentes en la DB
+    //   (creados previamente vía Google OAuth). No crea usuarios
+    //   nuevos ni pisa name/image — Google es la única fuente de
+    //   verdad para identidad.
+    if (googleEnabled) {
+      // true si estamos en producción (dominio real, no localhost/sandbox).
+      const isProduction = typeof window !== 'undefined'
+        && !window.location.hostname.includes('localhost')
+        && !window.location.hostname.startsWith('127.0.0.1');
 
-    if (provider === 'google' && isProduction) {
-      // Flujo OAuth tradicional: form POST + 302 redirect.
-      // No manejamos la promesa porque el navegador navegará a Google.
-      void signIn(provider, { callbackUrl: '/' }).catch(() => {
-        addNotification('Error de conexión al iniciar sesión con Google.', 'info');
-      });
+      if (isProduction) {
+        // Flujo OAuth tradicional: form POST + 302 redirect.
+        void signIn('google', { callbackUrl: '/' }).catch(() => {
+          addNotification('Error de conexión al iniciar sesión con Google.', 'info');
+        });
+        return;
+      }
+
+      // Google en localhost/dev — flujo fetch (redirect:false)
+      void signIn('google', { callbackUrl: '/', redirect: false })
+        .then((res) => {
+          if (res?.error) {
+            addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
+          } else if (res?.url && res.url.includes('/api/auth/error')) {
+            const errorMatch = res.url.match(/[?&]error=([^&]+)/);
+            const errorCode = errorMatch ? decodeURIComponent(errorMatch[1]) : 'unknown';
+            console.error('[auth] OAuth provider error:', errorCode, res.url);
+            addNotification(
+              `Error de autenticación con Google. Código: ${errorCode}. Revisa la configuración OAuth.`,
+              'info',
+            );
+          } else if (res?.url) {
+            window.location.href = res.url;
+          } else {
+            window.location.reload();
+          }
+        })
+        .catch(() => {
+          addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
+        });
       return;
     }
 
-    // Flujo fetch (redirect:false) — para demo en cualquier entorno,
-    // o para Google en localhost/dev.
-    void signIn(provider, { callbackUrl: '/', redirect: false })
-      .then((res) => {
-        if (res?.error) {
-          addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
-        } else if (res?.url && res.url.includes('/api/auth/error')) {
-          // NextAuth returns the error URL when the OAuth flow fails.
-          const errorMatch = res.url.match(/[?&]error=([^&]+)/);
-          const errorCode = errorMatch ? decodeURIComponent(errorMatch[1]) : 'unknown';
-          console.error('[auth] OAuth provider error:', errorCode, res.url);
-          addNotification(
-            `Error de autenticación con ${provider === 'google' ? 'Google' : 'el proveedor'}. ` +
-            `Código: ${errorCode}. Revisa la configuración OAuth.`,
-            'info'
-          );
-        } else if (res?.url) {
-          // OAuth provider — navigate to provider's authorization URL
-          window.location.href = res.url;
-        } else {
-          // Credentials provider — cookie already set, just reload
-          window.location.reload();
-        }
-      })
-      .catch(() => {
-        addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
-      });
+    // Google no configurado → abrir modal demo para que el usuario
+    // escriba su email. Solo funciona para usuarios ya existentes
+    // (creados previamente vía Google OAuth en producción).
+    setDemoModalOpen(true);
   };
 
   const handleLogout = () => {
@@ -545,6 +549,9 @@ export function Navbar() {
           : null}
         {user && isAdminEmail(user.email) && adminNavItem()}
       </div>
+
+      {/* Modal de login demo (cuando Google OAuth no está configurado) */}
+      <DemoLoginModal open={demoModalOpen} onOpenChange={setDemoModalOpen} />
     </nav>
   );
 }
