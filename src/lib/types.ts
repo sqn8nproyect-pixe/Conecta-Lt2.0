@@ -325,6 +325,16 @@ export interface AdminBusiness extends Establishment {
     email: string;
     image: string | null;
   } | null;
+  /** Owner-approval workflow (Etapa 7.C). PENDING when a delegation
+   *  proposal awaits admin review; served by GET /api/admin/businesses. */
+  ownerStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  proposedOwnerId?: string | null;
+  proposedOwner?: {
+    id: string;
+    name: string | null;
+    email: string;
+    image?: string | null;
+  } | null;
 }
 
 export interface AdminReview {

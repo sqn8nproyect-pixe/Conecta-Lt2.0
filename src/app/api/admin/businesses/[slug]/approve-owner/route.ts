@@ -24,7 +24,7 @@ export async function POST(
     // Verify business exists and has a proposed owner
     const business = await db.business.findUnique({
       where: { slug },
-      select: { id: true, name: true, proposedOwnerId: true },
+      select: { id: true, name: true, ownerId: true, proposedOwnerId: true },
     });
 
     if (!business) {
@@ -41,13 +41,28 @@ export async function POST(
       );
     }
 
-    // Transfer ownership
+    // Conflict guard — if the business is already owned by someone else,
+    // the pending proposal is stale and must be rejected instead.
+    if (business.ownerId && business.ownerId !== business.proposedOwnerId) {
+      return NextResponse.json(
+        {
+          error:
+            'Este local ya tiene un dueño distinto. Rechaza la propuesta pendiente en su lugar.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Transfer ownership. `claimedAt` is stamped on first ownership
+    // (consistent with the self-claim flow); a re-approval of the same
+    // owner keeps the original claim date.
     const updated = await db.business.update({
       where: { slug },
       data: {
         ownerId: business.proposedOwnerId,
         proposedOwnerId: null,
         ownerStatus: 'APPROVED',
+        ...(business.ownerId ? {} : { claimedAt: new Date() }),
       },
     });
 

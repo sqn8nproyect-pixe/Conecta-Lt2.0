@@ -28,6 +28,8 @@ import {
   Eye,
   AlertTriangle,
   RefreshCw,
+  CheckCircle2,
+  UserCheck,
 } from 'lucide-react';
 import {
   useAppStore,
@@ -37,7 +39,8 @@ import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useRedemptionActions } from '@/lib/hooks/use-redemption-actions';
 import { useReservationActions } from '@/lib/hooks/use-reservation-actions';
 import { useAnalytics } from '@/lib/hooks/use-analytics';
-import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity } from '@/lib/api';
+import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity, claimBusiness } from '@/lib/api';
+import { isAdminEmail } from '@/lib/admin-config';
 import type { BookingData, CapacityLevel, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
 import { imageFallback } from '@/components/conecta/image-fallback';
@@ -184,6 +187,41 @@ export function EstablishmentPage() {
   useEffect(() => {
     if (est?.slug) trackPageView(est.slug);
   }, [est?.slug, trackPageView]);
+
+  // Etapa 7.B — self-claim. A BUSINESS_OWNER (or admin) browsing an
+  // unclaimed micro-landing can claim it directly from the hero. The
+  // API enforces role + ownership server-side; we only surface errors.
+  const claimMutation = useMutation({
+    mutationFn: () => claimBusiness(est!.slug),
+    onSuccess: () => {
+      addNotification(
+        '¡Local reclamado! Ya aparece en tu sección "Mis Locales".',
+        'info',
+      );
+      void refetch();
+    },
+    onError: (err: Error) => {
+      if (err.message === 'NOT_AUTHENTICATED') {
+        addNotification('Inicia sesión para reclamar este local.', 'info');
+      } else {
+        addNotification(
+          err.message || 'No se pudo reclamar el local.',
+          'info',
+        );
+      }
+    },
+  });
+
+  // Hero owner-management state (derived from the fetched business):
+  //   - isGestorHere → the current user owns this business → badge.
+  //   - canClaimHere → unclaimed + eligible role → claim button.
+  //   - owned by someone else → render nothing.
+  const isGestorHere =
+    !!user && !!est?.ownerId && est.ownerId === user.id;
+  const canClaimHere =
+    !!user &&
+    !est?.ownerId &&
+    (user.role === 'BUSINESS_OWNER' || isAdminEmail(user.email));
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   // Etapa 3: 3 sub-ratings reales en lugar de un único rating global.
@@ -606,6 +644,30 @@ export function EstablishmentPage() {
             )}
 
           </div>
+
+          {/* Etapa 7.B — owner management entry point on the micro-landing.
+              Owners see a confirmation badge; eligible unclaimed venues
+              show the self-claim button referenced by OwnerDashboard. */}
+          {isGestorHere && (
+            <div className="mt-3 inline-flex items-center gap-2 text-[11px] font-mono tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full">
+              <CheckCircle2 size={13} />
+              Gestionando este local
+            </div>
+          )}
+          {canClaimHere && (
+            <button
+              onClick={() => claimMutation.mutate()}
+              disabled={claimMutation.isPending}
+              className="mt-3 inline-flex items-center gap-2 text-[11px] font-mono tracking-wider text-gold bg-gold/10 border border-gold/40 px-4 py-1.5 rounded-full hover:bg-gold/20 transition-all disabled:opacity-50"
+            >
+              {claimMutation.isPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <UserCheck size={13} />
+              )}
+              Reclamar este local
+            </button>
+          )}
         </div>
 
         {/* Favorite button */}

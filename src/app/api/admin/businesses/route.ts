@@ -32,15 +32,20 @@ import type { AdminBusiness, BusinessStatus } from '@/lib/types';
 
 // Extended include — `businessInclude` doesn't bring the owner
 // relation (the public transformBusiness doesn't need it). We layer it
-// on top so the admin response can populate the `owner` column without
+// on top so the admin response can populate the `owner` column and the
+// owner-approval workflow fields (proposedOwner/ownerStatus) without
 // a separate fetch.
 const adminBusinessInclude = {
   ...businessInclude,
   owner: { select: { id: true, name: true, email: true, image: true } },
+  proposedOwner: {
+    select: { id: true, name: true, email: true, image: true },
+  },
 } satisfies Prisma.BusinessInclude;
 
 type AdminBusinessRow = BusinessWithRelations & {
   owner: { id: string; name: string | null; email: string; image: string | null } | null;
+  proposedOwner: { id: string; name: string | null; email: string; image: string | null } | null;
   status: BusinessStatus;
 };
 
@@ -76,6 +81,12 @@ export async function GET(request: Request) {
       ...transformBusiness(b),
       status: b.status,
       owner: b.owner,
+      // Owner-approval workflow (Etapa 7.C) — required by the
+      // AdminDashboard so the Aprobar/Rechazar buttons render whenever a
+      // delegation proposal is pending.
+      ownerStatus: b.ownerStatus,
+      proposedOwnerId: b.proposedOwnerId,
+      proposedOwner: b.proposedOwner,
     }));
 
     return NextResponse.json(result);

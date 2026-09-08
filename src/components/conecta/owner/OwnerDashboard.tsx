@@ -1989,17 +1989,20 @@ export function OwnerDashboard() {
               </TabsList>
 
               <TabsContent value="info" className="mt-6">
-                <InfoTab slug={selectedSlug} isAdmin={isAdmin} />
+                {/* key={slug} remounts the tab when the selected business
+                    changes — local form state (initialized flag, inputs)
+                    must re-hydrate from the newly fetched business. */}
+                <InfoTab key={selectedSlug} slug={selectedSlug!} isAdmin={isAdmin} />
               </TabsContent>
               <TabsContent value="reservas" className="mt-6">
-                <ReservasTab slug={selectedSlug} />
+                <ReservasTab key={selectedSlug} slug={selectedSlug!} />
               </TabsContent>
               <TabsContent value="promociones" className="mt-6">
-                <PromotionsTab slug={selectedSlug} isAdmin={isAdmin} />
+                <PromotionsTab key={selectedSlug} slug={selectedSlug!} isAdmin={isAdmin} />
               </TabsContent>
               {!isAdmin && (
                 <TabsContent value="propuestas" className="mt-6">
-                  <PropuestasTab slug={selectedSlug} />
+                  <PropuestasTab key={selectedSlug} slug={selectedSlug!} />
                 </TabsContent>
               )}
             </Tabs>

@@ -875,6 +875,9 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
   const [assignDialog, setAssignDialog] = useState<{
     slug: string;
     name: string;
+    /** Email of the currently confirmed owner, if any. When set, the
+     *  assignment is an explicit transfer (API `force: true`). */
+    ownerEmail?: string | null;
   } | null>(null);
   const [assignEmail, setAssignEmail] = useState('');
   const [proposalsDialog, setProposalsDialog] = useState<{
@@ -935,8 +938,15 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
 
   // Owner management mutations
   const assignOwnerMutation = useMutation({
-    mutationFn: ({ slug, email }: { slug: string; email: string }) =>
-      assignOwner(slug, email),
+    mutationFn: ({
+      slug,
+      email,
+      force,
+    }: {
+      slug: string;
+      email: string;
+      force: boolean;
+    }) => assignOwner(slug, email, force),
     onSuccess: () => {
       addNotification('Dueño propuesto correctamente', 'success');
       setAssignDialog(null);
@@ -1089,7 +1099,11 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
                                 size="sm"
                                 className="h-6 px-2 text-[10px] text-gold hover:bg-gold/10 hover:text-gold"
                                 onClick={() =>
-                                  setAssignDialog({ slug: b.slug, name: b.name })
+                                  setAssignDialog({
+                                    slug: b.slug,
+                                    name: b.name,
+                                    ownerEmail: b.owner?.email ?? null,
+                                  })
                                 }
                               >
                                 <UserPlus size={11} className="mr-1" />
@@ -1255,6 +1269,14 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
               El usuario deberá ser aprobado después.
             </DialogDescription>
           </DialogHeader>
+          {assignDialog?.ownerEmail && (
+            <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+              Este local ya está gestionado por{' '}
+              <span className="font-medium">{assignDialog.ownerEmail}</span>.
+              Al confirmar, se le quitará la gestión y se propondrá al nuevo
+              dueño (pendiente de aprobación).
+            </p>
+          )}
           <div className="py-2">
             <label className="text-[10px] font-mono tracking-widest text-white/40 uppercase block mb-1.5">
               Email del usuario
@@ -1270,6 +1292,7 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
                   assignOwnerMutation.mutate({
                     slug: assignDialog.slug,
                     email: assignEmail.trim(),
+                    force: !!assignDialog.ownerEmail,
                   });
                 }
               }}
@@ -1294,6 +1317,7 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
                   assignOwnerMutation.mutate({
                     slug: assignDialog.slug,
                     email: assignEmail.trim(),
+                    force: !!assignDialog.ownerEmail,
                   });
                 }
               }}

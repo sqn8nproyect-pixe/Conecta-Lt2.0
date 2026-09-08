@@ -766,13 +766,15 @@ export async function migrateOwnership() {
   return res.json();
 }
 
-export async function assignOwner(slug: string, email: string) {
+export async function assignOwner(slug: string, email: string, force = false) {
   const res = await fetch(
     `/api/admin/businesses/${slug}/assign-owner`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
+      // `force` = explicit admin transfer when the business already has
+      // a confirmed owner (releases them, then proposes the new owner).
+      body: JSON.stringify({ email, force }),
     },
   );
   if (!res.ok) await throwAdminError(res);
