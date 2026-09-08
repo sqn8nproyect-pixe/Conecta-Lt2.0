@@ -695,20 +695,29 @@ export async function fetchOwnerReservations(
 /**
  * PATCH /api/owner/businesses/[slug]/reservations/[id]/status — change
  * a reservation's status from the owner dashboard. Allowed transitions:
- *   PENDING → CONFIRMED, CONFIRMED → COMPLETED, CONFIRMED → NO_SHOW
+ *   PENDING → CONFIRMED, PENDING → REJECTED (with reason),
+ *   CONFIRMED → COMPLETED, CONFIRMED → NO_SHOW
  * The server validates the transition and notifies the user (best-effort).
+ *
+ * When `status` is REJECTED, `rejectionReason` is forwarded to the
+ * backend so it can be persisted and included in the user notification.
  */
 export async function updateOwnerReservationStatus(
   slug: string,
   id: string,
   status: ReservationStatus,
-): Promise<{ id: string; status: ReservationStatus }> {
+  rejectionReason?: string,
+): Promise<{ id: string; status: ReservationStatus; rejectionReason: string | null }> {
   const res = await fetch(
     `/api/owner/businesses/${slug}/reservations/${id}/status`,
     {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(
+        status === 'REJECTED'
+          ? { status, rejectionReason: rejectionReason?.trim() || null }
+          : { status },
+      ),
     },
   );
   if (!res.ok) await throwOwnerError(res);

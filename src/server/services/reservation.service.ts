@@ -249,11 +249,11 @@ export const reservationService = {
     },
   ): Promise<CreateReservationResult> => {
     // ── 1. Validate business by slug ───────────────────────────────
-    // Minimal select — we only need the id; full business payload is
-    // fetched lazily via the reservationInclude on the response path.
+    // Select ownerId + name so we can notify the owner after creating
+    // the reservation (fire-and-forget, after the tx commits).
     const business = await db.business.findUnique({
       where: { slug: input.businessSlug },
-      select: { id: true },
+      select: { id: true, name: true, ownerId: true },
     });
     if (!business) {
       throw jsonError('Negocio no encontrado', 404);
@@ -366,18 +366,34 @@ export const reservationService = {
       return created;
     });
 
-    // ── 8. Persistent notification (Etapa 7.A) ────────────────────
+    // ── 8. Persistent notifications (Etapa 7.A + reservas bidireccionales) ─
     // Fire-and-forget AFTER the tx commits so a notification DB error
     // can never roll back the reservation. The notification service
     // catches + logs its own errors and never throws.
-    // `reservation.business.name` is already loaded via the
-    // `reservationInclude` so we don't need an extra round-trip.
+
+    // (a) Al CLIENTE: confirma que su reserva fue recibida (PENDING,
+    //     no CONFIRMED — eso pasa cuando el dueño la apruebe).
     await notificationService.notify(
       userId,
-      'RESERVATION_CONFIRMED',
-      'Reserva confirmada',
-      `Tu reserva ${reservation.confirmationCode} en ${reservation.business.name} fue confirmada.`,
+      'SYSTEM',
+      'Reserva recibida',
+      `Recibimos tu reserva ${reservation.confirmationCode} en ${reservation.business.name}. ` +
+        `Te avisaremos cuando el local la confirme.`,
     );
+
+    // (b) Al DUEÑO del negocio: avisa que tiene una reserva nueva
+    //     pendiente de revisión. Si el negocio no tiene ownerId (no
+    //     reclamado), la notificación se omite (no hay a quién avisar).
+    if (business.ownerId) {
+      await notificationService.notify(
+        business.ownerId,
+        'RESERVATION_NEW',
+        'Nueva reserva recibida',
+        `${trimmedName} reservó para ${guestsNum} ${guestsNum === 1 ? 'persona' : 'personas'} ` +
+          `el ${input.date} a las ${input.time} en ${business.name}. ` +
+          `Código: ${reservation.confirmationCode}.`,
+      );
+    }
 
     // ── 9. Build the response payload ──────────────────────────────
     return {

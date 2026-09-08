@@ -23,6 +23,7 @@ import {
   ArrowRight,
   AlertTriangle,
   RefreshCw,
+  XCircle,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
@@ -680,15 +681,20 @@ function ProfileContent({
                           label: 'CANCELADA',
                           cls: 'bg-white/15 border-white/30 text-white/60',
                         }
-                      : status === 'COMPLETED'
+                      : status === 'REJECTED'
                         ? {
-                            label: 'COMPLETADA',
-                            cls: 'bg-sky-500/25 border-sky-500/50 text-sky-300',
+                            label: 'RECHAZADA',
+                            cls: 'bg-red-500/15 border-red-500/30 text-red-300',
                           }
-                        : {
-                            label: 'NO ASISTIÓ',
-                            cls: 'bg-red-500/25 border-red-500/50 text-red-300',
-                          };
+                        : status === 'COMPLETED'
+                          ? {
+                              label: 'COMPLETADA',
+                              cls: 'bg-sky-500/25 border-sky-500/50 text-sky-300',
+                            }
+                          : {
+                              label: 'NO ASISTIÓ',
+                              cls: 'bg-red-500/25 border-red-500/50 text-red-300',
+                            };
               const canCancel =
                 status === 'PENDING' || status === 'CONFIRMED';
               const cancelling = isCancellingReservation(r.id);
@@ -697,7 +703,9 @@ function ProfileContent({
                 <article
                   key={r.id}
                   className={`glass-card rounded-2xl p-5 transition-opacity ${
-                    status === 'CANCELLED' ? 'opacity-60' : ''
+                    status === 'CANCELLED' || status === 'REJECTED'
+                      ? 'opacity-60'
+                      : ''
                   }`}
                 >
                   {/* Top row: code + status badge */}
@@ -752,6 +760,25 @@ function ProfileContent({
                       </span>
                     </span>
                   </div>
+
+                  {/* Rejection reason (only when REJECTED + reason present) */}
+                  {status === 'REJECTED' && r.rejectionReason && (
+                    <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <XCircle
+                        size={14}
+                        className="text-red-300 mt-0.5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-bold tracking-wider uppercase text-red-300/80">
+                          Motivo del rechazo
+                        </span>
+                        <p className="mt-0.5 text-xs text-red-200 leading-relaxed break-words">
+                          {r.rejectionReason}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Coupon code chip (if linked) */}
                   {r.coupon && (

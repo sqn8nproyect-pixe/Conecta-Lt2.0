@@ -177,6 +177,7 @@ export interface CouponRedemption {
 export type ReservationStatus =
   | 'PENDING'
   | 'CONFIRMED'
+  | 'REJECTED'
   | 'CANCELLED'
   | 'COMPLETED'
   | 'NO_SHOW';
@@ -194,6 +195,8 @@ export interface Reservation {
   name: string;
   phone: string;
   email: string | null;
+  /** Motivo del rechazo (solo cuando status = REJECTED). */
+  rejectionReason?: string | null;
   /** ISO timestamp of when the reservation was created. */
   createdAt: string;
   business: {

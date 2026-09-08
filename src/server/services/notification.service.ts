@@ -46,8 +46,10 @@ import { notificationRepository } from '@/server/repositories/notification.repos
  * `CAPACITY_REPORTED` is reserved for future use (owner/admin flow).
  */
 export type NotificationType =
-  | 'RESERVATION_CONFIRMED'
-  | 'RESERVATION_CANCELLED'
+  | 'RESERVATION_NEW' // al dueño: "Nueva reserva de [cliente]"
+  | 'RESERVATION_CONFIRMED' // al cliente: "Tu reserva fue confirmada"
+  | 'RESERVATION_REJECTED' // al cliente: "Tu reserva fue rechazada"
+  | 'RESERVATION_CANCELLED' // al dueño: "El cliente canceló la reserva"
   | 'COUPON_REDEEMED'
   | 'REVIEW_PUBLISHED'
   | 'CAPACITY_REPORTED' // future (owner/admin flow)

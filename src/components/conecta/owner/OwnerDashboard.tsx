@@ -36,6 +36,7 @@ import {
   Lock,
   CheckCircle2,
   XCircle,
+  Ban,
   Pause,
   Play,
   Pencil,
@@ -266,6 +267,7 @@ function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
     COMPLETED: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
     NO_SHOW: 'bg-red-500/15 text-red-300 border-red-500/30',
     CANCELLED: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
+    REJECTED: 'bg-red-500/15 text-red-300 border-red-500/30',
   };
   const labels: Record<ReservationStatus, string> = {
     PENDING: 'PENDIENTE',
@@ -273,6 +275,7 @@ function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
     COMPLETED: 'COMPLETADA',
     NO_SHOW: 'NO ASISTIÓ',
     CANCELLED: 'CANCELADA',
+    REJECTED: 'RECHAZADA',
   };
   return (
     <span
@@ -1015,6 +1018,124 @@ function ImageSection({
   );
 }
 
+// ─── Reject Reservation Dialog ─────────────────────────────────
+// Small modal opened from the ReservasTab dropdown when the owner
+// picks "Rechazar". Lets the owner write a free-text reason that will
+// be persisted on the reservation and forwarded to the customer via
+// the existing notification pipeline (handled by the PATCH route).
+
+const REJECT_REASON_MAX = 500;
+
+function RejectReservationDialog({
+  reservation,
+  reason,
+  onReasonChange,
+  isPending,
+  onConfirm,
+  onOpenChange,
+}: {
+  reservation: OwnerReservation | null;
+  reason: string;
+  onReasonChange: (value: string) => void;
+  isPending: boolean;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const open = reservation !== null;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Block closing while the mutation is in-flight to avoid
+        // losing the typed reason mid-submit.
+        if (isPending && !next) return;
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="bg-zinc-950 border-white/10 text-white sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <Ban size={18} className="text-red-400" />
+            Rechazar reserva
+          </DialogTitle>
+          <DialogDescription className="text-white/60">
+            {reservation ? (
+              <>
+                Vas a rechazar la reserva{' '}
+                <span className="font-mono font-bold text-gold">
+                  {reservation.confirmationCode}
+                </span>{' '}
+                de{' '}
+                <span className="text-white">
+                  {reservation.user?.name ?? reservation.name}
+                </span>{' '}
+                para el{' '}
+                <span className="text-white">
+                  {reservation.date} · {reservation.time}
+                </span>
+                . El cliente será notificado.
+              </>
+            ) : (
+              'Vas a rechazar la reserva seleccionada.'
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <Label
+            htmlFor="reject-reason"
+            className="text-[11px] uppercase tracking-widest text-white/50"
+          >
+            Motivo del rechazo
+          </Label>
+          <Textarea
+            id="reject-reason"
+            value={reason}
+            onChange={(e) => onReasonChange(e.target.value)}
+            placeholder="Ej: No tenemos disponibilidad para esa hora. ¿Te parece a las 21:30?"
+            maxLength={REJECT_REASON_MAX}
+            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 min-h-[100px] resize-y"
+            disabled={isPending}
+          />
+          <div className="flex justify-end">
+            <span className="text-[10px] font-mono text-white/40">
+              {reason.length}/{REJECT_REASON_MAX}
+            </span>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={onConfirm}
+            disabled={isPending}
+            className="bg-red-600 hover:bg-red-500 text-white border-red-500/30"
+          >
+            {isPending ? (
+              <>
+                <span className="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Rechazando…
+              </>
+            ) : (
+              <>
+                <XCircle size={14} className="mr-2" />
+                Rechazar reserva
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Tab 2: Reservas ───────────────────────────────────────────
 
 function ReservasTab({ slug }: { slug: string }) {
@@ -1023,6 +1144,10 @@ function ReservasTab({ slug }: { slug: string }) {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Reservation currently being rejected (opens the reject dialog when set).
+  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  // Free-text reason typed inside the reject dialog. Trimmed on submit.
+  const [rejectReason, setRejectReason] = useState('');
 
   const { data: reservations = [], isLoading, isError } = useQuery({
     queryKey: QK_OWNER_RESERVATIONS(slug, statusFilter, dateFilter),
@@ -1038,18 +1163,31 @@ function ReservasTab({ slug }: { slug: string }) {
     mutationFn: ({
       id,
       status,
+      rejectionReason,
     }: {
       id: string;
       status: ReservationStatus;
-    }) => updateOwnerReservationStatus(slug, id, status),
-    onMutate: async ({ id, status }) => {
+      rejectionReason?: string;
+    }) => updateOwnerReservationStatus(slug, id, status, rejectionReason),
+    onMutate: async ({ id, status, rejectionReason }) => {
       const queryKey = QK_OWNER_RESERVATIONS(slug, statusFilter, dateFilter);
       await queryClient.cancelQueries({ queryKey });
       const prev = queryClient.getQueryData<OwnerReservation[]>(queryKey);
       if (prev) {
         queryClient.setQueryData<OwnerReservation[]>(
           queryKey,
-          prev.map((r) => (r.id === id ? { ...r, status } : r)),
+          prev.map((r) =>
+            r.id === id
+              ? {
+                  ...r,
+                  status,
+                  rejectionReason:
+                    status === 'REJECTED'
+                      ? (rejectionReason?.trim() || null)
+                      : r.rejectionReason,
+                }
+              : r,
+          ),
         );
       }
       return { prev, queryKey };
@@ -1063,8 +1201,13 @@ function ReservasTab({ slug }: { slug: string }) {
         'info',
       );
     },
-    onSuccess: () => {
-      addNotification('Reserva actualizada', 'success');
+    onSuccess: (_data, vars) => {
+      addNotification(
+        vars.status === 'REJECTED'
+          ? 'Reserva rechazada. El cliente fue notificado.'
+          : 'Reserva actualizada',
+        vars.status === 'REJECTED' ? 'info' : 'success',
+      );
       void queryClient.invalidateQueries({ queryKey: ['owner', 'reservations', slug] });
     },
   });
@@ -1081,6 +1224,7 @@ function ReservasTab({ slug }: { slug: string }) {
             <SelectItem value="ALL">Todas</SelectItem>
             <SelectItem value="PENDING">Pendientes</SelectItem>
             <SelectItem value="CONFIRMED">Confirmadas</SelectItem>
+            <SelectItem value="REJECTED">Rechazadas</SelectItem>
             <SelectItem value="COMPLETED">Completadas</SelectItem>
             <SelectItem value="NO_SHOW">No asistieron</SelectItem>
             <SelectItem value="CANCELLED">Canceladas</SelectItem>
@@ -1212,6 +1356,21 @@ function ReservasTab({ slug }: { slug: string }) {
                                     Confirmar
                                   </DropdownMenuItem>
                                 )}
+                                {r.status === 'PENDING' && (
+                                  <>
+                                    <DropdownMenuSeparator className="bg-white/10" />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setRejectTargetId(r.id);
+                                        setRejectReason('');
+                                      }}
+                                      className="hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+                                    >
+                                      <Ban size={14} className="mr-2" />
+                                      Rechazar
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                                 {r.status === 'CONFIRMED' && (
                                   <>
                                     <DropdownMenuItem
@@ -1251,6 +1410,17 @@ function ReservasTab({ slug }: { slug: string }) {
                       {isExpanded && (
                         <tr className="bg-white/[0.02]">
                           <td colSpan={6} className="px-4 py-3">
+                            {r.status === 'REJECTED' && r.rejectionReason && (
+                              <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                                <div className="mb-1 flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-red-300">
+                                  <XCircle size={12} />
+                                  Motivo del rechazo
+                                </div>
+                                <p className="text-sm text-red-200 whitespace-pre-wrap">
+                                  {r.rejectionReason}
+                                </p>
+                              </div>
+                            )}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                               <div>
                                 <div className="text-white/40 mb-1 uppercase tracking-wider text-[10px]">
@@ -1305,6 +1475,36 @@ function ReservasTab({ slug }: { slug: string }) {
           </div>
         </div>
       )}
+
+      {/* Reject reservation dialog — controlled by rejectTargetId */}
+      <RejectReservationDialog
+        reservation={reservations.find((r) => r.id === rejectTargetId) ?? null}
+        reason={rejectReason}
+        onReasonChange={setRejectReason}
+        isPending={statusMutation.isPending}
+        onConfirm={() => {
+          if (!rejectTargetId) return;
+          statusMutation.mutate(
+            {
+              id: rejectTargetId,
+              status: 'REJECTED',
+              rejectionReason: rejectReason,
+            },
+            {
+              onSuccess: () => {
+                setRejectTargetId(null);
+                setRejectReason('');
+              },
+            },
+          );
+        }}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectTargetId(null);
+            setRejectReason('');
+          }
+        }}
+      />
     </div>
   );
 }

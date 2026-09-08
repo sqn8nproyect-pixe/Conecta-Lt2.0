@@ -454,6 +454,7 @@ model Favorite {
 enum ReservationStatus {
   PENDING
   CONFIRMED
+  REJECTED
   CANCELLED
   COMPLETED
   NO_SHOW
@@ -474,6 +475,9 @@ model Reservation {
   guests           Int
   notes            String?
   status           ReservationStatus @default(PENDING)
+  // Motivo del rechazo (solo cuando status = REJECTED). Lo escribe
+  // el dueño al rechazar y lo ve el cliente en "Mis Reservas".
+  rejectionReason  String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 

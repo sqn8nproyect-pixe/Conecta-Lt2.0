@@ -40,25 +40,31 @@ import type { ReservationStatus as FrontendReservationStatus } from '@/lib/types
 const VALID_STATUSES: ReadonlySet<FrontendReservationStatus> = new Set([
   'PENDING',
   'CONFIRMED',
+  'REJECTED',
   'COMPLETED',
   'NO_SHOW',
   'CANCELLED',
 ]);
 
-// Map of allowed forward transitions. The owner can only move a
-// reservation forward in the lifecycle (PENDING → CONFIRMED →
-// COMPLETED | NO_SHOW). CANCELLED is user-only.
+// Map of allowed forward transitions. The owner can:
+//   PENDING    → CONFIRMED            (confirm the booking)
+//   PENDING    → REJECTED             (reject with reason)
+//   CONFIRMED  → COMPLETED            (customer showed up)
+//   CONFIRMED  → NO_SHOW              (customer didn't show)
+// CANCELLED is user-only (owner can't cancel on user's behalf).
 const ALLOWED_TRANSITIONS: Record<string, ReadonlySet<string>> = {
-  PENDING: new Set(['CONFIRMED']),
+  PENDING: new Set(['CONFIRMED', 'REJECTED']),
   CONFIRMED: new Set(['COMPLETED', 'NO_SHOW']),
   COMPLETED: new Set(),
   NO_SHOW: new Set(),
+  REJECTED: new Set(),
   CANCELLED: new Set(),
 };
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'pendiente',
   CONFIRMED: 'confirmada',
+  REJECTED: 'rechazada',
   COMPLETED: 'completada',
   NO_SHOW: 'no asistió',
   CANCELLED: 'cancelada',
@@ -96,12 +102,20 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            'status inválido (se esperaba PENDING | CONFIRMED | COMPLETED | NO_SHOW | CANCELLED)',
+            'status inválido (se esperaba PENDING | CONFIRMED | REJECTED | COMPLETED | NO_SHOW | CANCELLED)',
         },
         { status: 400 },
       );
     }
     const newStatus = rawStatus as FrontendReservationStatus;
+
+    // rejectionReason: solo relevante si status = REJECTED.
+    // String opcional, máx 500 chars.
+    const rawReason = (body as Record<string, unknown> | null)?.rejectionReason;
+    const rejectionReason =
+      typeof rawReason === 'string'
+        ? rawReason.trim().slice(0, 500) || null
+        : null;
 
     // CANCELLED is user-only — owner can't cancel on the user's behalf.
     if (newStatus === 'CANCELLED') {
@@ -113,6 +127,9 @@ export async function PATCH(
         { status: 400 },
       );
     }
+
+    // REJECTED requires a reason (recommended, but not strictly required).
+    // We allow empty reason but encourage the owner to provide one.
 
     // Fetch the reservation — must belong to the owned business.
     const reservation = await db.reservation.findUnique({
@@ -155,8 +172,13 @@ export async function PATCH(
 
     const updated = await db.reservation.update({
       where: { id: reservation.id },
-      data: { status: newStatus as ReservationStatus },
-      select: { id: true, status: true },
+      data: {
+        status: newStatus as ReservationStatus,
+        // Solo guarda rejectionReason si el status es REJECTED;
+        // para otros statuses, limpia el campo.
+        rejectionReason: newStatus === 'REJECTED' ? rejectionReason : null,
+      },
+      select: { id: true, status: true, rejectionReason: true },
     });
 
     // ── Side effect: notify the user (best-effort) ──────────────
@@ -165,13 +187,25 @@ export async function PATCH(
     if (reservation.userId) {
       try {
         const label = STATUS_LABELS[newStatus] ?? newStatus.toLowerCase();
+        const title =
+          newStatus === 'CONFIRMED'
+            ? 'Tu reserva fue confirmada'
+            : newStatus === 'REJECTED'
+              ? 'Tu reserva fue rechazada'
+              : 'Tu reserva fue actualizada';
+        const message =
+          newStatus === 'REJECTED' && rejectionReason
+            ? `Tu reserva ${reservation.confirmationCode} en ${reservation.business.name} fue rechazada. Motivo: ${rejectionReason}`
+            : `Tu reserva ${reservation.confirmationCode} en ${reservation.business.name} fue ${label}.`;
         await notificationService.notify(
           reservation.userId,
           newStatus === 'CONFIRMED'
             ? 'RESERVATION_CONFIRMED'
-            : 'SYSTEM',
-          'Tu reserva fue actualizada',
-          `Tu reserva ${reservation.confirmationCode} en ${reservation.business.name} fue ${label}.`,
+            : newStatus === 'REJECTED'
+              ? 'RESERVATION_REJECTED'
+              : 'SYSTEM',
+          title,
+          message,
         );
       } catch (e) {
         console.error('notify user of reservation status change failed:', e);
@@ -181,6 +215,7 @@ export async function PATCH(
     return NextResponse.json({
       id: updated.id,
       status: updated.status as FrontendReservationStatus,
+      rejectionReason: updated.rejectionReason,
     });
   } catch (e) {
     if (e instanceof Response) return e; // 401 / 403 / 404 / 400

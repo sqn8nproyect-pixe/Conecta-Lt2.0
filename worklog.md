@@ -6569,3 +6569,129 @@ Stage Summary:
 - ✅ El carrusel inferior (GALLERY) sigue con su límite de 10
 - ✅ Refactor: ImageSection reutilizable reduce duplicación de código entre COVER y GALLERY
 - ✅ Las aprobaciones, badges y eliminación funcionan igual en ambas secciones
+
+---
+Task ID: 6-client-reject-badge-profile
+Agent: full-stack-developer
+Task: Mostrar badge "RECHAZADA" + motivo del rechazo en Mis Reservas (ProfilePage)
+
+Work Log:
+- Leído worklog.md (contexto del proyecto CONECTA-LT) y verificado que `ReservationStatus` ya incluye `'REJECTED'` y `Reservation` ya incluye `rejectionReason?: string | null` en src/lib/types.ts (líneas 177-216) → no fue necesario tocar types.ts
+- Leído src/components/conecta/ProfilePage.tsx (960 líneas) y localizada la sección "Mis Reservas" (líneas 639-822). Cada reserva se renderiza en un `<article>` glass-card con:
+  * Fila superior: código de confirmación + badge de estado (statusMeta)
+  * Nombre del local (clicable → detalle)
+  * Fila de fecha / hora / comensales
+  * Chip de cupón (si aplica)
+  * Notas (si las hay)
+  * Fila inferior: countdown + botón "CANCELAR"
+- La cadena ternaria `statusMeta` originalmente mapeaba: PENDING→PENDIENTE (ámbar), CONFIRMED→CONFIRMADA (esmeralda), CANCELLED→CANCELADA (blanco/gris), COMPLETED→COMPLETADA (sky), else→NO ASISTIÓ (rojo). NO existía el caso REJECTED.
+- Editado src/components/conecta/ProfilePage.tsx (3 cambios):
+
+  1. **Import de icono** (línea 26): añadido `XCircle` a la lista de imports de `lucide-react` para usarlo junto al motivo del rechazo.
+
+  2. **statusMeta — nuevo caso REJECTED** (líneas 684-688): insertado entre `CANCELLED` y `COMPLETED` en la cadena ternaria:
+     ```ts
+     : status === 'REJECTED'
+       ? {
+           label: 'RECHAZADA',
+           cls: 'bg-red-500/15 border-red-500/30 text-red-300',
+         }
+     ```
+     - Color rojo sutil (`/15` bg, `/30` border) distinto del rojo más fuerte de NO_SHOW (`/25` bg, `/50` border) → ambos rojos pero visualmente diferenciables por intensidad y, sobre todo, por el label "RECHAZADA" vs "NO ASISTIÓ".
+     - CANCELLED sigue siendo "CANCELADA" con gris/blanco (no se tocó) → cumple el requisito de mantenerlos distinguibles.
+
+  3. **Opacidad de la tarjeta** (líneas 705-709): extendida la condición `opacity-60` para que también atenúe las reservas REJECTED (además de las CANCELLED), indicando visualmente que ya no están activas:
+     ```tsx
+     status === 'CANCELLED' || status === 'REJECTED' ? 'opacity-60' : ''
+     ```
+
+  4. **Bloque de motivo del rechazo** (líneas 764-781): añadido entre la fila fecha/hora/comensales y el chip de cupón. Sólo se renderiza cuando `status === 'REJECTED'` AND `r.rejectionReason` es truthy (no null/empty):
+     ```tsx
+     {status === 'REJECTED' && r.rejectionReason && (
+       <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+         <XCircle size={14} className="text-red-300 mt-0.5 shrink-0" aria-hidden="true" />
+         <div className="min-w-0 flex-1">
+           <span className="block text-[10px] font-bold tracking-wider uppercase text-red-300/80">
+             Motivo del rechazo
+           </span>
+           <p className="mt-0.5 text-xs text-red-200 leading-relaxed break-words">
+             {r.rejectionReason}
+           </p>
+         </div>
+       </div>
+     )}
+     ```
+     - Estilo rojo tenue (`bg-red-500/10`, `border-red-500/20`) coherente con el badge pero más sutil (es contenido, no badge).
+     - Icono `XCircle` (lucide-react) a la izquierda con `aria-hidden` por ser decorativo.
+     - Label "Motivo del rechazo" en mayúsculas tracking-wider rojo-300/80.
+     - Texto del motivo en rojo-200, `break-words` para textos largos, `min-w-0` + `flex-1` para layout responsive correcto.
+
+- Verificación:
+  * `bun run lint` → 0 errores, 0 warnings (eslint . limpio)
+  * Dev server (puerto 3000): recompiló los cambios sin errores (`✓ Compiled in 184ms/169ms/178ms` en dev.log). La página `/` responde HTTP 200.
+  * No se modificaron rutas API, schema, ni backend — sólo ProfilePage.tsx.
+  * El tipo `Reservation` ya tenía `rejectionReason` desde la tarea previa (api/types), así que el frontend lo consume sin cambios de tipo.
+
+Stage Summary:
+- 1 archivo modificado: src/components/conecta/ProfilePage.tsx (4 ediciones puntuales)
+- Nuevo caso REJECTED en el mapper de badges de estado de reserva → muestra "RECHAZADA" en rojo tenue
+- Nuevo bloque condicional que muestra el `rejectionReason` debajo de la info de fecha/hora, con icono XCircle y estética roja coherente con el tema oscuro (bg-obsidian / gold)
+- Opacidad de tarjeta extendida para atenuar también reservas REJECTED
+- Diferenciación visual preservada: CANCELLED sigue gris/blanco "CANCELADA", REJECTED es rojo "RECHAZADA", NO_SHOW es rojo más fuerte "NO ASISTIÓ"
+- Lint limpio, dev server compila OK, sin tocar backend
+
+---
+Task ID: 5-owner-reject-reservation-ui
+Agent: conecta-frontend (Z.ai Code)
+Task: Añadir acción "Rechazar" (con dialog de motivo) y badge "RECHAZADA" en el ReservasTab del OwnerDashboard
+
+Work Log:
+- Leído worklog.md (contexto: backend ya actualizado en tarea previa — `ReservationStatus` enum ahora incluye `REJECTED`, el PATCH `/api/owner/businesses/[slug]/reservations/[id]/status` acepta `rejectionReason` cuando status es `REJECTED`, la transición `PENDING → REJECTED` está permitida, la respuesta incluye `rejectionReason: string | null`, y `Reservation` type en `src/lib/types.ts` ya incluye `rejectionReason?: string | null`). `OwnerReservation extends Reservation` por lo tanto ya hereda el campo — no hizo falta tocar tipos.
+- Confirmado contrato del API PATCH: el backend persiste `rejectionReason` solo si `newStatus === 'REJECTED'`, lo incluye en la notificación al cliente ("Tu reserva {code} en {business} fue rechazada. Motivo: {reason}"), y el response body incluye `rejectionReason: updated.rejectionReason`.
+- Editado `src/lib/api.ts` — `updateOwnerReservationStatus`:
+  * Nuevo parámetro opcional `rejectionReason?: string`
+  * El body enviado al backend ahora es `{ status, rejectionReason: rejectionReason?.trim() || null }` cuando status es `REJECTED`, y `{ status }` en caso contrario (sin añadir ruido al body para las demás transiciones)
+  * Tipo de retorno ampliado a `Promise<{ id: string; status: ReservationStatus; rejectionReason: string | null }>` para reflejar el contrato real del API
+  * Actualizado el docstring de la función para documentar la nueva transición `PENDING → REJECTED (with reason)`
+- Editado `src/components/conecta/owner/OwnerDashboard.tsx`:
+  1. **Imports**: añadido `Ban` a la lista de iconos de `lucide-react` (entre `XCircle` y `Pause`). `XCircle` ya estaba importado — se reutiliza para el botón "Rechazar reserva" del footer y para "Marcar no asistió" del dropdown.
+  2. **`ReservationStatusBadge`** (línea 262): añadida entrada `REJECTED` al `map` (`bg-red-500/15 text-red-300 border-red-500/30`, mismo estilo que `NO_SHOW`) y al `labels` (`'RECHAZADA'`). Como `ReservationStatus` ahora incluye `'REJECTED'`, el `Record<ReservationStatus, string>` exige que la clave exista — sin la entrada, TypeScript rompía. Ahora compila.
+  3. **Filtro de estado** (Select): añadido `<SelectItem value="REJECTED">Rechazadas</SelectItem>` entre "Confirmadas" y "Completadas" para que el dueño pueda filtrar también las reservas rechazadas.
+  4. **`statusMutation`** (en `ReservasTab`):
+     * `mutationFn` ahora acepta `{ id, status, rejectionReason? }` y pasa el `rejectionReason` a `updateOwnerReservationStatus`.
+     * `onMutate` actualiza el cache optimisticamente: cuando `status === 'REJECTED'`, además de cambiar el status también setea `rejectionReason: rejectionReason?.trim() || null` (mantiene el valor previo si la transición no es REJECTED).
+     * `onSuccess` ahora recibe `vars` y muestra un toast diferenciado: `"Reserva rechazada. El cliente fue notificado."` (tipo `info`) para REJECTED, `"Reserva actualizada"` (tipo `success`) para el resto.
+  5. **Estado del dialog**: añadidos `rejectTargetId` (id de la reserva en proceso de rechazo, o `null`) y `rejectReason` (texto libre del textarea). Cuando `rejectTargetId` no es null, el dialog se abre.
+  6. **Dropdown de acciones** (columna "Acciones"): cuando `r.status === 'PENDING'`, además de "Confirmar" se muestra un `DropdownMenuSeparator` + un nuevo `DropdownMenuItem` "Rechazar" con icono `Ban` y hover rojo (`hover:bg-red-500/10 hover:text-red-300`). Al hacer clic, setea `rejectTargetId=r.id` y limpia `rejectReason` (abriendo el dialog).
+     * Condición `(r.status === 'PENDING' || r.status === 'CONFIRMED') && (...)` se mantuvo — muestra el dropdown solo en estados no terminales.
+     * La condición inversa `r.status !== 'PENDING' && r.status !== 'CONFIRMED'` ya cubre automáticamente `REJECTED` (terminal state, muestra "—"). No hizo falta tocarla.
+  7. **Nueva sección "Motivo del rechazo" en fila expandida**: cuando `r.status === 'REJECTED' && r.rejectionReason`, antes del grid de 3 columnas se renderiza un banner rojo (`border-red-500/30 bg-red-500/10 p-3 rounded-lg`) con label "MOTIVO DEL RECHAZO" + icono `XCircle` y el texto del motivo en `text-red-200 whitespace-pre-wrap`. Solo aparece si hay motivo (defensivo contra REJECTED legacy sin reason).
+  8. **Nuevo componente `RejectReservationDialog`** (declarado antes de `ReservasTab`): dialog controlado por props `reservation`, `reason`, `onReasonChange`, `isPending`, `onConfirm`, `onOpenChange` para mantener la lógica de presentación separada de la mutation. Características:
+     - `Dialog` con `open = reservation !== null`, `onOpenChange` bloquea el cierre mientras `isPending` (evita perder el texto mid-submit).
+     - `DialogContent` dark theme: `bg-zinc-950 border-white/10 text-white sm:max-w-md`.
+     - `DialogTitle` con icono `Ban` rojo: "Rechazar reserva".
+     - `DialogDescription` dinámica: si hay `reservation`, muestra código (gold, mono, bold), nombre del cliente y fecha/hora. Fallback genérico si no.
+     - `Label` "MOTIVO DEL RECHAZO" (uppercase tracking-widest, blanco/50).
+     - `Textarea` con `id="reject-reason"`, placeholder "Ej: No tenemos disponibilidad para esa hora. ¿Te parece a las 21:30?", `maxLength={REJECT_REASON_MAX}` (constante = 500), `min-h-[100px] resize-y`, `disabled={isPending}`.
+     - Contador `{reason.length}/500` en mono blanco/40 abajo a la derecha.
+     - `DialogFooter`: botón "Cancelar" (`ghost`, blanco/70) + botón "Rechazar reserva" (`bg-red-600 hover:bg-red-500`, con icono `XCircle`). Mientras `isPending`, el botón muestra un spinner CSS (`animate-spin` border) y el texto "Rechazando…".
+     - Al confirmar: `statusMutation.mutate({ id, status: 'REJECTED', rejectionReason }, { onSuccess: () => { setRejectTargetId(null); setRejectReason('') } })` — cierra el dialog y limpia el textarea solo si la mutation tuvo éxito (si falla, el dialog queda abierto y el usuario puede reintentar).
+- Verificación:
+  * `bun run lint` → 0 errores, 0 warnings (eslint . pasa limpio).
+  * Dev server recompila sin errores (`✓ Compiled in 184ms` y subsecuentes). Los warnings `prisma:error Error in PostgreSQL connection` son pre-existentes (no relacionados con esta tarea — la conexión Neon cold-startea tras idle; la app se auto-recupera).
+  * TypeScript: el `Record<ReservationStatus, string>` en `ReservationStatusBadge` ahora incluye las 6 claves requeridas (PENDING, CONFIRMED, COMPLETED, NO_SHOW, CANCELLED, REJECTED) — sin errores de exhaustividad.
+- Archivos modificados:
+  * ~ `src/lib/api.ts` (1 función: `updateOwnerReservationStatus` ampliada con `rejectionReason?` + nuevo return type)
+  * ~ `src/components/conecta/owner/OwnerDashboard.tsx` (8 ediciones quirúrgicas: imports, badge, filter, mutation, dropdown, expanded row, dialog component, dialog render)
+- Sin tocar: APIs, schema.prisma, prisma, backend. Solo frontend como pedía la tarea.
+
+Stage Summary:
+- ✅ Badge "RECHAZADA" visible en la columna Estado del ReservasTab (rojo, mismo estilo que NO_SHOW)
+- ✅ Filtro "Rechazadas" añadido al Select de estados (entre Confirmadas y Completadas)
+- ✅ Acción "Rechazar" en el dropdown (solo cuando status === 'PENDING'), con icono Ban rojo, separada visualmente de "Confirmar" por un `DropdownMenuSeparator`
+- ✅ Dialog de rechazo con: título + descripción contextual (código + cliente + fecha/hora), Textarea maxlength=500 con contador X/500, botones Cancelar (ghost) + "Rechazar reserva" (rojo destructivo con spinner mientras se envía)
+- ✅ Toast diferenciado al rechazar: "Reserva rechazada. El cliente fue notificado." (tipo info) — distinto del "Reserva actualizada" genérico de las demás transiciones
+- ✅ Motivo del rechazo visible en la fila expandida (banner rojo con icon XCircle + label "MOTIVO DEL RECHAZO") cuando la reserva tiene `rejectionReason`
+- ✅ Optimistic update: al rechazar, la fila cambia inmediatamente a REJECTED + se actualiza el `rejectionReason` en cache sin esperar al refetch
+- ✅ Estados terminales (REJECTED, CANCELLED, COMPLETED, NO_SHOW) siguen mostrando "—" en la columna Acciones (no se pueden revertir desde la UI)
+- ✅ ESLint: 0 errores / 0 warnings; dev server compila limpio
