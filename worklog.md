@@ -6377,3 +6377,24 @@ Stage Summary:
 - ✅ Modal de login demo permite escribir el email (en lugar de login automático como Ana)
 - ⏳ PENDIENTE USUARIO: configurar GOOGLE_CLIENT_SECRET + NEXT_PUBLIC_GOOGLE_CLIENT_ID en .env local (Vercel ya los tiene). Sin esto, el botón sigue diciendo 'CUENTA DEMO' en lugar de 'CONTINUAR CON GOOGLE'
 - Nota: usuarios seed (@seed.conecta.lt) conservan sus avatares pravatar — son ficticios para reviews, no usuarios reales
+
+---
+Task ID: restore-google-identity-from-idtoken
+Agent: main
+Task: Restaurar name+avatar reales de Google sin requerir re-login OAuth
+
+Work Log:
+- Causa raíz del pisado de datos: las pruebas de login programático del propio agente (main) en sesiones previas usaron el provider demo con emails reales (sqn8nproyect, cerotraba) → el upsert con update:{name,image} sobreescribió los datos reales de Google con "Ana Rodríguez" + pravatar
+- Descubierto: la tabla Account (Prisma Adapter de NextAuth) guarda el id_token JWT de Google en cada login OAuth. Ese JWT contiene name, email, picture, given_name, family_name
+- Script de restauración: iteró todas las cuentas Google, decodificó el id_token (base64 payload), identificó 2 usuarios con datos null/pravatar que tenían id_token válido: sqn8nproyect y cerotraba
+- Restaurados en DB:
+  * sqn8nproyect@gmail.com → name: "Sqn8nproyect Beta", image: lh3.googleusercontent.com/a/ACg8ocLhSnyM...=s96-c
+  * cerotraba@gmail.com → name: "cero trabas", image: lh3.googleusercontent.com/a/ACg8ocIikGPg...=s96-c
+- Verificado vía API: login demo como sqn8nproyect → sesión con name "Sqn8nproyect Beta" + image real de Google + role ADMIN
+- No requirió credenciales Google OAuth ni re-login del usuario: los datos estaban en la DB (id_token de NextAuth adapter)
+
+Stage Summary:
+- ✅ Avatar y name reales de Google restaurados para sqn8nproyect y cerotraba SIN tocar credenciales
+- ✅ El fix del auth.ts (commit bd78b09) previene que vuelva a ocurrir: el demo provider ya no hace upsert/update
+- Lección: el id_token JWT almacenado por NextAuth es una fuente fiable para restaurar identidad sin re-OAuth
+- Lección para el agente: NO usar login demo programático con emails reales en pruebas — solo con usuarios seed ficticios
