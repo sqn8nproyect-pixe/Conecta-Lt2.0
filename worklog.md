@@ -6355,3 +6355,25 @@ Stage Summary:
 - ⚠️ Cambios de .env NO están en Vercel: usuario debe añadir manualmente pool_timeout=10&connect_timeout=30&connection_limit=5 al DATABASE_URL de Vercel
 - ⏳ Pendiente: opción 3 (activar pooler interno del endpoint en consola Neon web) — el usuario lo hará
 - 🔐 Recordar al usuario: revocar el Neon API key tras cerrar la revisión
+
+---
+Task ID: fix-auth-google-source-of-truth
+Agent: main
+Task: Google OAuth debe ser única fuente de verdad para identidad (name, email, avatar)
+
+Work Log:
+- Diagnóstico: DEMO_USER hardcodeado en auth.ts ({name:'Ana Rodríguez', email:'ana.rodriguez@gmail.com', image:'pravatar.cc/150?img=47'}) era usado como fallback en cada login demo, pisando los datos reales de usuarios existentes (incluido admin sqn8nproyect@gmail.com)
+- Verificado en DB: 5 usuarios con datos falsos (pravatar + 'Ana Rodríguez'): sqn8nproyect, cerotraba, ana.rodriguez, admin@conecta.lt, moderator@conecta.lt. 14 usuarios SÍ tenían datos reales de Google (lh3.googleusercontent.com)
+- FIX auth.ts: removido DEMO_USER. Demo provider ahora solo autentica usuarios EXISTENTES (findUnique, sin upsert/create/update). Si el usuario no existe → 401. Google OAuth es responsable de crear usuarios con su name+avatar real.
+- CREADO src/components/conecta/DemoLoginModal.tsx: modal con input de email para login demo cuando Google OAuth no está configurado. Solo autentica usuarios ya existentes. Error claro si el email no está en DB.
+- EDITADO src/components/conecta/Navbar.tsx: handleLogin separa Google path de demo path. Demo path abre el modal en lugar de signIn('demo') sin email. Botón 'CUENTA DEMO' ahora abre modal con input.
+- DB limpiada: 5 usuarios con pravatar → name=null, image=null. Google los restaurará en próximo login OAuth.
+- E2E verificado: login demo con sqn8nproyect → HTTP 200, sesión {name:null, email:'sqn8nproyect@gmail.com', image:null, role:'ADMIN'}. Login con email inexistente → HTTP 401 (rechazado). Modal abre correctamente con input + botones Entrar/Cancelar.
+- Lint limpio; commit bd78b09 pushed a origin/main
+
+Stage Summary:
+- ✅ El bug del avatar 'Ana Rodríguez' está FIXEADO: el demo provider ya no pisa datos
+- ✅ Google OAuth es la única fuente de verdad para crear usuarios y poblar name+avatar
+- ✅ Modal de login demo permite escribir el email (en lugar de login automático como Ana)
+- ⏳ PENDIENTE USUARIO: configurar GOOGLE_CLIENT_SECRET + NEXT_PUBLIC_GOOGLE_CLIENT_ID en .env local (Vercel ya los tiene). Sin esto, el botón sigue diciendo 'CUENTA DEMO' en lugar de 'CONTINUAR CON GOOGLE'
+- Nota: usuarios seed (@seed.conecta.lt) conservan sus avatares pravatar — son ficticios para reviews, no usuarios reales
