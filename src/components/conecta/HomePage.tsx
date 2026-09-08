@@ -323,7 +323,7 @@ export function HomePage() {
                         </span>
                       </div>
                       <div className="mt-2">
-                        <h4 className="font-serif text-sm font-bold text-white line-clamp-1 group-hover:text-gold transition-colors">
+                        <h4 className="font-serif text-sm font-bold text-white line-clamp-2 group-hover:text-gold transition-colors">
                           {item.business.name}
                         </h4>
                         <div className="mt-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/50">
@@ -493,13 +493,13 @@ export function HomePage() {
                       </div>
                       <div className="p-5 sm:p-6">
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <h4 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white line-clamp-1 group-hover:text-gold transition-colors">
+                          <h4 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white line-clamp-2 group-hover:text-gold transition-colors">
                             {est.name}
                           </h4>
                           <div className="flex items-center gap-1 text-gold mt-1 flex-shrink-0">
                             <Star size={15} fill="#d4af37" />
                             <span className="font-mono text-base font-bold tabular-nums">
-                              {avg}
+                              {avg.toFixed(1)}
                             </span>
                           </div>
                         </div>

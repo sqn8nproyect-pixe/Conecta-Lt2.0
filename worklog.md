@@ -6076,3 +6076,22 @@ Stage Summary:
 - Las 2 imágenes nuevas viven en el repo → producción las sirve como estáticos tras deploy
 - El proxy /api/images sigue disponible para subidas futuras reales de los dueños
 - NOTA del screenshot del usuario: su captura mostraba un deploy viejo fallando con "Cannot read properties of null (reading 'email')" en prerender de / — el deploy actual con los fixes responde 200 OK
+
+---
+Task ID: fix-rating-decimales-nombre
+Agent: Z.ai Code (principal)
+Task: Rating con decimales incorrectos + nombre recortado en cards
+
+Work Log:
+- Rating: el fix original (71db366, 23/08) solo cubrió EstablishmentPage (toFixed(1) en 3 lugares). El mismo bug crudo seguía en 5 componentes: HomePage:502, ProfilePage:400/934, Matchmaker:247, MapPage:412
+- Causa raíz del valor feo: DB guarda avgRating Float sin redondear (Don Sancho = 4.444444444444445 con 9 reseñas)
+- Fix RAÍZ en transformBusiness: avgRating = Math.round(x*10)/10 → toda la app recibe 1 decimal desde la API
+- Fix DEFENSIVO: toFixed(1) añadido en los 5 renders crudos (consistencia con populares/planner que ya lo tenían)
+- Nombre: cards del directorio y franja populares usaban line-clamp-1 → "Licorería Don Sancho" se recortaba. Cambiado a line-clamp-2 (grid absorbe alturas)
+- Verificado: API devuelve 4.4 (Don Sancho), 4.8 (Oro Negro/Tasca Amigos 4.75→4.8 igual que toFixed); navegador: card muestra nombre completo + ★ 4.4
+- Lint limpio
+
+Stage Summary:
+- El rating ya se normaliza a 1 decimal en la API (raíz) + defensa en UI → no puede volver a aparecer crudo en ningún componente nuevo
+- Nombres completos en cards (2 líneas disponibles)
+- Lección: los fixes de UI deben incluir TODOS los puntos de render o normalizar en el transform de salida

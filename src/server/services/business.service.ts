@@ -500,7 +500,8 @@ export function transformBusiness(
     instagram,
     coverImage,
     images: imagesList,
-    avgRating: business.avgRating,
+    avgRating:
+      Math.round(business.avgRating * 10) / 10,
     reviewCount: business.reviewCount,
     priceRange,
     schedule,

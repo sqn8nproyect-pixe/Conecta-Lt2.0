@@ -244,7 +244,7 @@ export function Matchmaker({ open, onClose }: MatchmakerProps) {
                     <div className="flex items-center justify-center gap-1.5 text-gold text-sm mb-4">
                       <Star size={14} fill="#d4af37" />
                       <span className="font-mono font-bold text-base">
-                        {recommendation.establishment.avgRating}
+                        {recommendation.establishment.avgRating.toFixed(1)}
                       </span>
                       <span className="text-white/40">
                         ({recommendation.establishment.reviewCount} reseñas)

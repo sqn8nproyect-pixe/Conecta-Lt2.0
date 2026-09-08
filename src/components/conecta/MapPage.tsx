@@ -409,7 +409,7 @@ export function MapPage() {
                 <div className="flex items-center gap-1.5">
                   <Star className="text-gold" size={16} fill="#D4AF37" />
                   <span className="font-mono font-bold text-white">
-                    {selectedEst.avgRating}
+                    {selectedEst.avgRating.toFixed(1)}
                   </span>
                   <span>
                     ({selectedEst.reviewCount} reseñas)

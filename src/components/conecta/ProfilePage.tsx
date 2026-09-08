@@ -397,7 +397,7 @@ function ProfileContent({
                       <div className="flex items-center gap-2 mt-1.5 text-xs text-white/50">
                         <Star size={13} className="text-gold" fill="#d4af37" />
                         <span className="font-mono font-bold text-gold">
-                          {avg}
+                          {avg.toFixed(1)}
                         </span>
                         <span>·</span>
                         <span className="line-clamp-1 flex items-center gap-1">
@@ -931,7 +931,7 @@ function MyLocalesSection({
                     <div className="flex items-center gap-2 mt-1.5 text-xs text-white/50">
                       <Star size={13} className="text-gold" fill="#d4af37" />
                       <span className="font-mono font-bold text-gold">
-                        {avg}
+                        {avg.toFixed(1)}
                       </span>
                       <span>·</span>
                       <span className="line-clamp-1 flex items-center gap-1">
