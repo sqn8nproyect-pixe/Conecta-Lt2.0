@@ -6262,3 +6262,20 @@ Stage Summary:
 - Menú Digital ✅ completo: dueña edita carta en su panel, controla visibilidad con un botón, público la ve en la ficha
 - Tasca Los Amigos tiene carta demo activa (2 secciones, 3 ítems) para las pruebas como dueña
 - Pendiente usuario: probar flujo de dueño con Ana + NEXTAUTH_SECRET en Vercel
+
+---
+Task ID: verify-cerotraba-licobar
+Agent: main
+Task: Verificar asignación de Cerotraba@gmail.com como dueña de Licobar Punto de Encuentro + confirmar flujo de actualizaciones a producción
+
+Work Log:
+- Consulta directa a Neon (DATABASE_URL="$NEON"): Cerotraba@gmail.com (id cmsnqx5n60000ld04njd4j5qc, role BUSINESS_OWNER, name "Ana Rodríguez") YA ES dueña APROBADA de licobar-punto-de-encuentro (ownerStatus APPROVED, proposedOwnerId null) — la asignación se hizo en sesión previa
+- Confirmado que Cerotraba y ana.rodriguez@gmail.com son usuarios DISTINTOS (id diferente) aunque ambas se llaman "Ana Rodríguez" en DB
+- Login demo como Cerotraba: HTTP 200, sesión válida con role BUSINESS_OWNER
+- E2E ownership assertion: GET /api/owner/businesses/licobar-punto-de-encuentro → 200 (gestiona); GET /api/owner/businesses/licobar-punto-de-encuentro/menu → 200 ({visible:false, sections:[]} — carta vacía lista para que la arme); GET /api/owner/businesses/tasca-los-amigos/menu → 403 "No tienes permisos para gestionar este local" (guard bloquea correctamente el acceso a locales ajenos)
+- Arquitectura confirmada: dev (localhost:3000) y prod (Vercel) comparten la MISMA base de datos Neon PostgreSQL + el MISMO bucket Cloudflare R2 → todo lo que escriben los endpoints /api/owner/* se persiste una sola vez y es visible en producción inmediatamente
+
+Stage Summary:
+- Cerotraba@gmail.com puede entrar YA al panel de dueño y editar Licobar Punto de Encuentro (nombre, fotos, horarios, redes, menú, promociones)
+- Los cambios hechos en dev aparecen al instante en producción (Vercel) sin redeploy, porque Neon+R2 son compartidos
+- Único requisito a verificar: que las variables de entorno en Vercel apunten al MISMO Neon DB y MISMO bucket R2 que .env local (si apuntan a recursos diferentes, los cambios NO sincronizarían)
