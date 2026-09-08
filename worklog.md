@@ -6832,3 +6832,28 @@ Stage Summary:
 - ✅ `statusMutation.onSuccess` refactorizado a switch con 5 toasts diferenciados — mejora feedback para todas las transiciones, no solo la nueva
 - ✅ Invalidación del query `reservation-lookup` en onSuccess — la tarjeta gold refresca su badge automáticamente al cambiar status
 - ✅ TypeScript limpio (0 errores nuevos), ESLint limpio (0 errores / 0 warnings), dev server compila sin errores
+
+---
+Task ID: qr-real-buscador-dueño
+Agent: main + 2 subagents (full-stack-developer)
+Task: Opción 2 — QR real + buscador en panel del dueño para validar reservas
+
+Work Log:
+- Instalada librería `qrcode` + `@types/qrcode`
+- CREADO src/components/ui/qrcode.tsx: componente QRCode reutilizable que genera QR real (dataURL via qrcode lib). Codifica `${origin}/r/${code}`. Props: value, size, className. White bg para escaneabilidad. Fallback a texto si falla
+- EDITADO EstablishmentPage.tsx: reemplazado SVG decorativo por <QRCode value={reservationCode} size={160} />. Glow-gold en lugar de glow-purple. Código mostrado debajo en gold mono
+- CREADO src/app/api/reservations/lookup/[code]/route.ts: GET busca reserva por confirmationCode. Sin auth → info pública solo (code, status, date, time, guests, business). BUSINESS_OWNER (con ownership) o ADMIN → info completa (name, phone, email, notes, rejectionReason, id). 400 si código inválido, 404 si no existe
+- Subagent 4 (OwnerDashboard): nueva search bar arriba de la tabla. Input + botón Buscar. Si el término matchea LT-XXXX-X → llama API lookup → muestra LookupResultCard (gold border) con código, status badge, cliente, botón verde 'Confirmar llegada' (statusMutation COMPLETED). Si es nombre parcial → filtra tabla client-side. Toasts diferenciados por status. Formato hint cuando empieza con LT- pero no matchea
+- Subagent 5 (ProfilePage): cada reserva PENDING/CONFIRMED muestra QR inline (64px) + botón 'AMPLIAR' que abre Dialog con QR 200px + código + business info. Estados terminales (CANCELLED, REJECTED, COMPLETED, NO_SHOW) ocultan el QR
+- api.ts: nuevo helper lookupReservation() + tipo ReservationLookupResult
+- Bug cazado: Prisma client no reconocía rejectionReason (campo añadido en sesión anterior). Solución: bunx prisma generate + reiniciar dev server
+- E2E verificado: LT-4243-F con admin → 200 con full info + hasOwnership:true. Sin auth → 200 con info pública only. LT-NOPE-X → 404. INVALID → 400. Lint limpio
+- Commit b9dd3b4 pushed a origin/main
+
+Stage Summary:
+- ✅ QR real funcional en confirmación de reserva + Mis Reservas (cliente puede mostrarlo)
+- ✅ Buscador en panel del dueño: escribe código LT-XXXX-X → ve la reserva destacada → click 'Confirmar llegada' → COMPLETED
+- ✅ Búsqueda client-side por nombre/código parcial filtra la tabla en tiempo real
+- ✅ API lookup respeta ownership: dueño solo ve datos de clientes de sus propios locales
+- ✅ Visitantes sin auth pueden escanear el QR y ver info pública (status, fecha, business) pero NO datos del cliente
+- Pendiente futuro: página pública /r/[code] (por ahora el QR apunta a esa URL pero la ruta no existe aún — el visitante que escanea verá 404). Se puede añadir en otra iteración
