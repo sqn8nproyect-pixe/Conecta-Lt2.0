@@ -6057,3 +6057,22 @@ Stage Summary:
 - Local: placeholders por fallback (R2 no configurado en sandbox). Producción: fotos reales vía proxy con las credenciales R2 de Vercel
 - Presign restaurado + dev script inmune a env var DATABASE_URL del sandbox
 - Pendiente usuario: si al desplegar las fotos siguen sin verse, verificar/rotar R2_ACCESS_KEY_ID/SECRET en Vercel
+
+---
+Task ID: fix-imagenes-r2-contenido
+Agent: Z.ai Code (principal)
+Task: Reemplazar contenido basura en covers de Africa Burguers y Tasca Los Amigos
+
+Work Log:
+- Inspección de bytes vía proxy en producción: Africa = PNG 1200x2000 válido (770KB) que resultó ser SCREENSHOT de build logs de Vercel desde celular (subido por error como portada); Tasca = PNG válido pero VACÍO 100x100 transparente (205 bytes)
+- Generadas 2 imágenes apropiadas con IA (1344x768): public/images/africa-burguers.png (hamburguesa gourmet en bar oscuro) y public/images/tasca-los-amigos.png (tasca venezolana con luces y tapas)
+- DB Neon actualizada: Business.coverImage + filas BusinessImage COVER de ambos negocios → URLs locales nuevas (storageKey=null, objetos R2 basura desconectados)
+- transformBusiness: images[] ahora pone la PORTADA PRIMERO (dedup, máx 3) → hero del detalle abre con la foto elegida
+- Verificado en navegador: home sin imágenes rotas, detalle Africa = hamburguesa OK, detalle Tasca = tasca OK
+- Lint limpio
+
+Stage Summary:
+- Los objetos R2 corruptos (screenshot logs + PNG blanco) ya no se referencian desde la DB
+- Las 2 imágenes nuevas viven en el repo → producción las sirve como estáticos tras deploy
+- El proxy /api/images sigue disponible para subidas futuras reales de los dueños
+- NOTA del screenshot del usuario: su captura mostraba un deploy viejo fallando con "Cannot read properties of null (reading 'email')" en prerender de / — el deploy actual con los fixes responde 200 OK

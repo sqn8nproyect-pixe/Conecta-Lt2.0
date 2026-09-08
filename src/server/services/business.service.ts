@@ -411,14 +411,13 @@ export function transformBusiness(
   const galleryUrls = galleryImages.map((img) => resolveImageUrl(img.url));
   const coverUrls = coverImages.map((img) => resolveImageUrl(img.url));
 
-  // images[] — 2-3 photos, prefer GALLERY, fallback to COVER
-  let imagesList: string[] = galleryUrls.slice(0, 3);
-  if (imagesList.length < 3) {
-    imagesList = [...imagesList, ...coverUrls].slice(0, 3);
-  }
-  if (imagesList.length === 0 && business.coverImage) {
-    imagesList = [business.coverImage];
-  }
+  // images[] — portada primero (es la foto elegida del negocio),
+  // luego galería; máx 3, sin duplicados
+  const dedup = (arr: string[]) => Array.from(new Set(arr));
+  const imagesList: string[] = dedup([
+    ...coverUrls,
+    ...galleryUrls,
+  ]).slice(0, 3);
 
   // gallery[] — up to 10 photos, pad by cycling existing
   const gallery: string[] = [];
