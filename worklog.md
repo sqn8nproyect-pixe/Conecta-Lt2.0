@@ -6550,3 +6550,22 @@ Stage Summary:
 - ✅ El dueño entiende el rol de cada sección por el copy mejorado
 - ✅ La API pública ya no muestra el cover duplicado en la galería
 - El script cleanup-cover-dupes.ts queda disponible para re-correr si se necesitan más limpiezas
+
+---
+Task ID: hero-multi-cover
+Agent: main
+Task: Permitir subir hasta 3 fotos de portada (COVER) para el hero slider
+
+Work Log:
+- Backend POST /api/owner/businesses/[slug]/images: removida lógica de '1 COVER único' (find existing + update). Ahora COVER crea fila nueva como GALLERY. Max 3 COVER (HTTP 409 si excede). Auto-asigna sortOrder (0,1,2) con aggregate _max. business.coverImage se actualiza solo cuando se sube la primera COVER (sortOrder 0) por un admin
+- Frontend OwnerDashboard: refactorizado GallerySection → ImageSection genérico reutilizable (acepta imageType COVER|GALLERY, maxImages, title, description, recommendation). Dos instancias: sección 4 (COVER, max 3) y sección 5 (GALLERY, max 10). Misma UI: header con contador X/MAX, descripción, info de aprobación, upload zone compact, grid de thumbnails con badges Pendiente/Aprobada/Rechazada + botón eliminar
+- Removido import SingleImageUpload (no se usa más)
+- Agregado MAX_COVER_IMAGES = 3
+- transformBusiness NO necesita cambios: imagesList ya era dedup([...coverUrls, ...galleryUrls]).slice(0,3) — ahora coverUrls puede tener hasta 3 URLs
+- Lint limpio; commit 87d513e pushed a origin/main
+
+Stage Summary:
+- ✅ El dueño puede subir hasta 3 fotos de portada (hero) que rotarán en el slider superior
+- ✅ El carrusel inferior (GALLERY) sigue con su límite de 10
+- ✅ Refactor: ImageSection reutilizable reduce duplicación de código entre COVER y GALLERY
+- ✅ Las aprobaciones, badges y eliminación funcionan igual en ambas secciones
