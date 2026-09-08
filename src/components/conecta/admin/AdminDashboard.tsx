@@ -59,6 +59,7 @@ import {
   X,
   FileText,
   Clock,
+  LogOut,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -776,7 +777,7 @@ function ProposalsDialog({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-[10px] text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                            className="h-7 px-3 text-[11px] font-semibold text-emerald-300 bg-emerald-400/10 border border-emerald-400/40 hover:bg-emerald-400/20 hover:border-emerald-400/60"
                             onClick={() =>
                               reviewMutation.mutate({
                                 proposalId: p.id,
@@ -791,7 +792,7 @@ function ProposalsDialog({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            className="h-7 px-3 text-[11px] font-semibold text-red-300 bg-red-400/10 border border-red-400/40 hover:bg-red-400/20 hover:border-red-400/60"
                             onClick={() =>
                               reviewMutation.mutate({
                                 proposalId: p.id,
@@ -989,6 +990,131 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
     },
   });
 
+  // ── Shared action renderers ──────────────────────────────────
+  // Used by BOTH the desktop table cells and the mobile card list
+  // so the buttons behave identically on every screen size.
+
+  const renderOwnerActions = (b: AdminBusinessExt) => (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {!b.proposedOwnerId && b.ownerStatus !== 'PENDING' && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-3 text-[11px] font-semibold text-gold bg-gold/10 border border-gold/40 hover:bg-gold/20 hover:border-gold/60"
+          onClick={() =>
+            setAssignDialog({
+              slug: b.slug,
+              name: b.name,
+              ownerEmail: b.owner?.email ?? null,
+            })
+          }
+        >
+          <UserPlus size={11} className="mr-1" />
+          Asignar
+        </Button>
+      )}
+      {b.ownerStatus === 'PENDING' && (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-3 text-[11px] font-semibold text-emerald-300 bg-emerald-400/10 border border-emerald-400/40 hover:bg-emerald-400/20 hover:border-emerald-400/60"
+            onClick={() => approveOwnerMutation.mutate(b.slug)}
+            disabled={approveOwnerMutation.isPending}
+          >
+            <Check size={11} className="mr-1" />
+            Aprobar
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-3 text-[11px] font-semibold text-red-300 bg-red-400/10 border border-red-400/40 hover:bg-red-400/20 hover:border-red-400/60"
+            onClick={() => rejectOwnerMutation.mutate(b.slug)}
+            disabled={rejectOwnerMutation.isPending}
+          >
+            <X size={11} className="mr-1" />
+            Rechazar
+          </Button>
+        </>
+      )}
+    </div>
+  );
+
+  const renderRowActions = (b: AdminBusinessExt) => (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-white/70 hover:text-gold hover:bg-gold/10 border border-white/15 hover:border-gold/40"
+        onClick={() => setProposalsDialog({ slug: b.slug, name: b.name })}
+        title="Ver propuestas"
+      >
+        <FileText size={14} />
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border border-white/15 text-white/80 hover:text-gold hover:bg-gold/10 hover:border-gold/40"
+            disabled={statusMutation.isPending}
+          >
+            Acciones
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="bg-zinc-900 border-white/10 text-white"
+        >
+          <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-widest">
+            Cambiar estado
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-white/10" />
+          {b.status === 'PENDING_REVIEW' && (
+            <DropdownMenuItem
+              onClick={() => statusMutation.mutate({ id: b.id, status: 'ACTIVE' })}
+              className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
+            >
+              <CheckCircle2 size={14} className="mr-2" />
+              Aprobar
+            </DropdownMenuItem>
+          )}
+          {b.status === 'ACTIVE' && (
+            <DropdownMenuItem
+              onClick={() =>
+                statusMutation.mutate({ id: b.id, status: 'SUSPENDED' })
+              }
+              className="hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+            >
+              <Ban size={14} className="mr-2" />
+              Suspender
+            </DropdownMenuItem>
+          )}
+          {(b.status === 'SUSPENDED' || b.status === 'ARCHIVED') && (
+            <DropdownMenuItem
+              onClick={() => statusMutation.mutate({ id: b.id, status: 'ACTIVE' })}
+              className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
+            >
+              <RotateCcw size={14} className="mr-2" />
+              Reactivar
+            </DropdownMenuItem>
+          )}
+          {b.status !== 'ARCHIVED' && (
+            <DropdownMenuItem
+              onClick={() =>
+                statusMutation.mutate({ id: b.id, status: 'ARCHIVED' })
+              }
+              className="hover:bg-zinc-500/10 hover:text-zinc-300 cursor-pointer"
+            >
+              <Archive size={14} className="mr-2" />
+              Archivar
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -1032,7 +1158,10 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
           No hay negocios para mostrar.
         </div>
       ) : (
-        <div className="glass-card rounded-2xl overflow-hidden">
+        <>
+        {/* Desktop table — hidden on mobile where the card list below
+            keeps every action button reachable without horizontal scroll. */}
+        <div className="glass-card rounded-2xl overflow-hidden hidden sm:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -1091,51 +1220,7 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1.5 min-w-[180px]">
                         <OwnerStatusBadge business={b} />
-                        {isAdmin && (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {!b.proposedOwnerId && b.ownerStatus !== 'PENDING' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-[10px] text-gold hover:bg-gold/10 hover:text-gold"
-                                onClick={() =>
-                                  setAssignDialog({
-                                    slug: b.slug,
-                                    name: b.name,
-                                    ownerEmail: b.owner?.email ?? null,
-                                  })
-                                }
-                              >
-                                <UserPlus size={11} className="mr-1" />
-                                Asignar
-                              </Button>
-                            )}
-                            {b.ownerStatus === 'PENDING' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-[10px] text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                                  onClick={() => approveOwnerMutation.mutate(b.slug)}
-                                  disabled={approveOwnerMutation.isPending}
-                                >
-                                  <Check size={11} className="mr-1" />
-                                  Aprobar
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                                  onClick={() => rejectOwnerMutation.mutate(b.slug)}
-                                  disabled={rejectOwnerMutation.isPending}
-                                >
-                                  <X size={11} className="mr-1" />
-                                  Rechazar
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                        {isAdmin && renderOwnerActions(b)}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -1149,96 +1234,8 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-white/60 hover:text-gold hover:bg-gold/10"
-                            onClick={() =>
-                              setProposalsDialog({ slug: b.slug, name: b.name })
-                            }
-                            title="Ver propuestas"
-                          >
-                            <FileText size={14} />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-white/80 hover:text-gold hover:bg-gold/10"
-                                disabled={statusMutation.isPending}
-                              >
-                                Acciones
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="bg-zinc-900 border-white/10 text-white"
-                            >
-                              <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-widest">
-                                Cambiar estado
-                              </DropdownMenuLabel>
-                              <DropdownMenuSeparator className="bg-white/10" />
-                              {b.status === 'PENDING_REVIEW' && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    statusMutation.mutate({
-                                      id: b.id,
-                                      status: 'ACTIVE',
-                                    })
-                                  }
-                                  className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
-                                >
-                                  <CheckCircle2 size={14} className="mr-2" />
-                                  Aprobar
-                                </DropdownMenuItem>
-                              )}
-                              {b.status === 'ACTIVE' && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    statusMutation.mutate({
-                                      id: b.id,
-                                      status: 'SUSPENDED',
-                                    })
-                                  }
-                                  className="hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
-                                >
-                                  <Ban size={14} className="mr-2" />
-                                  Suspender
-                                </DropdownMenuItem>
-                              )}
-                              {(b.status === 'SUSPENDED' ||
-                                b.status === 'ARCHIVED') && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    statusMutation.mutate({
-                                      id: b.id,
-                                      status: 'ACTIVE',
-                                    })
-                                  }
-                                  className="hover:bg-emerald-500/10 hover:text-emerald-300 cursor-pointer"
-                                >
-                                  <RotateCcw size={14} className="mr-2" />
-                                  Reactivar
-                                </DropdownMenuItem>
-                              )}
-                              {b.status !== 'ARCHIVED' && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    statusMutation.mutate({
-                                      id: b.id,
-                                      status: 'ARCHIVED',
-                                    })
-                                  }
-                                  className="hover:bg-zinc-500/10 hover:text-zinc-300 cursor-pointer"
-                                >
-                                  <Archive size={14} className="mr-2" />
-                                  Archivar
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <div className="flex items-center justify-end">
+                          {renderRowActions(b)}
                         </div>
                       </td>
                     )}
@@ -1248,6 +1245,53 @@ function NegociosTab({ isAdmin }: { isAdmin: boolean }) {
             </table>
           </div>
         </div>
+
+        {/* Mobile card list — same actions as the table, wrap-friendly
+            so Asignar/Aprobar/Rechazar/Acciones stay visible without
+            horizontal scrolling. */}
+        <div className="sm:hidden space-y-3">
+          {extBusinesses.map((b) => (
+            <div key={b.id} className="glass-card rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                {b.coverImage ? (
+                  <img
+                    src={b.coverImage}
+                    alt={b.name}
+                    className="w-10 h-10 rounded-xl object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                    <Store size={16} className="text-white/40" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-white font-medium truncate">{b.name}</div>
+                  <div className="text-[10px] text-white/40 font-mono truncate">
+                    {b.slug}
+                  </div>
+                </div>
+                <BusinessStatusBadge status={b.status} />
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <OwnerStatusBadge business={b} />
+                {b.claimedAt && (
+                  <span className="text-[10px] font-mono text-white/50">
+                    {formatRelativeTime(b.claimedAt)}
+                  </span>
+                )}
+              </div>
+
+              {isAdmin && (
+                <div className="flex flex-col items-start gap-2 pt-2 border-t border-white/5">
+                  {renderOwnerActions(b)}
+                  {renderRowActions(b)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       {/* Assign Owner Dialog */}
@@ -1965,8 +2009,9 @@ export function AdminDashboard() {
           <Button
             variant="outline"
             onClick={() => setView('home')}
-            className="border-white/15 text-white hover:bg-white/5 hover:border-gold/40"
+            className="border-white/25 text-white font-medium hover:bg-white/10 hover:border-gold/50"
           >
+            <LogOut size={14} className="mr-1.5" />
             Salir
           </Button>
         </div>
@@ -1976,38 +2021,38 @@ export function AdminDashboard() {
         <TabsList className="bg-white/5 border border-white/10 p-1 h-auto flex-wrap">
           <TabsTrigger
             value="resumen"
-            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
             Resumen
           </TabsTrigger>
           <TabsTrigger
             value="businesses"
-            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
             Negocios
           </TabsTrigger>
           <TabsTrigger
             value="reviews"
-            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
             Reseñas
           </TabsTrigger>
           <TabsTrigger
             value="users"
-            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
             Usuarios
           </TabsTrigger>
           <TabsTrigger
             value="metrics"
-            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
             <BarChart3 size={14} className="mr-1.5" />
             Métricas
           </TabsTrigger>
           <TabsTrigger
             value="proposals"
-            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
           >
             <FileText size={14} className="mr-1.5" />
             Propuestas
@@ -2092,7 +2137,7 @@ function MigrateOwnershipButton() {
           setResult(null);
           setOpen(true);
         }}
-        className="border-gold/40 text-gold hover:bg-gold/10 hover:border-gold/60"
+        className="border-gold/50 bg-gold/10 text-gold font-semibold hover:bg-gold/20 hover:border-gold/70"
       >
         <UserPlus size={14} className="mr-1.5" />
         Migrar Dueños
