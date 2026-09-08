@@ -6279,3 +6279,25 @@ Stage Summary:
 - Cerotraba@gmail.com puede entrar YA al panel de dueño y editar Licobar Punto de Encuentro (nombre, fotos, horarios, redes, menú, promociones)
 - Los cambios hechos en dev aparecen al instante en producción (Vercel) sin redeploy, porque Neon+R2 son compartidos
 - Único requisito a verificar: que las variables de entorno en Vercel apunten al MISMO Neon DB y MISMO bucket R2 que .env local (si apuntan a recursos diferentes, los cambios NO sincronizarían)
+
+---
+Task ID: revision-completa
+Agent: main
+Task: Revisión integral de la plataforma: flujo de dueño, sync dev↔prod, auditoría de datos, diagnóstico de conexiones
+
+Work Log:
+- Flujo de dueño (Cerotraba → licobar-punto-de-encuentro): login demo HTTP 200, GET owner business 200, PATCH specialty→"[PRUEBA Z.AI]" HTTP 200, verificado persistido en Neon (updatedAt actualizado), revertido a valor original
+- SYNC DEV↔PROD PROBADA: edit hecho en localhost:3000 apareció INSTANTANEAMENTE en https://conecta-lt2-0.vercel.app/api/businesses/licobar-punto-de-encuentro (mismo specialty). Reversión también se propagó. Confirma que dev y prod comparten el mismo Neon DB + mismo R2
+- Ownership assertion: Cerotraba GET licobar-punto-de-encuentro → 200; GET tasca-los-amigos → 403 "No tienes permisos" (guard correcto)
+- Auditoría Neon: 28 negocios (7×4 categorías), 28 APPROVED, 0 PENDING, 0 sin dueño. 3 dueños: sqn8nproyect (26 locales), ana.rodriguez (tasca-los-amigos), cerotraba (licobar-punto-de-encuentro). 0 reviews fuera de rango, 0 slugs duplicados, 0 dueños huérfanos, 0 items no disponibles, 1 item destacado
+- HALLAZGO MENOR: 14 promos con status=ACTIVE pero endDate<now (todas vencieron 2026-08-13). NO es bug de usuario: transformBusiness las separa en expiredPromotions (no reclamables). Solo higiene de DB
+- Prisma error "Closed": 11 ocurrencias en dev.log. DATABASE_URL usa pooler (-pooler.neon.tech) correcto, pero solo ?sslmode=require sin connection_limit/pool_timeout/connect_timeout. db.ts crea PrismaClient sin params de conexión. Causa: Neon autosuspend cierra conexiones idle → Prisma reintenta (cosmético, queries exitosos)
+- E2E navegador: login demo, age gate, Mis Locales, pestaña Menú (CARTA DIGITAL, switch visible ON, secciones Cervezas con items, botones reorder/renombrar/eliminar) — todo funcional
+
+Stage Summary:
+- ✅ Flujo de dueño: operativo end-to-end (login→edit→persist→sync prod)
+- ✅ Sincronización dev↔prod: PROBADA (mismo Neon+R2, cambios instantáneos)
+- ✅ Integridad de datos: sana (28/28 negocios con dueño, sin huérfanos, sin duplicados)
+- ⚠️ 14 promos vencidas marcadas ACTIVE (cosmético, API las filtra)
+- ⚠️ 11 prisma:error Closed (cosmético, Neon autosuspend; mitigable con pool_timeout)
+- Pendiente: Neon API key del usuario para chequeos de plataforma (compute, branches, métricas)
