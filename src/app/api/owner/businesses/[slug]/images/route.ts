@@ -106,7 +106,9 @@ export async function POST(
     const imageUrl = b.url.trim();
     const imageType = b.type as ImageTypeParam;
     const storageKey = typeof b.storageKey === 'string' ? b.storageKey.trim() : null;
-    const sortOrder = typeof b.sortOrder === 'number' ? b.sortOrder : 0;
+    // sortOrder viene del body si el frontend lo envía; si no, se
+    // auto-asigna después (al contar las COVER existentes).
+    const explicitSortOrder = typeof b.sortOrder === 'number' ? b.sortOrder : null;
 
     // ── Límite: máx 10 imágenes GALLERY por negocio ─────────
     if (imageType === 'GALLERY') {
@@ -124,48 +126,40 @@ export async function POST(
       }
     }
 
-    // ── Determinar estado de aprobación ────────────────────
-    // ADMIN: auto-aprobada. BUSINESS_OWNER: pendiente de revisión.
-    const isAdmin = user.role === 'ADMIN';
-    const approvalStatus = isAdmin ? 'APPROVED' : 'PENDING';
-
-    // ── Si es COVER: actualizar existente o crear nueva ─────
+    // ── Límite: máx 3 imágenes COVER (hero) por negocio ─────
     if (imageType === 'COVER') {
-      // Buscar si ya existe una imagen COVER para este negocio
-      const existingCover = await db.businessImage.findFirst({
+      const coverCount = await db.businessImage.count({
         where: {
           businessId: biz.id,
           type: 'COVER' as ImageType,
         },
       });
-
-      if (existingCover) {
-        // Actualizar la COVER existente
-        const updated = await db.businessImage.update({
-          where: { id: existingCover.id },
-          data: {
-            url: imageUrl,
-            storageKey: storageKey ?? undefined,
-            sortOrder,
-            approvalStatus: approvalStatus as never,
-            approvedById: isAdmin ? user.id : null,
-            approvedAt: isAdmin ? new Date() : null,
-          },
-        });
-
-        // Actualizar también business.coverImage (solo si está aprobada)
-        if (isAdmin) {
-          await db.business.update({
-            where: { id: biz.id },
-            data: { coverImage: imageUrl },
-          });
-        }
-
-        return NextResponse.json(updated);
+      if (coverCount >= 3) {
+        return NextResponse.json(
+          { error: 'Has alcanzado el límite de 3 fotos de portada (hero). Elimina alguna para subir una nueva.' },
+          { status: 409 },
+        );
       }
     }
 
-    // ── Crear nueva imagen ──────────────────────────────────
+    // ── Determinar estado de aprobación ────────────────────
+    // ADMIN: auto-aprobada. BUSINESS_OWNER: pendiente de revisión.
+    const isAdmin = user.role === 'ADMIN';
+    const approvalStatus = isAdmin ? 'APPROVED' : 'PENDING';
+
+    // ── Auto-asignar sortOrder si no viene explícito ─────────
+    // Para COVER: siguiente posición disponible (0, 1, 2)
+    // Para GALLERY: siguiente posición disponible
+    let sortOrder = explicitSortOrder;
+    if (sortOrder === null) {
+      const maxSort = await db.businessImage.aggregate({
+        where: { businessId: biz.id, type: imageType as ImageType },
+        _max: { sortOrder: true },
+      });
+      sortOrder = (maxSort._max.sortOrder ?? -1) + 1;
+    }
+
+    // ── Crear nueva imagen (COVER y GALLERY ambos crean fila) ──
     const created = await db.businessImage.create({
       data: {
         businessId: biz.id,
@@ -179,8 +173,10 @@ export async function POST(
       },
     });
 
-    // Si es COVER aprobada, también actualizar business.coverImage
-    if (imageType === 'COVER' && isAdmin) {
+    // Si es COVER aprobada y es la primera (sortOrder 0),
+    // actualizar business.coverImage para que el listado de
+    // negocios en la home muestre la portada correcta.
+    if (imageType === 'COVER' && isAdmin && sortOrder === 0) {
       await db.business.update({
         where: { id: biz.id },
         data: { coverImage: imageUrl },

@@ -118,7 +118,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ImageUploadZone, SingleImageUpload } from '@/components/ui/image-upload-zone';
+import { ImageUploadZone } from '@/components/ui/image-upload-zone';
 
 // Query keys — kept here because they're only consumed by this component.
 const QK_OWNER_BUSINESSES = ['owner', 'businesses'] as const;
@@ -189,6 +189,7 @@ type GalleryImage = {
 // Hard cap on gallery images — mirrors the backend limit enforced in
 // POST /api/owner/businesses/[slug]/images (HTTP 409 past 10).
 const MAX_GALLERY_IMAGES = 10;
+const MAX_COVER_IMAGES = 3;
 
 // ─── Day-of-week helpers ──────────────────────────────────────
 // Schema: 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
@@ -782,55 +783,64 @@ function InfoTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
       </section>
 
       {/* ─── Section 4: Imagen de portada (Hero) ──────────────── */}
-      <section className="glass-card rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <ImageIcon size={16} className="text-gold" />
-          <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
-            IMAGEN DE PORTADA (HERO)
-          </h2>
-        </div>
-        <p className="text-white/50 text-xs mb-4 leading-relaxed">
-          Esta es la <strong className="text-white/80">foto principal</strong> que verán los visitantes
-          en la parte superior de tu ficha, justo debajo del nombre del local. Es lo primero que ven al entrar.
-          <br />
-          <span className="text-amber-300/80">
-            Recomendación: usa una foto amplia y representativa del local (fachada, interior, ambiente).
-          </span>
-        </p>
-        <SingleImageUpload
-          businessSlug={slug}
-          imageType="COVER"
-          currentUrl={business.coverImage || undefined}
-          onUploadComplete={(url) => {
-            // Actualizar el campo local y refrescar
-            setBasicInfo((prev) => ({ ...prev, coverImage: url }));
-            void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
-            void queryClient.invalidateQueries({ queryKey: ['business', slug] });
-          }}
-          onClear={() => {
-            setBasicInfo((prev) => ({ ...prev, coverImage: '' }));
-          }}
-          label="Sube la imagen principal del hero (1 foto)"
-        />
-      </section>
+      <ImageSection
+        slug={slug}
+        imageType="COVER"
+        maxImages={MAX_COVER_IMAGES}
+        title="IMAGEN DE PORTADA (HERO)"
+        description="Esta es la foto principal que verán los visitantes en la parte superior de tu ficha, justo debajo del nombre del local. Es lo primero que ven al entrar."
+        recommendation="Recomendación: usa una foto amplia y representativa del local (fachada, interior, ambiente). Podés subir hasta 3 fotos que rotarán en el hero slider."
+        onCoverChange={(url) => {
+          setBasicInfo((prev) => ({ ...prev, coverImage: url }));
+          void queryClient.invalidateQueries({ queryKey: QK_OWNER_BUSINESS(slug) });
+          void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+        }}
+      />
 
       {/* ─── Section 5: Galería de fotos (Carrusel) ────────── */}
-      <GallerySection slug={slug} />
+      <ImageSection
+        slug={slug}
+        imageType="GALLERY"
+        maxImages={MAX_GALLERY_IMAGES}
+        title="GALERÍA DEL CARRUSEL"
+        description="Estas fotos aparecen en el carrusel inferior de tu ficha, debajo de la información del local. La imagen de portada (hero) no se repite aquí."
+        recommendation="Recomendación: muestra el interior, platos, tragos, ambiente nocturno, etc. Hasta 10 fotos."
+      />
     </div>
   );
 }
 
-// ─── Galería de fotos (sub-componente de InfoTab) ─────────
+// ─── Sección de imágenes reutilizable (COVER o GALLERY) ─────
+// Componente genérico que renderiza:
+// - Header con título + contador X/MAX
+// - Descripción + recomendación
+// - Info de aprobación
+// - Upload zone (compact)
+// - Grid de thumbnails con badges de aprobación + botón eliminar
 
-function GallerySection({ slug }: { slug: string }) {
+interface ImageSectionProps {
+  slug: string;
+  imageType: 'COVER' | 'GALLERY';
+  maxImages: number;
+  title: string;
+  description: string;
+  recommendation: string;
+  /** Solo para COVER: actualiza business.coverImage en el estado local */
+  onCoverChange?: (url: string) => void;
+}
+
+function ImageSection({
+  slug,
+  imageType,
+  maxImages,
+  title,
+  description,
+  recommendation,
+  onCoverChange,
+}: ImageSectionProps) {
   const queryClient = useQueryClient();
   const addNotification = useAppStore((s) => s.addNotification);
 
-  // The owner images API returns ALL images (PENDING + APPROVED +
-  // REJECTED) so the owner sees their full gallery. We type-assert
-  // to `BusinessImageWithApproval[]` because the shared
-  // `fetchBusinessImages` signature hasn't been widened yet — the
-  // runtime response already carries `approvalStatus` + `approvedAt`.
   const { data: images = [], isLoading } = useQuery<BusinessImageWithApproval[]>({
     queryKey: QK_OWNER_IMAGES(slug),
     queryFn: () =>
@@ -838,10 +848,9 @@ function GallerySection({ slug }: { slug: string }) {
     staleTime: 30_000,
   });
 
-  // Filtrar solo imágenes de tipo GALLERY y proyectar al shape interno
-  // que lleva el estado de aprobación para los badges.
-  const galleryImages: GalleryImage[] = images
-    .filter((img) => img.type === 'GALLERY')
+  // Filtrar solo imágenes del tipo solicitado y proyectar al shape interno.
+  const sectionImages: GalleryImage[] = images
+    .filter((img) => img.type === imageType)
     .map((img) => ({
       id: img.id,
       url: img.url,
@@ -875,32 +884,29 @@ function GallerySection({ slug }: { slug: string }) {
     },
   });
 
-  const hasReachedLimit = galleryImages.length >= MAX_GALLERY_IMAGES;
+  const hasReachedLimit = sectionImages.length >= maxImages;
 
   return (
     <section className="glass-card rounded-2xl p-5 sm:p-6">
-      {/* Header: título + contador X/10 */}
+      {/* Header: título + contador X/MAX */}
       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
         <div className="flex items-center gap-2">
           <ImageIcon size={16} className="text-gold" />
           <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
-            GALERÍA DEL CARRUSEL
+            {title}
           </h2>
         </div>
         <span className="text-xs font-mono text-white/60">
-          <span className="text-gold font-bold">{galleryImages.length}</span>
-          /{MAX_GALLERY_IMAGES} fotos
+          <span className="text-gold font-bold">{sectionImages.length}</span>
+          /{maxImages} fotos
         </span>
       </div>
 
       {/* Descripción del rol de esta sección */}
       <p className="text-white/50 text-xs mb-4 leading-relaxed">
-        Estas fotos aparecen en el <strong className="text-white/80">carrusel inferior</strong> de tu ficha,
-        debajo de la información del local. La imagen de portada (hero) no se repite aquí.
+        {description}
         <br />
-        <span className="text-amber-300/80">
-          Recomendación: muestra el interior, platos, tragos, ambiente nocturno, etc. Hasta 10 fotos.
-        </span>
+        <span className="text-amber-300/80">{recommendation}</span>
       </p>
 
       {/* Info: las fotos nuevas requieren aprobación del admin */}
@@ -915,25 +921,27 @@ function GallerySection({ slug }: { slug: string }) {
 
       {isLoading ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: Math.min(5, maxImages) }).map((_, i) => (
             <Skeleton key={i} className="aspect-square rounded-lg" />
           ))}
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Upload zone — compacto: solo drop zone, sin thumbnails.
-              Renderizamos los thumbnails nosotros mismos para poder
-              añadirles el badge de estado de aprobación. */}
+          {/* Upload zone — compacto: solo drop zone, sin thumbnails. */}
           {!hasReachedLimit && (
             <ImageUploadZone
               businessSlug={slug}
-              imageType="GALLERY"
-              maxFiles={MAX_GALLERY_IMAGES}
-              currentImages={galleryImages}
+              imageType={imageType}
+              maxFiles={maxImages}
+              currentImages={sectionImages}
               onImageDelete={(imageId) => deleteMutation.mutate(imageId)}
-              onUploadComplete={() => {
+              onUploadComplete={(url) => {
                 void queryClient.invalidateQueries({ queryKey: QK_OWNER_IMAGES(slug) });
                 void queryClient.invalidateQueries({ queryKey: ['business', slug] });
+                // Si es COVER, actualizar el estado local del formulario
+                if (imageType === 'COVER' && onCoverChange) {
+                  onCoverChange(url);
+                }
               }}
               compact
             />
@@ -941,16 +949,16 @@ function GallerySection({ slug }: { slug: string }) {
           {hasReachedLimit && (
             <div className="rounded-xl border-2 border-dashed border-white/15 bg-white/5 p-6 text-center">
               <p className="text-white/50 text-xs">
-                Has alcanzado el límite de {MAX_GALLERY_IMAGES} fotos en la
-                galería. Elimina alguna para subir una nueva.
+                Has alcanzado el límite de {maxImages} fotos en esta sección.
+                Elimina alguna para subir una nueva.
               </p>
             </div>
           )}
 
           {/* Thumbnails con badge de aprobación */}
-          {galleryImages.length > 0 && (
+          {sectionImages.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-              {galleryImages.map((img) => {
+              {sectionImages.map((img) => {
                 const status = img.approvalStatus;
                 const isRejected = status === 'REJECTED';
                 const isPending = status === 'PENDING';
@@ -984,7 +992,7 @@ function GallerySection({ slug }: { slug: string }) {
                       </span>
                     )}
 
-                    {/* Botón eliminar (mismo comportamiento que antes) */}
+                    {/* Botón eliminar */}
                     <button
                       type="button"
                       onClick={(e) => {
