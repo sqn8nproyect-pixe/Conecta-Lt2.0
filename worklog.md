@@ -6095,3 +6095,27 @@ Stage Summary:
 - El rating ya se normaliza a 1 decimal en la API (raíz) + defensa en UI → no puede volver a aparecer crudo en ningún componente nuevo
 - Nombres completos en cards (2 líneas disponibles)
 - Lección: los fixes de UI deben incluir TODOS los puntos de render o normalizar en el transform de salida
+
+---
+Task ID: delegacion-duenos
+Agent: main
+Task: Preparar la plataforma para pruebas de delegación a dueños de locales (editar su micro-landing)
+
+Work Log:
+- Explorado el flujo completo de delegación (Explore agent): auth NextAuth v4, claim flow, owner dashboard, admin approval endpoints
+- Verificado que el provider demo NO degrada roles (update solo toca name/image, role solo en create)
+- CRÍTICO: .env no tenía NEXTAUTH_SECRET → v4 sintetiza secret desde options; getServerSession quita providers → secret distinto → JWEDecryptionFailed → TODAS las rutas con requireRole/requireUser devolvían 401 (admin, favorites, owner). Fix: NEXTAUTH_SECRET + NEXTAUTH_URL en .env. **El usuario debe verificar que NEXTAUTH_SECRET exista en Vercel** o el mismo bug romperá sesión en producción
+- GET /api/admin/businesses ahora expone ownerStatus/proposedOwnerId/proposedOwner → los botones Aprobar/Rechazar del AdminDashboard por fin renderizan
+- assign-owner: guard 409 si ya tiene ownerId; body force:true libera al dueño actual (transferencia explícita, notifica al reemplazado) — evita el bug histórico tasca-el-patio (ownerId + proposedOwnerId ambos seteados)
+- approve-owner: estampa claimedAt en primera aprobación + guard contra propuesta obsoleta con dueño distinto (409)
+- EstablishmentPage: botón "Reclamar este local" (dueño/admin, local sin dueño) + badge "Gestionando este local" — conecta claimBusiness que estaba muerto
+- OwnerDashboard: fix con key={slug} en tabs — al cambiar de negocio el formulario NO re-hidrataba (flag initialized) y seguía mostrando el negocio anterior
+- Navbar móvil: "Mis Locales" visible para emails admin (igual que desktop)
+- DB: limpiado proposedOwnerId duplicado de tasca-el-patio (ownerStatus=APPROVED)
+- E2E verificado en navegador: login demo como admin (sqn8nproyect) y como dueña (ana.rodriguez) — asignación con force → PENDING → Aprobar/Rechazar en UI; propuesta de Info del dueño → revisión admin → aplicada a DB; botón Reclamar → badge; rollback de todos los datos de prueba (solo tasca-los-amigos queda de ana, resto admin)
+- Lint limpio, commit b841039 pusheado a origin/main
+
+Stage Summary:
+- Flujo de delegación 100% operativo de punta a punta (API + UI)
+- Próximo paso usuario: probar con dueños REALES (instrucciones en chat); verificar NEXTAUTH_SECRET en Vercel
+- Estado DB: 20 negocios owner=admin (sqn8nproyect), tasca-los-amigos owner=ana.rodriguez (usuario de prueba)
