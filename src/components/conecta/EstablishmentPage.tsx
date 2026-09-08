@@ -47,6 +47,7 @@ import { ValuePropositionBanner } from '@/components/establishment/ValueProposit
 import { imageFallback } from '@/components/conecta/image-fallback';
 import { BusinessMenuSheet } from '@/components/conecta/BusinessMenuSheet';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
+import { QRCode } from '@/components/ui/qrcode';
 import { SocialContactPanel } from '@/components/establishment/SocialContactPanel';
 import { CapacityBadge } from '@/components/establishment/CapacityBadge';
 import {
@@ -1602,68 +1603,24 @@ export function EstablishmentPage() {
                         </div>
                       )}
 
-                      {/* Decorative QR */}
+                      {/* QR real — codifica /r/[confirmationCode] para que
+                          el dueño pueda escanearlo o el cliente dictar
+                          el código. El dueño lo valida desde su panel. */}
                       <div className="flex flex-col items-center justify-center pt-2">
-                        <div className="p-3 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center glow-purple">
-                          <svg
-                            width="100"
-                            height="100"
-                            viewBox="0 0 100 100"
-                            className="text-purple"
-                            aria-hidden="true"
-                          >
-                            <rect
-                              x="5"
-                              y="5"
-                              width="25"
-                              height="25"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="5"
-                            />
-                            <rect x="12" y="12" width="11" height="11" fill="currentColor" />
-                            <rect
-                              x="70"
-                              y="5"
-                              width="25"
-                              height="25"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="5"
-                            />
-                            <rect x="77" y="12" width="11" height="11" fill="currentColor" />
-                            <rect
-                              x="5"
-                              y="70"
-                              width="25"
-                              height="25"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="5"
-                            />
-                            <rect x="12" y="77" width="11" height="11" fill="currentColor" />
-                            <rect x="40" y="5" width="8" height="8" fill="currentColor" />
-                            <rect x="50" y="15" width="12" height="6" fill="currentColor" />
-                            <rect x="40" y="28" width="16" height="8" fill="currentColor" />
-                            <rect x="5" y="45" width="15" height="8" fill="currentColor" />
-                            <rect x="80" y="45" width="15" height="15" fill="currentColor" />
-                            <rect x="45" y="45" width="25" height="25" fill="currentColor" />
-                            <rect
-                              x="40"
-                              y="80"
-                              width="15"
-                              height="15"
-                              fill="currentColor"
-                              opacity="0.8"
-                            />
-                            <rect x="85" y="80" width="10" height="10" fill="currentColor" />
-                            <rect x="70" y="70" width="8" height="8" fill="currentColor" />
-                            <circle cx="50" cy="50" r="5" fill="#D4AF37" />
-                          </svg>
+                        <div className="p-3 rounded-2xl bg-white border border-white/10 flex items-center justify-center glow-gold">
+                          <QRCode
+                            value={reservationCode}
+                            size={160}
+                          />
                         </div>
-                        <span className="text-[8px] text-white/40 mt-3 font-mono tracking-widest uppercase">
-                          MUESTRA ESTE QR EN LA ENTRADA
-                        </span>
+                        <div className="mt-2 text-center">
+                          <div className="text-[10px] text-white/40 font-mono tracking-widest uppercase">
+                            Muestra este QR en la entrada
+                          </div>
+                          <div className="text-sm text-gold font-bold font-mono mt-1">
+                            {reservationCode}
+                          </div>
+                        </div>
                       </div>
                     </div>
 

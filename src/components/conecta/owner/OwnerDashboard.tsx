@@ -52,6 +52,8 @@ import {
   Image as ImageIcon,
   Info,
   X,
+  Search,
+  QrCode,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -63,6 +65,7 @@ import {
   updateOwnerSocials,
   fetchOwnerReservations,
   updateOwnerReservationStatus,
+  lookupReservation,
   fetchOwnerPromotions,
   createOwnerPromotion,
   updateOwnerPromotion,
@@ -73,6 +76,7 @@ import {
   fetchBusinessImages,
   deleteBusinessImage,
 } from '@/lib/api';
+import type { ReservationLookupResult } from '@/lib/api';
 import type {
   Category,
   OwnerBusiness,
@@ -1138,6 +1142,166 @@ function RejectReservationDialog({
 
 // ─── Tab 2: Reservas ───────────────────────────────────────────
 
+// Regex que valida el formato del código de confirmación LT-XXXX-X.
+// Acepta mayúsculas A-Z y dígitos 0-9 en cada segmento. La API también
+// acepta cualquier código que empiece con "LT-", pero el lookup del
+// OwnerDashboard solo lo dispara si el código coincide con este patrón
+// estricto — así evitamos llamadas al backend para texto libre tipo
+// "Juan" o "LT-AB" (esas se filtran client-side en la tabla).
+const RESERVATION_CODE_RE = /^LT-[A-Z0-9]+-[A-Z0-9]+$/;
+
+function isCodeFormat(s: string): boolean {
+  return RESERVATION_CODE_RE.test(s.trim().toUpperCase());
+}
+
+/**
+ * Tarjeta destacada que aparece ARRIBA de la tabla de reservas cuando
+ * el dueño busca una reserva por código de confirmación (LT-XXXX-X) y
+ * la API la encuentra. Visualmente distinta (borde gold, fondo tenue)
+ * para que el dueño pueda validar la llegada del cliente de un vistazo.
+ *
+ * Solo muestra el botón "Confirmar llegada" si:
+ *   1. La reserva está CONFIRMED (la transición válida es CONFIRMED → COMPLETED)
+ *   2. La API devolvió el `id` de la reserva (lo que indica que el caller
+ *      tiene ownership del negocio — si no, la API omite el id y no
+ *      podemos mutar).
+ *
+ * El botón "Cerrar" limpia la búsqueda (searchQuery + lookupCode) para
+ * que el dueño vuelva a la tabla completa.
+ */
+function LookupResultCard({
+  reservation,
+  isPending,
+  onConfirmArrival,
+  onClose,
+}: {
+  reservation: ReservationLookupResult;
+  isPending: boolean;
+  onConfirmArrival: () => void;
+  onClose: () => void;
+}) {
+  // El botón de "Confirmar llegada" solo aparece si la reserva está
+  // confirmada y el caller tiene ownership (la API incluye `id` solo
+  // en ese caso). Sin id, no podemos llamar al PATCH.
+  const canConfirmArrival =
+    reservation.status === 'CONFIRMED' && !!reservation.id;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-gold/5 border border-gold/30 rounded-xl p-4 sm:p-5 shadow-lg shadow-gold/5"
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <Search size={14} className="text-gold" />
+          <span className="text-[10px] font-mono uppercase tracking-widest text-gold/80">
+            Reserva encontrada
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="text-white/60 hover:text-white hover:bg-white/10 h-7 px-2"
+        >
+          <X size={14} />
+          <span className="sr-only">Cerrar búsqueda</span>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-3">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-0.5">
+              Código
+            </div>
+            <div className="font-mono text-gold font-bold text-lg break-all">
+              {reservation.confirmationCode}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-0.5">
+              Estado
+            </div>
+            <ReservationStatusBadge status={reservation.status} />
+          </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-0.5">
+              Local
+            </div>
+            <div className="text-white text-sm">{reservation.business.name}</div>
+            {reservation.business.address && (
+              <div className="text-[11px] text-white/50">
+                {reservation.business.address}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-0.5">
+                Fecha
+              </div>
+              <div className="text-white text-sm">{reservation.date}</div>
+              <div className="text-[11px] text-white/50 font-mono">
+                {reservation.time}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-0.5">
+                Comensales
+              </div>
+              <div className="text-white font-mono text-sm">
+                {reservation.guests}
+              </div>
+            </div>
+          </div>
+          {(reservation.name || reservation.phone) && (
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-0.5">
+                Cliente
+              </div>
+              <div className="text-white text-sm">
+                {reservation.name ?? '—'}
+              </div>
+              {reservation.phone && (
+                <div className="text-[11px] text-white/50 font-mono">
+                  {reservation.phone}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {canConfirmArrival && (
+        <div className="mt-4 pt-3 border-t border-gold/20 flex flex-wrap gap-2 justify-end">
+          <Button
+            onClick={onConfirmArrival}
+            disabled={isPending}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-400/30"
+          >
+            {isPending ? (
+              <>
+                <span className="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Confirmando…
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={14} className="mr-2" />
+                Confirmar llegada
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 function ReservasTab({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
   const addNotification = useAppStore((s) => s.addNotification);
@@ -1148,6 +1312,17 @@ function ReservasTab({ slug }: { slug: string }) {
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   // Free-text reason typed inside the reject dialog. Trimmed on submit.
   const [rejectReason, setRejectReason] = useState('');
+
+  // ─── Buscador de reservas por código/nombre ─────────────────────
+  // `searchQuery` es el texto libre del input. `lookupCode` es el código
+  // "committed" (LT-XXXX-X) que se busca contra la API. Solo se setea
+  // cuando el usuario presiona Enter o clic en "Buscar" y el texto tiene
+  // formato válido — mientras tanto, la tabla se filtra client-side.
+  const [searchQuery, setSearchQuery] = useState('');
+  const [lookupCode, setLookupCode] = useState<string | null>(null);
+  // True cuando hay un código committed con formato válido. Controla
+  // el `enabled` del useQuery del lookup y desactiva el filtro client-side.
+  const lookupActive = !!lookupCode && isCodeFormat(lookupCode);
 
   const { data: reservations = [], isLoading, isError } = useQuery({
     queryKey: QK_OWNER_RESERVATIONS(slug, statusFilter, dateFilter),
@@ -1162,6 +1337,58 @@ function ReservasTab({ slug }: { slug: string }) {
     // automáticamente (refetchIntervalInBackground=false por defecto).
     refetchInterval: 30_000,
   });
+
+  // Lookup por código de confirmación. Solo se dispara cuando hay un
+  // código committed con formato válido (LT-XXXX-X). staleTime:0 fuerza
+  // refetch en cada búsqueda nueva (no cacheamos resultados).
+  const {
+    data: lookupData,
+    isLoading: lookupLoading,
+    isError: lookupError,
+  } = useQuery({
+    queryKey: ['reservation-lookup', lookupCode],
+    queryFn: () => lookupReservation(lookupCode!),
+    enabled: lookupActive,
+    staleTime: 0,
+    // No reintentar 404 — la reserva simplemente no existe.
+    retry: false,
+  });
+
+  // Dispara el lookup por API solo si el texto tiene formato LT-XXXX-X.
+  // Para texto libre (nombres, códigos parciales), no hace nada — la
+  // tabla se filtra client-side en tiempo real.
+  const handleBuscar = () => {
+    const trimmed = searchQuery.trim().toUpperCase();
+    if (isCodeFormat(trimmed)) {
+      setLookupCode(trimmed);
+    } else {
+      // Texto libre o código mal formado → no disparamos API lookup.
+      // El usuario verá la tabla filtrada por searchQuery.
+      setLookupCode(null);
+    }
+  };
+
+  // Limpia tanto el input como el lookup committed — usado por el
+  // botón "Cerrar" de la tarjeta de resultado y por el botón X del
+  // mensaje de "no encontrado".
+  const handleClearLookup = () => {
+    setSearchQuery('');
+    setLookupCode(null);
+  };
+
+  // Filtro client-side de la tabla. Cuando NO hay lookup activo,
+  // filtramos por searchQuery (código o nombre, case-insensitive).
+  // Cuando lookup está activo, mostramos todas las reservas en la
+  // tabla (la búsqueda "definitiva" vive en la tarjeta de arriba).
+  const searchLower = searchQuery.trim().toLowerCase();
+  const filteredReservations =
+    !lookupActive && searchLower
+      ? reservations.filter((r) => {
+          const code = r.confirmationCode.toLowerCase();
+          const name = (r.user?.name ?? r.name ?? '').toLowerCase();
+          return code.includes(searchLower) || name.includes(searchLower);
+        })
+      : reservations;
 
   const statusMutation = useMutation({
     mutationFn: ({
@@ -1206,18 +1433,156 @@ function ReservasTab({ slug }: { slug: string }) {
       );
     },
     onSuccess: (_data, vars) => {
-      addNotification(
-        vars.status === 'REJECTED'
-          ? 'Reserva rechazada. El cliente fue notificado.'
-          : 'Reserva actualizada',
-        vars.status === 'REJECTED' ? 'info' : 'success',
-      );
+      // Toast diferenciado por transición — más útil que un genérico
+      // "Reserva actualizada". COMPLETED se usa tanto para "Marcar
+      // completada" (dropdown) como para "Confirmar llegada" (lookup
+      // card), así que el mensaje "Llegada confirmada" encaja en ambos.
+      let msg: string;
+      let type: 'info' | 'success' = 'success';
+      switch (vars.status) {
+        case 'REJECTED':
+          msg = 'Reserva rechazada. El cliente fue notificado.';
+          type = 'info';
+          break;
+        case 'COMPLETED':
+          msg = 'Llegada confirmada';
+          break;
+        case 'NO_SHOW':
+          msg = 'Cliente marcado como no asistió';
+          break;
+        case 'CONFIRMED':
+          msg = 'Reserva confirmada';
+          break;
+        default:
+          msg = 'Reserva actualizada';
+      }
+      addNotification(msg, type);
       void queryClient.invalidateQueries({ queryKey: ['owner', 'reservations', slug] });
+      // Si hay un lookup activo (tarjeta gold arriba), refrescarlo para
+      // que el badge refleje el nuevo status (ej: al confirmar llegada,
+      // el badge pasa a COMPLETED y el botón desaparece).
+      void queryClient.invalidateQueries({ queryKey: ['reservation-lookup'] });
     },
   });
 
   return (
     <div className="space-y-4">
+      {/* Buscador por código (LT-XXXX-X) o nombre del cliente.
+          - Si el texto tiene formato LT-XXXX-X y el usuario presiona
+            Enter / clic en "Buscar", dispara el lookup por API y muestra
+            la tarjeta destacada arriba de la tabla.
+          - Para cualquier otro texto (nombre, código parcial), filtra
+            la tabla client-side en tiempo real. */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none"
+          />
+          <Input
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              // Cualquier cambio resetea el lookup committed — el
+              // usuario debe presionar Enter/Buscar para re-validar.
+              setLookupCode(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleBuscar();
+              }
+            }}
+            placeholder="Buscar por código (LT-XXXX-X) o nombre del cliente..."
+            className="bg-white/5 border-white/20 text-white placeholder:text-white/30 pl-9"
+          />
+        </div>
+        <Button
+          onClick={handleBuscar}
+          className="bg-gold hover:bg-gold/90 text-obsidian font-semibold"
+        >
+          <Search size={14} className="mr-2" />
+          Buscar
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white/60 hover:text-white hover:bg-white/10 border border-white/10"
+          title="Escanear QR (próximamente)"
+          disabled
+        >
+          <QrCode size={16} />
+          <span className="sr-only">Escanear QR</span>
+        </Button>
+      </div>
+
+      {/* Tarjeta de resultado del lookup — aparece arriba de la tabla
+          cuando el dueño busca por código LT-XXXX-X y la API responde.
+          Si no encontrado → mensaje rojo. Si loading → spinner. Si error
+          → mensaje de error. Si encontrado → tarjeta gold con datos y
+          botón "Confirmar llegada" (solo si status === CONFIRMED). */}
+      {lookupActive &&
+        (lookupLoading ? (
+          <div className="bg-gold/5 border border-gold/30 rounded-xl p-4 text-white/70 text-sm flex items-center gap-2">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gold/40 border-t-gold" />
+            Buscando reserva <span className="font-mono text-gold">{lookupCode}</span>…
+          </div>
+        ) : lookupError ? (
+          <div className="bg-red-500/5 border border-red-500/30 rounded-xl p-4 text-red-300 text-sm flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>Error al buscar la reserva. Intenta de nuevo.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearLookup}
+              className="ml-auto text-red-300 hover:text-white hover:bg-red-500/10 h-7 px-2"
+            >
+              <X size={14} />
+            </Button>
+          </div>
+        ) : lookupData === null ? (
+          <div className="bg-red-500/5 border border-red-500/30 rounded-xl p-4 text-red-300 text-sm flex items-center gap-2">
+            <XCircle size={16} />
+            <span>No se encontró ninguna reserva con ese código.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearLookup}
+              className="ml-auto text-red-300 hover:text-white hover:bg-red-500/10 h-7 px-2"
+            >
+              <X size={14} />
+            </Button>
+          </div>
+        ) : lookupData ? (
+          <LookupResultCard
+            reservation={lookupData}
+            isPending={statusMutation.isPending}
+            onConfirmArrival={() => {
+              // La API solo devuelve `id` cuando el caller tiene
+              // ownership. Sin id no podemos mutar — el botón tampoco
+              // se muestra en ese caso (gateado en el componente).
+              if (!lookupData?.id) return;
+              statusMutation.mutate(
+                { id: lookupData.id, status: 'COMPLETED' },
+              );
+            }}
+            onClose={handleClearLookup}
+          />
+        ) : null)}
+
+      {/* Pista de formato — cuando el usuario teclea algo que casi es
+          un código pero no cumple el regex (ej: "LT-AB" sin tercer
+          segmento). Solo se muestra cuando hay texto y NO hay lookup
+          activo (para no duplicar feedback con la tarjeta). */}
+      {!lookupActive &&
+        searchQuery.trim().length > 0 &&
+        !isCodeFormat(searchQuery) &&
+        searchQuery.trim().toUpperCase().startsWith('LT-') && (
+          <div className="text-[11px] text-white/40 font-mono">
+            El código debe tener formato LT-XXXX-X
+          </div>
+        )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -1254,6 +1619,10 @@ function ReservasTab({ slug }: { slug: string }) {
         <div className="glass-card rounded-2xl p-8 text-center text-white/60">
           No hay reservas para mostrar.
         </div>
+      ) : filteredReservations.length === 0 ? (
+        <div className="glass-card rounded-2xl p-8 text-center text-white/60">
+          No hay reservas que coincidan con la búsqueda.
+        </div>
       ) : (
         <div className="glass-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -1281,7 +1650,7 @@ function ReservasTab({ slug }: { slug: string }) {
                 </tr>
               </thead>
               <tbody>
-                {reservations.map((r) => {
+                {filteredReservations.map((r) => {
                   const isExpanded = expandedId === r.id;
                   return (
                     <>

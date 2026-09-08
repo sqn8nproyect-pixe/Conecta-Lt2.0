@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   RefreshCw,
   XCircle,
+  QrCode,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
@@ -36,6 +37,14 @@ import {
   fetchMyReservations,
 } from '@/lib/api';
 import type { CouponRedemption, Reservation, ReservationStatus } from '@/lib/types';
+import { QRCode } from '@/components/ui/qrcode';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 export function ProfilePage() {
   const goToDetail = useAppStore((s) => s.goToDetail);
@@ -197,6 +206,10 @@ function ProfileContent({
 }) {
   const user = useAppStore((s) => s.user);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  // Reserva cuyo QR se está mostrando en grande dentro del Dialog (null = cerrado).
+  // Solo se setea para reservas PENDING o CONFIRMED (las útiles para mostrar
+  // en la entrada del local).
+  const [qrReservation, setQrReservation] = useState<Reservation | null>(null);
 
   const handleCopyCode = useCallback(
     async (code: string) => {
@@ -817,6 +830,41 @@ function ProfileContent({
                     </p>
                   )}
 
+                  {/* QR access row — only for PENDING / CONFIRMED.
+                      Muestra un QR pequeño inline + botón "Ampliar" que
+                      abre un Dialog con el QR grande (200px) y el código de
+                      confirmación. Estados terminales (CANCELLED, REJECTED,
+                      COMPLETED, NO_SHOW) no muestran QR porque el cliente
+                      no va a asistir o ya asistió. */}
+                  {(status === 'PENDING' || status === 'CONFIRMED') && (
+                    <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-white border border-white/10 shrink-0">
+                          <QRCode
+                            value={r.confirmationCode}
+                            size={64}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-white/40 font-mono tracking-widest uppercase">
+                            Muestra este QR
+                          </div>
+                          <div className="text-[10px] text-white/60 leading-tight">
+                            en la entrada del local
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setQrReservation(r)}
+                        aria-label={`Ampliar QR de la reserva ${r.confirmationCode}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/5 text-gold hover:bg-gold/15 hover:border-gold/60 transition-all text-[11px] font-bold tracking-wider shrink-0"
+                      >
+                        <QrCode size={12} /> AMPLIAR
+                      </button>
+                    </div>
+                  )}
+
                   {/* Bottom row: countdown + cancel button */}
                   <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
                     <div className="text-[10px] text-white/50 font-mono">
@@ -847,6 +895,95 @@ function ProfileContent({
           </div>
         )}
       </section>
+
+      {/* Dialog de QR ampliado — muestra el QR grande (200px) + código +
+          datos de la reserva para que el cliente lo enseñe en la entrada.
+          Controlado por `qrReservation` (null = cerrado). Radix Portal
+          lo teleporta a <body> así que la posición en el árbol es
+          irrelevante para el layout. */}
+      <Dialog
+        open={qrReservation !== null}
+        onOpenChange={(open) => {
+          if (!open) setQrReservation(null);
+        }}
+      >
+        <DialogContent className="bg-zinc-950 border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-left">
+              <QrCode size={18} className="text-gold" />
+              <span>Tu QR de entrada</span>
+            </DialogTitle>
+            <DialogDescription className="text-white/50 text-left">
+              Muestra este código al personal del local para validar tu
+              reserva.
+            </DialogDescription>
+          </DialogHeader>
+
+          {qrReservation && (
+            <div className="flex flex-col items-center gap-4 pt-1">
+              {/* Contenedor blanco — fondo blanco para que el QR sea
+                  scannable incluso con flash / cámara de móvil de noche. */}
+              <div className="p-3 rounded-2xl bg-white border border-white/10 flex items-center justify-center glow-gold">
+                <QRCode
+                  value={qrReservation.confirmationCode}
+                  size={200}
+                />
+              </div>
+
+              <div className="text-center w-full">
+                <div className="text-[10px] text-white/40 font-mono tracking-widest uppercase">
+                  Muestra este QR en la entrada
+                </div>
+                <div className="text-lg text-gold font-bold font-mono mt-1 tracking-wider">
+                  {qrReservation.confirmationCode}
+                </div>
+              </div>
+
+              {/* Resumen de la reserva debajo del QR */}
+              <div className="w-full pt-3 border-t border-white/10 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-[9px] text-white/40 font-bold font-mono uppercase">
+                    Local
+                  </div>
+                  <div className="text-xs text-white/90 font-semibold mt-0.5 truncate">
+                    {qrReservation.business.name}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[9px] text-white/40 font-bold font-mono uppercase">
+                    Fecha
+                  </div>
+                  <div className="text-xs text-white/90 font-semibold mt-0.5 font-mono">
+                    {new Date(
+                      qrReservation.date + 'T00:00:00',
+                    ).toLocaleDateString('es-VE', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[9px] text-white/40 font-bold font-mono uppercase">
+                    Hora
+                  </div>
+                  <div className="text-xs text-white/90 font-semibold mt-0.5 font-mono">
+                    {qrReservation.time}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setQrReservation(null)}
+                className="w-full bg-white text-obsidian hover:bg-gold hover:text-obsidian font-bold h-11 rounded-xl text-xs tracking-wider transition-all mt-1"
+              >
+                ENTENDIDO
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

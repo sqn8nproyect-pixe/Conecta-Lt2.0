@@ -6738,3 +6738,97 @@ Stage Summary:
 - ✅ Funciona en dev y en producción (Vercel) sin infra adicional
 - ✅ Alternativa simple a WebSocket: 13 líneas cambiadas, 0 archivos nuevos, 0 mini-servicios
 - ✅ Latencia máxima percibida: 30s (aceptable para reservas de mesa)
+
+---
+Task ID: 5-profile-qr-reservations
+Agent: conecta-frontend (Z.ai Code)
+Task: Añadir QR real a cada reserva en la sección "Mis Reservas" del ProfilePage (cliente) para que pueda mostrarlo en la entrada del local en cualquier momento, no solo tras reservar.
+
+Work Log:
+- Leído worklog.md (contexto: el componente `QRCode` ya existe en `src/components/ui/qrcode.tsx` — usa la librería `qrcode` para generar un dataURL real que codifica la URL pública `${window.location.origin}/r/${confirmationCode}`. Ya estaba integrado en el modal de confirmación de reserva de `EstablishmentPage.tsx` — esta tarea replica esa integración en la sección "Mis Reservas" del cliente.)
+- Leído `ProfilePage.tsx` (986 líneas antes de la edición, 1124 después). Estructura:
+  * `ProfilePage` (wrapper) — fetches vía React Query (`fetchMyReservations`) y pasa `reservations: Reservation[]` a `ProfileContent`.
+  * `ProfileContent` — renderiza la sección "MIS RESERVAS" (~línea 640) que mapea cada `Reservation` a un `<article>` con: top row (código + badge de estado), nombre del negocio (clickable), fecha/hora/personas, motivo del rechazo (solo REJECTED), cupón vinculado, notas, y bottom row (countdown + botón Cancelar).
+  * `canCancel = status === 'PENDING' || status === 'CONFIRMED'` — reutilizado como condición para mostrar el QR (mismos estados no terminales útiles).
+- **Imports** (4 ediciones vía MultiEdit):
+  1. Añadido `QrCode` al bloque de iconos de `lucide-react` (al final, después de `XCircle`).
+  2. Añadido `import { QRCode } from '@/components/ui/qrcode';` y `import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';` después del `import type {...}` existente.
+- **Estado** (en `ProfileContent`):
+  * Añadido `const [qrReservation, setQrReservation] = useState<Reservation | null>(null);` junto al `copiedCode` existente. Documentado que solo se setea para PENDING/CONFIRMED.
+- **Card de reserva** — insertada nueva sección "QR access row" entre el bloque de Notes y el bottom row existente (countdown + cancelar). Render condicional `{(status === 'PENDING' || status === 'CONFIRMED') && (...)}`:
+  * Layout `flex items-center justify-between gap-3` con `mt-3 pt-3 border-t border-white/10` (mismo separador que las otras secciones del card).
+  * Izquierda: QR inline 64×64 dentro de `p-1.5 rounded-lg bg-white border border-white/10 shrink-0` (fondo blanco para scannability), + label "Muestra este QR / en la entrada del local" en dos líneas (mono tracking-widest uppercase + blanco/60).
+  * Derecha: botón "AMPLIAR" con icono `QrCode` — `border-gold/30 bg-gold/5 text-gold hover:bg-gold/15 hover:border-gold/60`, `aria-label="Ampliar QR de la reserva {code}"`. Al hacer clic setea `qrReservation=r` (abre el Dialog).
+- **Dialog de QR ampliado** (al final de `ProfileContent`, después de `</section>` de Mis Reservas, antes de `</motion.div>`):
+  * `Dialog` controlado por `open={qrReservation !== null}` + `onOpenChange` que limpia el estado al cerrar.
+  * `DialogContent` dark theme: `bg-zinc-950 border-white/10 text-white sm:max-w-md`.
+  * `DialogHeader`: título "Tu QR de entrada" con icono `QrCode` gold + descripción "Muestra este código al personal del local para validar tu reserva."
+  * Body (condicional `{qrReservation && (...)}`):
+    - QR 200×200 dentro de `p-3 rounded-2xl bg-white border border-white/10 glow-gold` (fondo blanco + glow para destacar).
+    - Label "Muestra este QR en la entrada" + código de confirmación en `text-gold font-bold font-mono tracking-wider`.
+    - Grid 3 col con resumen de la reserva: Local (truncate), Fecha (es-VE 2-digit/short/numeric), Hora (HH:mm).
+    - Botón "ENTENDIDO" para cerrar (setea `qrReservation=null`): `bg-white text-obsidian hover:bg-gold hover:text-obsidian`, `h-11 rounded-xl`.
+- Verificación:
+  * `bun run lint` → exit 0, 0 errores, 0 warnings.
+  * Dev server recompila OK (`✓ Compiled in 1118ms` y subsecuentes). Sin warnings nuevos. Los errores `prisma:error` y warnings de next-auth son pre-existentes (cold-start de Neon + DEBUG_ENABLED, no relacionados con esta tarea).
+  * TypeScript: `Reservation` ya incluye `confirmationCode`, `business.name`, `business.slug`, `date`, `time`, `guests` — todos los campos usados en el Dialog ya existían en `src/lib/types.ts`. Sin errores de tipos.
+- Archivos modificados:
+  * ~ `src/components/conecta/ProfilePage.tsx` (4 ediciones quirúrgicas vía MultiEdit: imports × 2, estado, card row, Dialog)
+- Sin tocar: APIs, schema.prisma, prisma, backend, `qrcode.tsx`, `dialog.tsx`. Solo frontend como pedía la tarea.
+
+Stage Summary:
+- ✅ QR real (64px) inline en cada card de reserva PENDING/CONFIRMED en "Mis Reservas" — el cliente puede verlo sin abrir nada
+- ✅ Botón "AMPLIAR" abre Dialog con QR grande (200px) + código + resumen (local/fecha/hora) para mostrar cómodamente al entrar al local
+- ✅ Estados terminales (CANCELLED, REJECTED, COMPLETED, NO_SHOW) no muestran QR — el cliente no va a asistir o ya asistió
+- ✅ Fondo blanco alrededor del QR (inline y dialog) para scannability con flash/cámara de móvil de noche
+- ✅ Estética consistente con CONECTA-LT: dark theme (`bg-zinc-950`), gold accents (`text-gold`, `border-gold/30`), mono uppercase tracking-widest para labels
+- ✅ Labels en español: "Muestra este QR en la entrada", "AMPLIAR", "Tu QR de entrada", "ENTENDIDO"
+- ✅ ESLint limpio; dev server compila sin errores
+
+---
+Task ID: 4-owner-reservation-lookup-ui
+Agent: conecta-frontend (Z.ai Code)
+Task: Buscador de reservas en ReservasTab del OwnerDashboard (validar llegada por código LT-XXXX-X o nombre)
+
+Work Log:
+- Leído worklog.md (contexto: el endpoint `GET /api/reservations/lookup/[code]` ya existe y devuelve info pública para callers anónimos + datos del cliente (id, name, phone, email, notes, rejectionReason) solo cuando el caller es BUSINESS_OWNER con ownership o ADMIN). El ReservasTab ya tenía tabla con filtros de status/date, dropdown de acciones (Confirmar/Rechazar/Marcar completada/Marcar no asistió), dialog de rechazo con motivo, polling 30s.
+- Leído `src/app/api/reservations/lookup/[code]/route.ts` para entender el contrato exacto: 400 si no empieza con "LT-", 404 si no se encuentra, 200 con `{ reservation, authenticated, hasOwnership? }`. La `reservation` puede tener campos privados opcionales (id, name, phone, email, notes, rejectionReason) según ownership.
+- Editado `src/lib/api.ts` — añadidos 2 exports nuevos entre `cancelReservation` y el bloque de Analytics:
+  * `ReservationLookupResult` (interface) — tipo del resultado. Campos públicos obligatorios (confirmationCode, status, date, time, guests, business.name/address/coverImage). Campos privados opcionales (id, notes, rejectionReason, name, phone, email, business.id/slug) — refleja el contrato del API sin forzar casting inseguro.
+  * `lookupReservation(code: string): Promise<ReservationLookupResult | null>` — wrapper de fetch. Normaliza a mayúsculas + URL-encode. Devuelve `null` para 404 (no lanza) para que la UI distinga "no encontrado" de "error real". Lanza Error con el mensaje del backend para 400/500. Extrae `data.reservation` de la envoltura del API.
+- Editado `src/components/conecta/owner/OwnerDashboard.tsx`:
+  1. **Imports**: añadidos `Search`, `QrCode` a lucide-react. Añadido `lookupReservation` al import block de `@/lib/api`. Añadido `import type { ReservationLookupResult } from '@/lib/api'` como statement separado.
+  2. **Helper `isCodeFormat`** (antes de LookupResultCard): `const RESERVATION_CODE_RE = /^LT-[A-Z0-9]+-[A-Z0-9]+$/;` + función que hace `.trim().toUpperCase()` antes de testear — acepta "lt-abcd-1" o "  LT-ABCD-1  ".
+  3. **Componente `LookupResultCard`** (nuevo, ~130 líneas): tarjeta destacada gold (`bg-gold/5 border-gold/30 rounded-xl p-4 sm:p-5 shadow-lg shadow-gold/5`) con motion.div initial opacity 0 → 1. Header con icono Search + label "RESERVA ENCONTRADA" + botón "Cerrar" (ghost, X). Grid 2 columnas: izq (código gold mono bold, status badge, local + dirección), der (fecha/hora/comensales en sub-grid + cliente nombre/phone — solo si están presentes). Footer con botón "Confirmar llegada" (verde `bg-emerald-500`, icon CheckCircle2) — SOLO visible si `status === 'CONFIRMED' && !!reservation.id` (gating doble: API devuelve id solo con ownership + transición válida CONFIRMED → COMPLETED). Spinner CSS mientras `isPending`.
+  4. **Estado + query en ReservasTab**: añadidos `searchQuery` (input value), `lookupCode` (committed code, null hasta Enter/Buscar), `lookupActive` (derivado: `!!lookupCode && isCodeFormat(lookupCode)`). Nuevo `useQuery` con `queryKey: ['reservation-lookup', lookupCode]`, `enabled: lookupActive`, `staleTime: 0` (siempre refetch), `retry: false` (no reintentar 404).
+  5. **Handlers**: `handleBuscar()` — trim+uppercase, si `isCodeFormat` → setea lookupCode (dispara API), si no → setea null (tabla filtra client-side). `handleClearLookup()` — limpia searchQuery + lookupCode.
+  6. **Filtro client-side**: `filteredReservations` = cuando `!lookupActive && searchLower`, filtra por `confirmationCode.toLowerCase().includes(searchLower) || (user.name ?? name).toLowerCase().includes(searchLower)`. Cuando lookupActive, muestra todas las reservas (la búsqueda "definitiva" vive en la tarjeta gold).
+  7. **UI search bar** (insertado ANTES del bloque `{/* Filters */}`): `flex gap-2` con input (icon Search absoluto izq, pl-9, placeholder "Buscar por código (LT-XXXX-X) o nombre del cliente...", estilo `bg-white/5 border-white/20 text-white placeholder:text-white/30`) + botón "Buscar" (gold `bg-gold hover:bg-gold/90 text-obsidian`) + botón QrCode (ghost, disabled, `title="Escanear QR (próximamente)"`). Input `onChange` resetea lookupCode a null (cualquier cambio requiere re-commit). `onKeyDown` Enter → handleBuscar().
+  8. **Lookup result section** (después de search bar, antes de Filters): `lookupActive && (...)` con 4 ramas: loading (spinner gold "Buscando reserva {code}…"), error (AlertCircle + mensaje + botón X), null/404 (XCircle + "No se encontró ninguna reserva con ese código" + botón X), success (`<LookupResultCard>` con `onConfirmArrival` que llama `statusMutation.mutate({ id: lookupData.id, status: 'COMPLETED' })`). Añadido `: null` final para satisfacer a TS (caso lookupData undefined).
+  9. **Pista de formato**: "El código debe tener formato LT-XXXX-X" (text-white/40 font-mono text-[11px]) cuando el usuario teclea algo que empieza con "LT-" pero no cumple el regex (solo si no hay lookup activo, para no duplicar feedback).
+  10. **Tabla**: cambiado `reservations.map` → `filteredReservations.map`. Añadida nueva rama de empty state: `filteredReservations.length === 0 ?` → "No hay reservas que coincidan con la búsqueda." (entre el "No hay reservas para mostrar" original y el render de la tabla).
+  11. **`statusMutation.onSuccess` refactorizado**: reemplazado el if/else binario por un `switch` con 5 mensajes diferenciados: REJECTED → "Reserva rechazada. El cliente fue notificado." (info), COMPLETED → "Llegada confirmada" (success), NO_SHOW → "Cliente marcado como no asistió" (success), CONFIRMED → "Reserva confirmada" (success), default → "Reserva actualizada" (success). Soluciona el problema de doble toast: tanto "Marcar completada" (dropdown) como "Confirmar llegada" (lookup card) usan el mismo statusMutation con status=COMPLETED, y ahora el mutation-level onSuccess ya muestra el toast correcto sin que la lookup card tenga que añadir su propio toast. Añadido `void queryClient.invalidateQueries({ queryKey: ['reservation-lookup'] })` al onSuccess para que la tarjeta gold refresque su badge al cambiar status (ej: al confirmar llegada, el badge pasa a COMPLETED y el botón desaparece).
+- Verificación:
+  * `bun run lint` → 0 errores, 0 warnings (eslint . pasa limpio).
+  * `npx tsc --noEmit` → 0 errores en archivos modificados. Los 15 errores pre-existentes en otros archivos (Matchmaker.tsx, AdminMetricsTab.tsx, scripts/add-licobars.ts, src/lib/auth.ts, src/lib/data.ts, etc.) no fueron tocados y siguen siendo los mismos.
+  * Dev server recompila limpio (`✓ Compiled in 233ms`, `✓ Compiled in 249ms` tras los últimos edits). Los warnings `prisma:error Error in PostgreSQL connection` son pre-existentes (Neon cold-start, la app se auto-recupera).
+- Archivos modificados:
+  * ~ `src/lib/api.ts` (+70 líneas: `ReservationLookupResult` interface + `lookupReservation` function)
+  * ~ `src/components/conecta/owner/OwnerDashboard.tsx` (+370 líneas: imports, isCodeFormat helper, LookupResultCard component, estado+query del lookup, handlers, filtro client-side, search bar UI, lookup result section, pista de formato, cambio a filteredReservations.map, nueva rama empty state, refactor statusMutation.onSuccess)
+- Sin tocar: APIs (lookup endpoint solo lectura), schema.prisma, backend services. No se crearon archivos de test.
+
+Stage Summary:
+- ✅ Search bar arriba de la tabla con input (gold Search icon) + botón "Buscar" (gold) + botón QrCode (disabled, placeholder futuro)
+- ✅ Lookup por API: teclear LT-XXXX-X + Enter/Buscar dispara `GET /api/reservations/lookup/[code]` con `useQuery` (queryKey `['reservation-lookup', code]`, `enabled: isCodeFormat(code)`, `staleTime: 0`, `retry: false`)
+- ✅ Tarjeta de resultado gold (`bg-gold/5 border-gold/30`) arriba de la tabla: código gold mono bold, status badge, customer name+phone, fecha/hora/comensales, business name+address
+- ✅ Botón "Confirmar llegada" (verde emerald, icon CheckCircle2) — solo si `status === CONFIRMED && !!reservation.id`. Llama `statusMutation.mutate({ id, status: 'COMPLETED' })` + toast "Llegada confirmada" (via onSuccess refactorizado)
+- ✅ Botón "Cerrar" (ghost, X) limpia searchQuery + lookupCode
+- ✅ Mensaje "No se encontró ninguna reserva con ese código" (rojo, XCircle) en 404 + botón X
+- ✅ Mensaje de error genérico (rojo, AlertCircle) + botón X si la API falla
+- ✅ Spinner gold "Buscando reserva {code}…" mientras la query está en flight
+- ✅ Pista de formato "El código debe tener formato LT-XXXX-X" cuando empieza con "LT-" pero no cumple regex
+- ✅ Filtro client-side en tiempo real por código o nombre del cliente (case-insensitive). Lookup activo desactiva el filtro (la búsqueda "definitiva" vive en la tarjeta)
+- ✅ Nueva rama de empty state: "No hay reservas que coincidan con la búsqueda"
+- ✅ `statusMutation.onSuccess` refactorizado a switch con 5 toasts diferenciados — mejora feedback para todas las transiciones, no solo la nueva
+- ✅ Invalidación del query `reservation-lookup` en onSuccess — la tarjeta gold refresca su badge automáticamente al cambiar status
+- ✅ TypeScript limpio (0 errores nuevos), ESLint limpio (0 errores / 0 warnings), dev server compila sin errores

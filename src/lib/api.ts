@@ -236,6 +236,78 @@ export async function cancelReservation(
   return data;
 }
 
+/**
+ * Resultado de GET /api/reservations/lookup/[code].
+ *
+ * La API devuelve campos adicionales (id, name, phone, email, notes,
+ * rejectionReason) solo cuando el caller está autenticado como
+ * BUSINESS_OWNER/ADMIN Y tiene ownership del negocio de la reserva.
+ * Para callers anónimos o dueños de otro negocio, solo se devuelve la
+ * info pública (código, status, fecha, hora, guests, business.name).
+ *
+ * Por eso todos los campos "privados" son opcionales en este tipo —
+ * la UI del OwnerDashboard los muestra solo si están presentes.
+ */
+export interface ReservationLookupResult {
+  confirmationCode: string;
+  status: ReservationStatus;
+  date: string;
+  time: string;
+  guests: number;
+  business: {
+    id?: string;
+    name: string;
+    slug?: string;
+    address: string;
+    coverImage: string | null;
+  };
+  // ─── Campos privados (solo si el caller es dueño/admin con ownership) ───
+  id?: string;
+  notes?: string | null;
+  rejectionReason?: string | null;
+  name?: string;
+  phone?: string;
+  email?: string | null;
+}
+
+/**
+ * GET /api/reservations/lookup/[code] — busca una reserva por su
+ * código de confirmación (LT-XXXX-X). Usado por el OwnerDashboard
+ * para validar la llegada del cliente (el dueño teclea o escanea el
+ * código y ve una tarjeta destacada con los datos de la reserva).
+ *
+ * Devuelve:
+ *   - `null` si la reserva no existe (404). La UI decide cómo mostrarlo.
+ *   - Un objeto `ReservationLookupResult` si se encuentra. Los campos
+ *     privados (id, name, phone, etc.) solo vienen si el caller es
+ *     dueño del negocio de la reserva o admin.
+ *
+ * Lanza Error si el código no empieza con "LT-" (400) o si hay un
+ * error de servidor (500). El caller debe normalizar el código a
+ * mayúsculas y validar el formato LT-XXXX-X antes de llamar.
+ */
+export async function lookupReservation(
+  code: string,
+): Promise<ReservationLookupResult | null> {
+  const normalized = code.trim().toUpperCase();
+  const res = await fetch(
+    `/api/reservations/lookup/${encodeURIComponent(normalized)}`,
+  );
+  // 404 → la reserva no existe. Devolvemos null en vez de lanzar
+  // para que la UI pueda distinguir "no encontrado" de "error real"
+  // sin tener que inspeccionar el mensaje del error.
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Error' }));
+    throw new Error(data.error ?? 'Error al buscar la reserva');
+  }
+  const data = await res.json();
+  // El endpoint envuelve la reserva en `{ reservation, authenticated, hasOwnership? }`.
+  // Nos quedamos solo con la parte de la reserva — `authenticated` y
+  // `hasOwnership` se infieren de la presencia de `id`/`name`/etc.
+  return (data.reservation ?? null) as ReservationLookupResult | null;
+}
+
 // ─── Analytics (Etapa 6) ───────────────────────────────────────
 // Fire-and-forget tracking + public read endpoints for "Populares esta
 // semana" and per-business view counts. Mirrors the API contract exposed
