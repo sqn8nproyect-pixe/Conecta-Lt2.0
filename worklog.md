@@ -6416,3 +6416,114 @@ Stage Summary:
 - ✅ Las fotos subidas por los dueños ya no se duplican en el carrusel
 - ✅ El cover no aparece dos veces (dedup entre COVER y GALLERY)
 - El carrusel ahora muestra exactamente las fotos que el dueño subió (mínimo las placeholders del seed, máximo 10 reales)
+
+---
+Task ID: 5-photo-approval-admin-ui
+Agent: conecta-frontend
+Task: Añadir pestaña "Fotos Pendientes" al AdminDashboard para moderación de fotos subidas por dueños
+
+Work Log:
+- Leído worklog.md y AdminDashboard.tsx para entender la estructura de pestañas (Resumen / Negocios / Reseñas / Usuarios / Métricas / Propuestas) y los patrones de uso (useQuery con staleTime 30s, useMutation con invalidación, addNotification para toasts, glass-card + gold + obsidian).
+- Revisadas las 3 APIs nuevas en /api/admin/images/ (pending, [imageId]/approve, [imageId]/reject) para confirmar la forma de la respuesta: { images: BusinessImage[], count }, cada imagen incluye business: { id, slug, name }.
+- Revisado AdminMetricsTab.tsx como referencia de estilo visual (glass-card, gold/15 bg + gold/30 border para icono, KPI cards en grid responsive, skeletons bg-white/5).
+- Creado `src/components/conecta/admin/PendingPhotosTab.tsx` ('use client'):
+  * Tipo local `PendingImage` refleja exactamente la respuesta del API.
+  * Query key `QK_PENDING_IMAGES` exportado para compartir cache con el AdminDashboard padre.
+  * Helpers de fetch inline: fetchPendingImages / approveImage / rejectImage.
+  * Estado de carga: grid de 6 skeleton cards (mismo estilo que AdminMetricsTab).
+  * Estado vacío: card con icono Check emerald + mensaje "No hay fotos pendientes de aprobación".
+  * Estado de error: card con icono AlertCircle + botón "Reintentar".
+  * PhotoCard: imagen en aspect-[4/3] con hover scale, Badge de tipo (Portada/Galería/Logo/Menú) con color distinto, nombre del negocio (icon Store gold), fecha relativa (formatRelativeTime), botones Aprobar (emerald) y Rechazar (red outline). Spinner Loader2 en el botón activo.
+  * RejectDialog: Dialog con Textarea opcional (maxlength 200, contador), placeholder con ejemplos, footer con Cancelar/Confirmar. Se resetea al cerrar.
+  * Mutations usan optimistic update (setQueryData filtra la imagen aprobada/rechazada del cache) + invalidateQueries para refetch en background.
+  * Toasts vía useAppStore.addNotification: "Foto aprobada y publicada" / "Foto rechazada".
+  * AnimatePresence mode="popLayout" para que las cards desaparezcan suavemente al aprobar/rechazar.
+  * Card de ayuda al pie explicando el flujo (aprobación pública / rechazo notifica al dueño).
+  * Responsive: 1 col mobile, 2 cols sm, 3 cols lg.
+- Editado `AdminDashboard.tsx`:
+  * Añadido `Camera` a imports de lucide-react.
+  * Importado `PendingPhotosTab` y `QK_PENDING_IMAGES`.
+  * Nuevo useQuery en AdminDashboard con `enabled: isAdminByEmail` (no dispara peticiones 401 para no-admins que aterricen aquí por defense-in-depth).
+  * Refactor del early-return para usar `isAdminByEmail` en vez de llamar `isAdminEmail(user.email)` dos veces (evita trabajo duplicado y aclara la intención).
+  * Nueva pestaña "Fotos Pendientes" colocada después de "Métricas" (antes de "Propuestas"), con icono Camera y badge dorado con el conteo si > 0 (formato "99+" para > 99).
+  * Nuevo TabsContent "pending-photos" renderiza `<PendingPhotosTab />`.
+- Verificación:
+  * `bun run lint` → 0 errors, 0 warnings (después de remover un eslint-disable directive no necesario — la regla @next/next/no-img-element no está activa en este proyecto).
+  * Dev server recompila limpio (✓ Compiled en ~489ms).
+  * Confirmado el patrón de response del API con curl: GET /api/admin/images/pending devuelve 401 sin sesión (esperado para admin-only).
+- Archivos modificados:
+  * + `src/components/conecta/admin/PendingPhotosTab.tsx` (nuevo, ~470 líneas)
+  * ~ `src/components/conecta/admin/AdminDashboard.tsx` (4 ediciones: imports, query de conteo, nuevo TabsTrigger con badge, nuevo TabsContent)
+- Sin tocar: APIs, schema.prisma, backend. Solo frontend como pedía la tarea.
+
+Stage Summary:
+- Feature completa: pestaña "Fotos Pendientes" funcional en el AdminDashboard.
+- UX: badge dorado con conteo visible en el tab aun antes de abrirlo (gracias al useQuery compartido con enabled condicional).
+- Mutations optimistas: al aprobar/rechazar, la card desaparece inmediatamente sin esperar al refetch (AnimatePresence suaviza la salida).
+- Rechazo con motivo opcional: textarea maxlength 200, se envía al backend que lo incluye en la notificación al dueño.
+- Accesibilidad: imagenes con alt descriptivo, loading="lazy", buttons con iconos + texto, labels asociados a textarea.
+- Reutiliza el cache de React Query entre el badge del tab y el contenido de la pestaña (mismo QK_PENDING_IMAGES) — solo 1 petición al backend para ambas vistas.
+- Siguiente paso sugerido (fuera del scope de esta tarea): añadir un acceso directo desde el "Resumen" (card "Pendientes" similar a las de Negocios/Reseñas) para que el admin pueda saltar a la pestaña con un click.
+
+---
+Task ID: 6-owner-panel-photo-badges
+Agent: fullstack-developer (Z.ai Code)
+Task: Mostrar badges de aprobación + contador X/10 + info de moderación en la galería del OwnerDashboard
+
+Work Log:
+- Leído worklog.md (contexto: directorio CONECTA-LT, dueños suben fotos que ahora pasan por moderación del admin) y OwnerDashboard.tsx (2.057 líneas): `GallerySection` en líneas 779-850 usa `useQuery` contra `fetchBusinessImages` (retorno tipado como `{id,url,type,sortOrder,storageKey}` sin approvalStatus) + `deleteMutation` con update optimista (onMutate cancelQueries+setQueryData filter, onError rollback, onSuccess toast). Render: `ImageUploadZone` no-compacto con label "Fotos subidas: X/20" y `maxFiles={20}`
+- Confirmado contrato real del backend:
+  * `prisma/schema.prisma`: enum `ImageApprovalStatus { PENDING, APPROVED, REJECTED }` en `BusinessImage` con `@default(APPROVED)` + `approvedAt: DateTime?` + `approvedById`
+  * `src/app/api/owner/businesses/[slug]/images/route.ts` GET devuelve `db.businessImage.findMany(...)` directo (todos los campos incluyendo `approvalStatus`); POST impone límite 10 GALLERY (HTTP 409 past 10), ADMIN→auto-APPROVED, BUSINESS_OWNER→PENDING
+- Confirmado ImageUploadZone (componente NO editable según tarea): en modo `compact` renderiza SOLO el drop zone (sin thumbnails) — `showDropZone = imageType !== 'GALLERY' || currentImages.length < maxFiles || compact` (el OR con `compact` ignora el límite). La grilla de thumbnails con el botón eliminar vive dentro de ImageUploadZone en modo no-compacto, por lo que para añadir badges a los thumbnails sin tocar ese componente hay que renderizar la grilla nosotros mismos en GallerySection y dejar ImageUploadZone solo para el drop zone (compact)
+- EDITADO `src/components/conecta/owner/OwnerDashboard.tsx` (3 ediciones quirúrgicas):
+  1. **Imports lucide-react**: añadido `Info` entre `Image as ImageIcon` y `X` (ya estaban `Clock`, `CheckCircle`, `XCircle` importados por usos previos)
+  2. **Tipos nuevos** (después de `OwnerProposal`, ~línea 156): `ImageApprovalStatus = 'PENDING'|'APPROVED'|'REJECTED'` (espejo del enum Prisma), `BusinessImageWithApproval` (extiende el shape de fetchBusinessImages con `approvalStatus` + `approvedAt?`), `GalleryImage` (`{id,url,type,approvalStatus}` — subestructura compatible con `CurrentImage` para pasarla a ImageUploadZone vía subtipado estructural), `MAX_GALLERY_IMAGES = 10` (espejo del límite backend)
+  3. **Reemplazado `GallerySection` completo** (líneas 818-991). Cambios:
+     * `useQuery<BusinessImageWithApproval[]>` con queryFn que hace `fetchBusinessImages(slug) as Promise<BusinessImageWithApproval[]>` — el cast es seguro porque la API ya devuelve estos campos, solo que `@/lib/api` no se ensanchó (no se tocó ese archivo)
+     * `galleryImages: GalleryImage[]` proyectado con `approvalStatus: img.approvalStatus ?? 'APPROVED'` (defensivo contra imágenes viejas sin el campo)
+     * `deleteMutation` intacto (mismo onMutate/onError/onSuccess con update optimista + rollback); `prev: typeof images` ahora resuelva a `BusinessImageWithApproval[]` automáticamente
+     * Header: `flex items-center justify-between gap-3 mb-4 flex-wrap` — título "GALERÍA DE FOTOS" a la izquierda, contador "{X}/{10} fotos" a la derecha con el número X en `text-gold font-bold`
+     * Info box ámbar ANTES del drop zone: `border-amber-500/30 bg-amber-500/10 p-3 flex gap-2` + `<Info size={14} className="text-amber-300 shrink-0 mt-0.5" />` + texto "Las fotos que subas serán revisadas por el administrador antes de ser visibles al público. Esto asegura que el contenido represente correctamente a CONECTA-LT." en `text-xs text-amber-200 leading-relaxed`
+     * `ImageUploadZone` ahora en modo `compact` (solo drop zone, sin thumbnails propios) — conserva `currentImages`, `onImageDelete`, `onUploadComplete` y sube `maxFiles={10}` (antes 20, alineado al backend). Condicionado con `!hasReachedLimit` para ocultar el drop zone cuando se llega a 10 fotos y mostrar en su lugar un placeholder "Has alcanzado el límite de 10 fotos..."
+     * Grilla propia de thumbnails (grid 3/4/5 cols responsive) con badge de estado de aprobación:
+       - PENDING → `bg-amber-500/90 text-amber-950` + icon `Clock` + "Pendiente"
+       - APPROVED → `bg-emerald-500/90 text-emerald-950` + icon `CheckCircle` + "Aprobada"
+       - REJECTED → `bg-red-500/90 text-red-950` + icon `XCircle` + "Rechazada" + thumbnail `opacity-60` para indicar que no es pública
+       - Badges: `absolute bottom-1 left-1` + `shadow-sm backdrop-blur-sm` para legibilidad sobre la foto, `text-[10px] font-semibold`
+     * Botón eliminar mantenido en `absolute top-1 right-1` con `bg-red-500/80` y opacidad hover (mismo estilo/UX que tenía ImageUploadZone), invoca `deleteMutation.mutate(img.id)` — el dueño puede borrar sus propias fotos PENDING o REJECTED sin restricciones
+- Limpieza: removido el import `type { CurrentImage } from '@/components/ui/image-upload-zone'` (ya no se usa — `galleryImages` ahora se anota como `GalleryImage[]`)
+
+Stage Summary:
+- ✅ Contador "X/10 fotos" en el header de la galería (alineado al límite real del backend — antes decía /20 incorrectamente)
+- ✅ Badge de estado de aprobación en cada thumbnail de galería: Pendiente (ámbar + Clock), Aprobada (verde + CheckCircle), Rechazada (rojo + XCircle + thumbnail atenuado opacity-60)
+- ✅ Info message ámbar con icon Info explicando el flujo de moderación: "Las fotos que subas serán revisadas por el administrador antes de ser visibles al público..."
+- ✅ Funcionalidad de borrado conservada (mismo deleteMutation con update optimista + rollback); el dueño puede borrar sus propias fotos PENDING o REJECTED
+- ✅ Drop zone oculto al llegar a 10/10 (placeholder explicativo en su lugar) — mejor UX que el toast de error genérico que daba antes
+- ✅ No se tocaron APIs, schema, prisma, ni otros componentes — solo OwnerDashboard.tsx (3 ediciones)
+- ✅ ESLint: 0 errores/0 warnings; TypeScript: 0 errores en OwnerDashboard.tsx (errores pre-existentes en otros archivos no relacionados, validador Next.js autogenerado y scripts seed legacy); dev server: compila limpio + GET / → HTTP 200
+- Nota: el cover (SingleImageUpload) sigue manejándose aparte y no se le añadió badges (correcto, según la tarea)
+- Pendiente futuro (fuera de scope de esta tarea): ampliar el tipo de retorno de `fetchBusinessImages` en `src/lib/api.ts` para que incluya `approvalStatus` + `approvedAt` y así eliminar el cast del queryFn
+
+---
+Task ID: 7-moderacion-fotos
+Agent: main + 2 subagents (full-stack-developer)
+Task: Sistema de moderación de fotos + carrusel de 10 fotos
+
+Work Log:
+- Schema: enum ImageApprovalStatus (PENDING/APPROVED/REJECTED) + campos en BusinessImage (approvalStatus default APPROVED, approvedById, approvedAt, index en approvalStatus). db:push a Neon OK
+- POST /api/owner/businesses/[slug]/images: BUSINESS_OWNER → PENDING, ADMIN → auto-APPROVED. Validación max 10 GALLERY (409 si excede). COVER de dueño no actualiza business.coverImage hasta ser aprobada
+- transformBusiness: filtrado runtime solo APPROVED en API pública. PENDING y REJECTED no visibles para visitantes
+- 3 APIs admin nuevas: GET /api/admin/images/pending (lista cola de revisión), POST .../[imageId]/approve, POST .../[imageId]/reject (con reason opcional, notifica al dueño)
+- Subagent 5: PendingPhotosTab.tsx — grid de fotos pendientes con thumbnails, badges de tipo, botones aprobar/rechazar, dialog de motivo, skeletons, empty state. Tab "Fotos Pendientes" en AdminDashboard con badge contador dorado
+- Subagent 6: OwnerDashboard GallerySection — contador X/10, badges por foto (Pendiente ámbar / Aprobada verde / Rechazada roja+dimmed), info message sobre aprobación, preservada funcionalidad de delete
+- Bug cazado: API pending usaba orderBy createdAt (campo no existe en BusinessImage) → cambiado a sortOrder. Prisma client regenerado tras db:push
+- E2E: GET /api/admin/images/pending sin auth → 401; con admin → 200 count:0 (todas APPROVED por default); lint limpio
+
+Stage Summary:
+- ✅ Sistema de moderación operativo: dueño sube → PENDING → admin aprueba/rechaza → notificación al dueño
+- ✅ Carrusel soporta hasta 10 fotos (validación backend max 10 GALLERY)
+- ✅ Panel dueño muestra badges de estado + contador + info message
+- ✅ Panel admin tiene pestaña "Fotos Pendientes" con cola de revisión
+- ✅ API pública solo muestra APPROVED — moderación transparente al visitante
+- Commit c94f55c pushed a origin/main
