@@ -30,7 +30,7 @@ const features = [
   {
     icon: Compass,
     title: 'Directorio Exclusivo',
-    text: 'Acceso a perfiles enriquecidos con fotografías reales, horarios de apertura y contacto directo con los 21 locales más selectos de la capital mirandina (incluyendo licorerías, tascas y discotecas).',
+    text: 'Acceso a perfiles enriquecidos con fotografías reales, horarios de apertura y contacto directo con los locales más selectos de la capital mirandina (licorerías, tascas, discotecas y licobares).',
   },
   {
     icon: MapPin,

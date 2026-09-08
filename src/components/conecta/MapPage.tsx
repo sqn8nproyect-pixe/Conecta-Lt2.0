@@ -321,6 +321,10 @@ export function MapPage() {
               <div className="w-3 h-3 rounded-full bg-[#C026D3] glow-purple" />
               <span className="text-white/80 font-medium">Discotecas</span>
             </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-3 h-3 rounded-full bg-[#10B981] glow-emerald" />
+              <span className="text-white/80 font-medium">Licobares</span>
+            </div>
             <div className="flex items-center gap-2.5 pt-1 mt-1 border-t border-white/10">
               <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-white/60" />
               <span className="text-white/80 font-medium">Tu ubicación</span>
@@ -364,6 +368,10 @@ export function MapPage() {
                   <div className="flex items-center gap-2.5">
                     <div className="w-3 h-3 rounded-full bg-[#C026D3] glow-purple" />
                     <span className="text-white/85 font-medium">Discotecas</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded-full bg-[#10B981] glow-emerald" />
+                    <span className="text-white/85 font-medium">Licobares</span>
                   </div>
                   <div className="flex items-center gap-2.5 pt-1.5 mt-1 border-t border-white/10">
                     <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-white/60" />

@@ -34,6 +34,15 @@ type Filter = 'Todas' | Category;
 type PriceFilter = 'Todos' | PriceRange;
 type SortBy = 'rating' | 'reviews' | 'name';
 
+/** Etiquetas legibles (plural) para los chips de filtro. */
+const FILTER_LABELS: Record<Filter, string> = {
+  Todas: 'Todos',
+  licorería: 'Licorerías',
+  tasca: 'Tascas',
+  discoteca: 'Discotecas',
+  licobar: 'Licobares',
+};
+
 export function HomePage() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<Filter>('Todas');
@@ -129,7 +138,7 @@ export function HomePage() {
     [viewCounts],
   );
 
-  const filters: Filter[] = ['Todas', 'licorería', 'tasca', 'discoteca'];
+  const filters: Filter[] = ['Todas', 'licorería', 'tasca', 'discoteca', 'licobar'];
   const priceFilters: PriceFilter[] = ['Todos', '$', '$$', '$$$'];
 
   if (isError) {
@@ -231,8 +240,9 @@ export function HomePage() {
             transition={{ delay: 0.3, duration: 0.6 }}
             className="text-base sm:text-lg md:text-xl text-white/80 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed"
           >
-            Explora los 21 locales más selectos de la capital mirandina. Descubre ofertas
-            únicas y planifica tu salida perfecta.
+            Explora los locales más selectos de la capital mirandina: licorerías,
+            tascas, discotecas y licobares. Descubre ofertas únicas y planifica
+            tu salida perfecta.
           </motion.p>
 
           <motion.div
@@ -372,7 +382,7 @@ export function HomePage() {
                       : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  {f === 'Todas' ? 'Todos' : f + 's'}
+                  {FILTER_LABELS[f]}
                 </button>
               ))}
             </div>

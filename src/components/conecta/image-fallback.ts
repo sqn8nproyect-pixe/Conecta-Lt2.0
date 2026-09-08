@@ -14,6 +14,7 @@ const PLACEHOLDERS: Record<string, string> = {
   licorería: '/images/licoreria.png',
   tasca: '/images/tasca.png',
   discoteca: '/images/discoteca.png',
+  licobar: '/images/licobar.png',
 };
 
 /** Placeholder genérico si la categoría no tiene uno propio. */

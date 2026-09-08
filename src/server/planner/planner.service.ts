@@ -16,7 +16,7 @@
 //   → Calculate scores → Sort → Return Top N
 // ─────────────────────────────────────────────────────────────
 
-import type { CapacityLevel, PriceRange } from '@/lib/types';
+import type { CapacityLevel, Category, PriceRange } from '@/lib/types';
 import { isPromotionLive } from '@/server/repositories/promotion.repository';
 import {
   plannerRepository,
@@ -68,26 +68,34 @@ function jsonError(message: string, status: number): Response {
  * no socials, no full review list). The full Establishment is
  * fetched separately when the user clicks "Ver local".
  */
+/**
+ * Map a DB Category slug (e.g. 'licoreria') to the frontend `Category`
+ * union. The DB categories are seeded with slugs like 'licoreria',
+ * 'tasca', 'discoteca', 'licobar' — we normalize to the union values
+ * (which use the accented 'licorería' for legacy reasons).
+ * Unknown slugs fall back to 'licorería' (oldest category, safest default).
+ */
+function categoryFromSlug(slug: string | null | undefined): Category {
+  const categoryMap: Record<string, Category> = {
+    licoreria: 'licorería',
+    licorería: 'licorería',
+    tasca: 'tasca',
+    discoteca: 'discoteca',
+    licobar: 'licobar',
+  };
+  return (slug && categoryMap[slug]) || 'licorería';
+}
+
 function toBusinessSummary(
   candidate: PlannerCandidate,
   date: string,
 ): PlannerBusinessSummary {
   const categorySlug = candidate.category?.slug ?? 'licorería';
-  // Map the Category.slug to the frontend Category union. The DB
-  // categories are seeded with slugs like 'licoreria', 'tasca',
-  // 'discoteca' — we normalize to the union values (which use
-  // the accented 'licorería' for legacy reasons).
-  const categoryMap: Record<string, 'licorería' | 'tasca' | 'discoteca'> = {
-    licoreria: 'licorería',
-    licorería: 'licorería',
-    tasca: 'tasca',
-    discoteca: 'discoteca',
-  };
   return {
     id: candidate.id,
     name: candidate.name,
     slug: candidate.slug,
-    category: categoryMap[categorySlug] ?? 'licorería',
+    category: categoryFromSlug(categorySlug),
     address: candidate.address,
     lat: candidate.lat,
     lng: candidate.lng,
@@ -312,12 +320,7 @@ export async function recommendNightPlan(
       const scoringInput: PlannerScoringInput = {
         business: {
           id: f.candidate.id,
-          category:
-            (f.candidate.category?.slug === 'tasca'
-              ? 'tasca'
-              : f.candidate.category?.slug === 'discoteca'
-                ? 'discoteca'
-                : 'licorería') as 'licorería' | 'tasca' | 'discoteca',
+          category: categoryFromSlug(f.candidate.category?.slug),
           priceRange:
             (f.candidate.priceRange as PriceRange) ?? '$$',
           avgRating: f.candidate.avgRating,

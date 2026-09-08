@@ -20,11 +20,12 @@ const LOS_TEQUES_CENTER: [number, number] = [10.3444, -67.0428];
 /** Radio de proximidad para "opciones cercanas" (en metros). 1000m = 1km. */
 export const NEARBY_RADIUS_M = 1000;
 
-type PinColor = 'gold' | 'amber' | 'purple';
+type PinColor = 'gold' | 'amber' | 'purple' | 'emerald';
 
 function colorForCategory(cat: Category): PinColor {
   if (cat === 'licorería') return 'gold';
   if (cat === 'tasca') return 'amber';
+  if (cat === 'licobar') return 'emerald';
   return 'purple';
 }
 
@@ -98,12 +99,13 @@ export function LeafletMap({
   const setSelectedEst = useAppStore((s) => s.setSelectedMapEstablishment);
   const goToDetail = useAppStore((s) => s.goToDetail);
 
-  // Build the three colored pin icons + the user icon once.
+  // Build the colored pin icons (per category) + the user icon once.
   const icons = useMemo(
     () => ({
       gold: makeIcon('gold'),
       amber: makeIcon('amber'),
       purple: makeIcon('purple'),
+      emerald: makeIcon('emerald'),
     }),
     [],
   );

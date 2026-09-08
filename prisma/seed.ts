@@ -116,6 +116,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'licorería': '#d4af37', // gold
   'tasca': '#F59E0B',     // amber
   'discoteca': '#C026D3', // purple
+  'licobar': '#10B981',   // emerald (licorería con mesas para tomar)
 };
 
 // ── Seed principal ───────────────────────────────────────────

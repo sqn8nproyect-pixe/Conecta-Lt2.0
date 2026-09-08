@@ -190,6 +190,9 @@
   .glow-purple {
     box-shadow: 0 0 24px rgba(192, 38, 211, 0.35), 0 0 60px rgba(192, 38, 211, 0.15);
   }
+  .glow-emerald {
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.35), 0 0 60px rgba(16, 185, 129, 0.15);
+  }
 
   /* Card hover glow */
   .card-glow-hover {
@@ -424,6 +427,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .conecta-marker-pin.amber .pin-tail { border-top: 10px solid #f59e0b; }
 .conecta-marker-pin.purple .pin-body { background: #c026d3; box-shadow: 0 0 16px rgba(192,38,211,0.6); }
 .conecta-marker-pin.purple .pin-tail { border-top: 10px solid #c026d3; }
+.conecta-marker-pin.emerald .pin-body { background: #10b981; box-shadow: 0 0 16px rgba(16,185,129,0.6); }
+.conecta-marker-pin.emerald .pin-tail { border-top: 10px solid #10b981; }
 
 /* Radar pulse ring on markers */
 .conecta-marker-pin::before {

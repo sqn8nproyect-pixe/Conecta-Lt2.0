@@ -23,7 +23,7 @@
 //   total       100%
 // ─────────────────────────────────────────────────────────────
 
-import type { CapacityLevel, PriceRange } from '@/lib/types';
+import type { CapacityLevel, Category, PriceRange } from '@/lib/types';
 import type {
   NightPlannerPreferences,
   PlannerAvailability,
@@ -38,7 +38,7 @@ import type {
 export interface PlannerScoringInput {
   business: {
     id: string;
-    category: 'licorería' | 'tasca' | 'discoteca';
+    category: Category;
     priceRange: PriceRange; // "$" | "$$" | "$$$"
     avgRating: number; // 0–5
     reviewCount: number;
@@ -84,26 +84,28 @@ export const SCORE_WEIGHTS = {
 // ANY of the requested moods, not all of them).
 //
 // Mapping (blueprint-intent, no hardcoded slugs):
-//   relax          → tasca 1.0, licorería 0.7, discoteca 0.1
-//   date           → tasca 1.0, licorería 0.8, discoteca 0.4
-//   friends        → licorería 1.0, tasca 0.8, discoteca 0.7
-//   party          → discoteca 1.0, licorería 0.4, tasca 0.2
-//   celebration    → discoteca 0.9, tasca 0.8, licorería 0.7
-//   live_music     → tasca 0.9, discoteca 0.7, licorería 0.5
-//   food_drinks    → tasca 1.0, licorería 0.6, discoteca 0.3
-//   drinks         → licorería 1.0, discoteca 0.7, tasca 0.6
+//   relax          → tasca 1.0, licorería 0.7, discoteca 0.1, licobar 0.8
+//   date           → tasca 1.0, licorería 0.8, discoteca 0.4, licobar 0.7
+//   friends        → licorería 1.0, tasca 0.8, discoteca 0.7, licobar 0.9
+//   party          → discoteca 1.0, licorería 0.4, tasca 0.2, licobar 0.3
+//   celebration    → discoteca 0.9, tasca 0.8, licorería 0.7, licobar 0.6
+//   live_music     → tasca 0.9, discoteca 0.7, licorería 0.5, licobar 0.5
+//   food_drinks    → tasca 1.0, licorería 0.6, discoteca 0.3, licobar 0.5
+//   drinks         → licobar 1.0, licorería 0.7, discoteca 0.7, tasca 0.6
+//     ↑ licobar = "siéntate a tomar" — la mejor respuesta para solo tragos;
+//       la licorería pura es compra y llévate (baja de 1.0 a 0.7).
 const MOOD_CATEGORY_COMPAT: Record<
   NightPlannerPreferences['mood'][number],
-  Record<PlannerScoringInput['business']['category'], number>
+  Record<Category, number>
 > = {
-  relax: { tasca: 1.0, licorería: 0.7, discoteca: 0.1 },
-  date: { tasca: 1.0, licorería: 0.8, discoteca: 0.4 },
-  friends: { licorería: 1.0, tasca: 0.8, discoteca: 0.7 },
-  party: { discoteca: 1.0, licorería: 0.4, tasca: 0.2 },
-  celebration: { discoteca: 0.9, tasca: 0.8, licorería: 0.7 },
-  live_music: { tasca: 0.9, discoteca: 0.7, licorería: 0.5 },
-  food_drinks: { tasca: 1.0, licorería: 0.6, discoteca: 0.3 },
-  drinks: { licorería: 1.0, discoteca: 0.7, tasca: 0.6 },
+  relax: { tasca: 1.0, licorería: 0.7, discoteca: 0.1, licobar: 0.8 },
+  date: { tasca: 1.0, licorería: 0.8, discoteca: 0.4, licobar: 0.7 },
+  friends: { licorería: 1.0, tasca: 0.8, discoteca: 0.7, licobar: 0.9 },
+  party: { discoteca: 1.0, licorería: 0.4, tasca: 0.2, licobar: 0.3 },
+  celebration: { discoteca: 0.9, tasca: 0.8, licorería: 0.7, licobar: 0.6 },
+  live_music: { tasca: 0.9, discoteca: 0.7, licorería: 0.5, licobar: 0.5 },
+  food_drinks: { tasca: 1.0, licorería: 0.6, discoteca: 0.3, licobar: 0.5 },
+  drinks: { licobar: 1.0, licorería: 0.7, discoteca: 0.7, tasca: 0.6 },
 };
 
 export function scoreMood(input: PlannerScoringInput): number {
@@ -231,13 +233,13 @@ export function scoreDistance(input: PlannerScoringInput): number {
 // tasca/food_drinks).
 const COMPANY_CATEGORY_COMPAT: Record<
   NightPlannerPreferences['company'],
-  Record<PlannerScoringInput['business']['category'], number>
+  Record<Category, number>
 > = {
-  solo: { licorería: 1.0, tasca: 0.8, discoteca: 0.4 },
-  couple: { tasca: 1.0, licorería: 0.8, discoteca: 0.5 },
-  friends: { licorería: 1.0, discoteca: 0.8, tasca: 0.7 },
-  family: { tasca: 1.0, licorería: 0.5, discoteca: 0.3 },
-  celebration: { discoteca: 1.0, tasca: 0.8, licorería: 0.7 },
+  solo: { licorería: 1.0, tasca: 0.8, discoteca: 0.4, licobar: 0.9 },
+  couple: { tasca: 1.0, licorería: 0.8, discoteca: 0.5, licobar: 0.7 },
+  friends: { licorería: 1.0, discoteca: 0.8, tasca: 0.7, licobar: 0.9 },
+  family: { tasca: 1.0, licorería: 0.5, discoteca: 0.3, licobar: 0.4 },
+  celebration: { discoteca: 1.0, tasca: 0.8, licorería: 0.7, licobar: 0.6 },
 };
 
 export function scoreCompany(input: PlannerScoringInput): number {

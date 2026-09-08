@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "CONECTA-LT | Guía Nocturna de Los Teques",
     description:
-      "La vida nocturna, redescubierta. Explora los 21 locales más selectos de Los Teques: licorerías, tascas y discotecas con ofertas exclusivas y reseñas reales.",
+      "La vida nocturna, redescubierta. Explora los locales más selectos de Los Teques: licorerías, tascas, discotecas y licobares con ofertas exclusivas y reseñas reales.",
     siteName: "CONECTA-LT",
     url: siteUrl,
     type: "website",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "CONECTA-LT | Guía Nocturna de Los Teques",
     description:
-      "La vida nocturna, redescubierta. 21 locales selectos de Los Teques con ofertas y reseñas.",
+      "La vida nocturna, redescubierta. Licorerías, tascas, discotecas y licobares de Los Teques con ofertas y reseñas.",
     images: [ogImage],
   },
   robots: {

@@ -1,6 +1,6 @@
 // CONECTA-LT — Type definitions
 
-export type Category = 'licorería' | 'tasca' | 'discoteca';
+export type Category = 'licorería' | 'tasca' | 'discoteca' | 'licobar';
 
 export type PriceRange = '$' | '$$' | '$$$';
 
