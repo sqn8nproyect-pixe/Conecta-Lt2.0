@@ -6140,3 +6140,28 @@ Work Log:
 Stage Summary:
 - Panel admin totalmente legible en desktop y móvil; flujo de delegación visible de punta a punta
 - La clase dark ahora activa el theming semántico en TODA la app (beneficia también OwnerDashboard y diálogos)
+
+---
+Task ID: categoria-licobar
+Agent: main
+Task: Crear la categoría "Licobar" (licorería con mesas para tomar) + 7 locales nuevos en Los Teques
+
+Work Log:
+- Explorado el sistema de categorías: tabla DB Category (no enum) + unión TS hardcodeada en types.ts; mapeados TODOS los puntos de uso (planner scoring/service, HomePage, LeafletMap, MapPage leyenda, image-fallback, Matchmaker = dead code)
+- Imagen placeholder /images/licobar.png generada con IA (estantes de licores + balde de cervezas, estilo consistente)
+- types.ts: Category = 'licorería' | 'tasca' | 'discoteca' | 'licobar'
+- planner.scoring.ts: licobar en MOOD_CATEGORY_COMPAT y COMPANY_CATEGORY_COMPAT; drinks mood → licobar 1.0, licorería 0.7 (semántica: licorería = compra y llévate, licobar = siéntate a tomar); tipos ahora usan Category importado (no inline)
+- planner.service.ts: helper compartido categoryFromSlug() usado en toBusinessSummary Y en el scoringInput (eliminado ternario duplicado)
+- UI: chip LICOBARES (FILTER_LABELS con plurales correctos: licorerías/tascas/discotecas/LICOBARES), PinColor emerald + .conecta-marker-pin.emerald + .glow-emerald en globals.css, leyenda MapPage (desktop+mobile), image-fallback licobar
+- BUG CAZADO EN E2E: LeafletMap icons map no tenía 'emerald' → runtime crash "Cannot read properties of undefined (reading 'createIcon')" al entrar al mapa. Fix: emerald: makeIcon('emerald') en el useMemo
+- Textos sin conteo hardcodeado ("21 locales" → genérico + 4 categorías) en HomePage hero, layout.tsx metadata (OG+Twitter) y AboutPage
+- scripts/add-licobars.ts: incremental IDEMPOTENTE (upsert por slug, sub-registros solo si no existen) — seguro contra Neon con datos reales. seed.ts no se re-ejecuta (borraría usuarios/pruebas); CATEGORY_COLORS actualizado por consistencia
+- DB Neon: categoría licobar (#10B981, sortOrder 3) + 7 locales owner=admin ownerStatus=APPROVED (patrón existente): El Tequeño (Centro), El Barrilito (La Matica), Doña Rosa (El Cambre), La Terraza (Los Cerritos), El Botellón (La Hoyada), La Esquina del Frío (San José de Los Altos), Punto de Encuentro (Guacara) — c/u con horarios estructurados, imágenes, IG+WhatsApp, 3 reviews (usuarios seed u1-u16) y 1 promo ACTIVA con código
+- E2E navegador (desktop+mobile): filtro LICOBARES = 7/7 cards con badge LICOBAR; detalle Doña Rosa correcto; mapa con 7 pins esmeralda + leyenda; popup + bottom sheet OK; planner "Solo tragos/Con amigos/$" → #1 Punto de Encuentro 83%, #2 El Barrilito 81%; admin Negocios = 28 filas (7 licobar con owner admin); lint limpio
+- Commit 5dd8821 pushed a origin/main (Vercel auto-deploy)
+
+Stage Summary:
+- Categoría licobar operativa de punta a punta (DB → API → filtros → mapa → planner → admin)
+- Los 7 locales quedan owner=admin y listos para DELEGAR a dueños reales en las pruebas (asignar → aprobar → el dueño edita su micro-landing)
+- Para añadir más licobares en el futuro: editar LICOBARS en scripts/add-licobars.ts y re-correr (idempotente)
+- OJO planner: si se agrega otra categoría hay que tocar categoryFromSlug + las 2 matrices de compatibilidad (ahora tipadas con Category, TS obliga a llenar la fila)
