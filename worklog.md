@@ -6527,3 +6527,26 @@ Stage Summary:
 - ✅ Panel admin tiene pestaña "Fotos Pendientes" con cola de revisión
 - ✅ API pública solo muestra APPROVED — moderación transparente al visitante
 - Commit c94f55c pushed a origin/main
+
+---
+Task ID: separar-hero-carrusel
+Agent: main
+Task: Diferenciar claramente fotos del hero (COVER) de las del carrusel (GALLERY)
+
+Work Log:
+- OPCIÓN A — Limpieza DB:
+  * Diagnóstico: 45 imágenes GALLERY tenían la misma URL que el COVER del negocio (placeholders del seed: /images/licorería.png, /images/tasca.png, /images/discoteca.png). Cada local tenía 2 duplicados
+  * Script idempotente scripts/cleanup-cover-dupes.ts: elimina GALLERY images cuya URL coincide exactamente con business.coverImage
+  * Ejecutado contra Neon: 45 imágenes eliminadas. Todos los locales quedaron con 0 duplicados COVER↔GALLERY
+  * Verificado vía API: licobar-punto-de-encuentro ahora tiene coverImage=/images/licobar.png y gallery con 4 fotos SIN el cover repetido (antes tenía 5 con el cover duplicado)
+- OPCIÓN B — Mejora de copy en OwnerDashboard:
+  * Sección 4: 'IMAGEN DE PORTADA' → 'IMAGEN DE PORTADA (HERO)' + descripción: 'Esta es la foto principal que verán los visitantes en la parte superior de tu ficha, justo debajo del nombre del local. Es lo primero que ven al entrar.' + recomendación de foto amplia/representativa
+  * Sección 5: 'GALERÍA DE FOTOS' → 'GALERÍA DEL CARRUSEL' + descripción: 'Estas fotos aparecen en el carrusel inferior de tu ficha, debajo de la información del local. La imagen de portada (hero) no se repite aquí.' + recomendación de mostrar interior/platos/tragos/ambiente
+  * Ambas secciones ahora dejan clarísimo al dueño qué foto va dónde y para qué sirve
+- Lint limpio; commit 9fd7a9f pushed a origin/main
+
+Stage Summary:
+- ✅ Hero (COVER) y carrusel (GALLERY) están limpiamente separados en DB y UI
+- ✅ El dueño entiende el rol de cada sección por el copy mejorado
+- ✅ La API pública ya no muestra el cover duplicado en la galería
+- El script cleanup-cover-dupes.ts queda disponible para re-correr si se necesitan más limpiezas
