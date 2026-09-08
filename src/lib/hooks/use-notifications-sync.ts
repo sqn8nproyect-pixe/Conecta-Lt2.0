@@ -46,11 +46,17 @@ export function useNotificationsSync() {
   // 30s staleTime so the badge stays reasonably fresh without
   // hammering the server. The window-focus handler below covers the
   // "user comes back to the tab after 10 minutes" case.
+  // refetchInterval: 30s — polling automático para que el badge de la
+  // campana se actualice solo cuando llega una notificación nueva
+  // (ej: "Nueva reserva recibida" para el dueño, o "Tu reserva fue
+  // confirmada/rechazada" para el cliente). React Query pausa el
+  // polling en background automáticamente.
   const { data } = useQuery({
     queryKey: NOTIFICATIONS_QUERY_KEY,
     queryFn: fetchMyNotifications,
     enabled: status === 'authenticated',
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 
   // ── 2. Sync server → store ─────────────────────────────────────

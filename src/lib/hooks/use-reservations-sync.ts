@@ -54,11 +54,14 @@ export function useReservationsSync() {
   }, [session, status, setUser]);
 
   // ── 2. Fetch reservations when the user is authenticated ──────────
+  // Polling cada 30s — el cliente ve cambios de status (confirmada/rechazada)
+  // sin refrescar. React Query pausa el polling si la pestaña está inactiva.
   const { data: serverReservations = [] } = useQuery({
     queryKey: RESERVATIONS_QUERY_KEY,
     queryFn: fetchMyReservations,
     enabled: status === 'authenticated',
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 
   // Sync server reservations → store. Only fire when the set of IDs

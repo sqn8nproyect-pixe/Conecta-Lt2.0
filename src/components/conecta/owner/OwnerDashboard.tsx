@@ -1157,6 +1157,10 @@ function ReservasTab({ slug }: { slug: string }) {
         date: dateFilter.trim() || undefined,
       }),
     staleTime: 30_000,
+    // Polling cada 30s — el dueño ve reservas nuevas sin refrescar.
+    // Si el usuario está en otra pestaña, React Query pausa el polling
+    // automáticamente (refetchIntervalInBackground=false por defecto).
+    refetchInterval: 30_000,
   });
 
   const statusMutation = useMutation({
