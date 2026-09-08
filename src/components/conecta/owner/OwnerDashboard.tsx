@@ -781,14 +781,22 @@ function InfoTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
         </div>
       </section>
 
-      {/* ─── Section 4: Imagen de portada ──────────────────── */}
+      {/* ─── Section 4: Imagen de portada (Hero) ──────────────── */}
       <section className="glass-card rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-2">
           <ImageIcon size={16} className="text-gold" />
           <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
-            IMAGEN DE PORTADA
+            IMAGEN DE PORTADA (HERO)
           </h2>
         </div>
+        <p className="text-white/50 text-xs mb-4 leading-relaxed">
+          Esta es la <strong className="text-white/80">foto principal</strong> que verán los visitantes
+          en la parte superior de tu ficha, justo debajo del nombre del local. Es lo primero que ven al entrar.
+          <br />
+          <span className="text-amber-300/80">
+            Recomendación: usa una foto amplia y representativa del local (fachada, interior, ambiente).
+          </span>
+        </p>
         <SingleImageUpload
           businessSlug={slug}
           imageType="COVER"
@@ -802,11 +810,11 @@ function InfoTab({ slug, isAdmin }: { slug: string; isAdmin: boolean }) {
           onClear={() => {
             setBasicInfo((prev) => ({ ...prev, coverImage: '' }));
           }}
-          label="Sube una imagen de portada para tu negocio"
+          label="Sube la imagen principal del hero (1 foto)"
         />
       </section>
 
-      {/* ─── Section 5: Galería de fotos ────────────────────── */}
+      {/* ─── Section 5: Galería de fotos (Carrusel) ────────── */}
       <GallerySection slug={slug} />
     </div>
   );
@@ -872,11 +880,11 @@ function GallerySection({ slug }: { slug: string }) {
   return (
     <section className="glass-card rounded-2xl p-5 sm:p-6">
       {/* Header: título + contador X/10 */}
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
         <div className="flex items-center gap-2">
           <ImageIcon size={16} className="text-gold" />
           <h2 className="text-gold tracking-[3px] text-xs font-mono font-bold">
-            GALERÍA DE FOTOS
+            GALERÍA DEL CARRUSEL
           </h2>
         </div>
         <span className="text-xs font-mono text-white/60">
@@ -884,6 +892,16 @@ function GallerySection({ slug }: { slug: string }) {
           /{MAX_GALLERY_IMAGES} fotos
         </span>
       </div>
+
+      {/* Descripción del rol de esta sección */}
+      <p className="text-white/50 text-xs mb-4 leading-relaxed">
+        Estas fotos aparecen en el <strong className="text-white/80">carrusel inferior</strong> de tu ficha,
+        debajo de la información del local. La imagen de portada (hero) no se repite aquí.
+        <br />
+        <span className="text-amber-300/80">
+          Recomendación: muestra el interior, platos, tragos, ambiente nocturno, etc. Hasta 10 fotos.
+        </span>
+      </p>
 
       {/* Info: las fotos nuevas requieren aprobación del admin */}
       <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex gap-2">
