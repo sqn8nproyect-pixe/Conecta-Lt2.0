@@ -6165,3 +6165,22 @@ Stage Summary:
 - Los 7 locales quedan owner=admin y listos para DELEGAR a dueños reales en las pruebas (asignar → aprobar → el dueño edita su micro-landing)
 - Para añadir más licobares en el futuro: editar LICOBARS en scripts/add-licobars.ts y re-correr (idempotente)
 - OJO planner: si se agrega otra categoría hay que tocar categoryFromSlug + las 2 matrices de compatibilidad (ahora tipadas con Category, TS obliga a llenar la fila)
+
+---
+Task ID: 1
+Agent: main
+Task: Planificar "Menú Digital Interactivo" para bares/tascas (solo plan, sin implementar)
+
+Work Log:
+- Mapeada superficie de APIs: patrón owner existente = requireRole('BUSINESS_OWNER','ADMIN') + assertBusinessOwnership(user.id, slug) (ver /api/owner/businesses/[slug]/promotions)
+- Revisado OwnerDashboard.tsx: tabs por local = info / reservas / promociones / propuestas (líneas ~1963-2004)
+- Revisado Business en schema.prisma: sin campos de menú; ownerId nullable, ownerStatus APPROVED
+- Elaborado plan completo y presentado al usuario
+
+Stage Summary:
+- Alcance propuesto: categorías tasca + licobar ("bares y tascas"); licorería/discoteca fuera
+- Modelos nuevos: MenuSection + MenuItem (cascade delete) y Business.menuVisible (default false)
+- APIs: público GET /api/businesses/[slug]/menu (respeta toggle) + 5 endpoints owner bajo /api/owner/businesses/[slug]/menu/*
+- UI dueño: pestaña "Menú" en OwnerDashboard con Switch de visibilidad + editor por secciones/ítems
+- UI pública: botón "Ver Menú" + sheet en EstablishmentPage (SPA, sin rutas nuevas)
+- Orden de ejecución sugerido: Licobar primero (aprobado, pendiente) → Menú después (requiere aprobación del usuario)
