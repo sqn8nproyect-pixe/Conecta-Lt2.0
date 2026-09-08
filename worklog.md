@@ -6719,3 +6719,22 @@ Stage Summary:
 - ✅ El dueño puede rechazar con motivo (dialog con textarea max 500 chars)
 - ✅ El cliente ve el motivo del rechazo en 'Mis Reservas' (badge roja + caja con el motivo)
 - ⏳ WebSocket en tiempo real (mini-service socket.io): pendiente — las notificaciones funcionan sin él (solo requieren refresh), se puede añadir después si el usuario quiere updates en vivo sin refrescar
+
+---
+Task ID: reservas-polling-30s
+Agent: main
+Task: Polling cada 30s para reservas + notificaciones (alternativa simple a WebSocket)
+
+Work Log:
+- OwnerDashboard ReservasTab: añadido refetchInterval:30000 a la query de reservas del dueño. El dueño ve reservas nuevas aparecer en la lista dentro de los 30s sin refrescar
+- useReservationsSync (cliente): añadido refetchInterval:30000. El cliente ve cambios de status (PENDING→CONFIRMED/REJECTED) en 'Mis Reservas' dentro de los 30s, incluyendo el rejectionReason
+- useNotificationsSync (campana): añadido refetchInterval:30000. El badge de notificaciones se actualiza solo cuando llega una nueva (RESERVATION_NEW para dueño, RESERVATION_CONFIRMED/REJECTED para cliente)
+- React Query pausa el polling automáticamente cuando la pestaña está en background (refetchIntervalInBackground=false por defecto) — no desperdicia requests
+- El handler de window-focus existente sigue haciendo refetch inmediato al volver a la pestaña, para frescura extra
+- Lint limpio; commit 7fce53e pushed a origin/main
+
+Stage Summary:
+- ✅ Polling cada 30s activo en las 3 queries clave (reservas dueño, reservas cliente, notificaciones)
+- ✅ Funciona en dev y en producción (Vercel) sin infra adicional
+- ✅ Alternativa simple a WebSocket: 13 líneas cambiadas, 0 archivos nuevos, 0 mini-servicios
+- ✅ Latencia máxima percibida: 30s (aceptable para reservas de mesa)
