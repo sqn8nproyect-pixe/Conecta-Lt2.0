@@ -6398,3 +6398,21 @@ Stage Summary:
 - ✅ El fix del auth.ts (commit bd78b09) previene que vuelva a ocurrir: el demo provider ya no hace upsert/update
 - Lección: el id_token JWT almacenado por NextAuth es una fuente fiable para restaurar identidad sin re-OAuth
 - Lección para el agente: NO usar login demo programático con emails reales en pruebas — solo con usuarios seed ficticios
+
+---
+Task ID: fix-gallery-duplicados
+Agent: main
+Task: Fotos subidas por dueños aparecían duplicadas en el carrusel
+
+Work Log:
+- Diagnóstico DB licobar-punto-de-encuentro: 6 imágenes (1 COVER + 5 GALLERY). El dueño subió 1 foto (R2-backed, storageKey válido) → galleryUrls tenía 5 entradas
+- Bug encontrado en transformBusiness (business.service.ts:422-435): el código rellenaba gallery[] ciclando las imágenes existentes hasta llegar a 10. Con 5 imágenes, cada una aparecía 2 veces (5×2=10). Por eso la foto subida se veía duplicada
+- Fix aplicado: eliminado el bucle de cycling. gallery[] ahora muestra solo las imágenes reales (dedup, máx 10). Si hay 5 fotos, muestra 5 — no 10 con duplicados
+- También se aplica dedup al gallerySource para que el cover (que en el seed está como COVER Y GALLERY) no aparezca dos veces
+- Verificado vía API: gallery count pasó de 10 (con 5 duplicados) a 5 (0 duplicados). La foto subida aparece una sola vez
+- Lint limpio; commit a641c1e pushed a origin/main
+
+Stage Summary:
+- ✅ Las fotos subidas por los dueños ya no se duplican en el carrusel
+- ✅ El cover no aparece dos veces (dedup entre COVER y GALLERY)
+- El carrusel ahora muestra exactamente las fotos que el dueño subió (mínimo las placeholders del seed, máximo 10 reales)
