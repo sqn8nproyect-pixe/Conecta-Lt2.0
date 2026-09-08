@@ -381,6 +381,19 @@ export type EstablishmentWithRelations = Establishment & {
 };
 
 /**
+ * Resuelve una URL de imagen que apunte a la URL pública r2.dev
+ * (desactivada: TLS handshake failure) hacia el proxy interno
+ * /api/images/<key>, que sirve el objeto vía credenciales S3.
+ * Las URLs locales (/images/...) pasan intactas.
+ */
+function resolveImageUrl(url: string): string {
+  const marker = '.r2.dev/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+  return `/api/images/${url.slice(idx + marker.length)}`;
+}
+
+/**
  * Transform a Prisma Business (with all relations) into the frontend
  * Establishment type, including embedded offers and reviews.
  */
@@ -395,8 +408,8 @@ export function transformBusiness(
     .filter((img) => img.type === 'COVER')
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const galleryUrls = galleryImages.map((img) => img.url);
-  const coverUrls = coverImages.map((img) => img.url);
+  const galleryUrls = galleryImages.map((img) => resolveImageUrl(img.url));
+  const coverUrls = coverImages.map((img) => resolveImageUrl(img.url));
 
   // images[] — 2-3 photos, prefer GALLERY, fallback to COVER
   let imagesList: string[] = galleryUrls.slice(0, 3);
@@ -423,8 +436,9 @@ export function transformBusiness(
   }
 
   // coverImage — prefer business.coverImage, fallback to first COVER image, then first GALLERY
-  const coverImage =
-    business.coverImage ?? coverUrls[0] ?? galleryUrls[0] ?? '';
+  const coverImage = resolveImageUrl(
+    business.coverImage ?? coverUrls[0] ?? galleryUrls[0] ?? '',
+  );
 
   // ── Phone ─────────────────────────────────────────────────
   const phoneSocial = business.socials.find((s) => s.type === 'PHONE');

@@ -6033,3 +6033,27 @@ Stage Summary:
 - Token configurado de forma segura (no en .git/config, no en código)
 - Rebase limpio, ambos conflictos resueltos
 - Listo para git push origin main
+
+---
+Task ID: fix-imagenes-r2
+Agent: Z.ai Code (principal)
+Task: Arreglar imágenes principales de Africa Burguers y Tasca Los Amigos
+
+Work Log:
+- Diagnóstico: ambos negocios tienen coverImage apuntando a r2.dev (public access del bucket NUNCA se activó según worklog r2-setup; Cloudflare responde TLS alert 40 → dominio muerto en cualquier entorno)
+- Causa raíz adicional 1: .env local fue regenerado en reset del sandbox con DATABASE_URL=file (SQLite), sin R2_* ni Neon. Restaurado Neon desde worklog (password npg_wCaURxpW72QP sigue válido, verificado)
+- Causa raíz adicional 2: el shell del sandbox exporta DATABASE_URL=file como env var → tiene precedencia sobre .env → el server nunca veía Neon. Fix: script dev ahora usa `env -u DATABASE_URL -u DIRECT_URL`
+- Causa raíz adicional 3: commit checkpoint local d5e1bb0 BORRÓ /api/upload/presign (que ad6f171 había restaurado). Restaurado desde ad6f171
+- Creado proxy /api/images/[...key] (GET): sirve objetos R2 vía credenciales S3 del server; valida prefijos businesses/ y promotions/, bloquea path traversal, cache immutable
+- Agregado getR2Object() a src/lib/r2.ts (GetObjectCommand, null si NoSuchKey)
+- transformBusiness: resolveImageUrl() convierte URLs *.r2.dev/* → /api/images/* (aplica a gallery, cover y business.coverImage)
+- generatePresignedUploadUrl: publicUrl ahora /api/images/<key> (subidas futuras quedan con URL proxy relativa)
+- Fallback UI: image-fallback.ts con placeholder por categoría (tasca/licorería/discoteca); aplicado onError en HomePage (2 imgs), EstablishmentPage hero, PhotoGallery (grid + lightbox)
+- Verificado en navegador: age gate → home sin imágenes rotas → detalle Africa Burguers OK (placeholder local; en producción foto real vía proxy con R2_* de Vercel)
+- Lint limpio
+
+Stage Summary:
+- El sistema de imágenes ya NO depende del acceso público r2.dev
+- Local: placeholders por fallback (R2 no configurado en sandbox). Producción: fotos reales vía proxy con las credenciales R2 de Vercel
+- Presign restaurado + dev script inmune a env var DATABASE_URL del sandbox
+- Pendiente usuario: si al desplegar las fotos siguen sin verse, verificar/rotar R2_ACCESS_KEY_ID/SECRET en Vercel

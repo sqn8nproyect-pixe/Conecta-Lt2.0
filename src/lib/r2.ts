@@ -9,7 +9,7 @@
 //      para registrar la URL en la base de datos
 // ─────────────────────────────────────────────────────────────
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // ─── Configuración R2 ───────────────────────────────────────
@@ -106,8 +106,10 @@ export async function generatePresignedUploadUrl(
 
   const uploadUrl = await getSignedUrl(client, command, { expiresIn });
 
-  // Construir la URL pública final
-  const publicUrl = `${R2_PUBLIC_URL}/${key}`;
+  // URL pública final: se sirve a través del proxy interno de la app
+  // porque la URL pública r2.dev del bucket está desactivada.
+  // Relativa a propósito → funciona en cualquier dominio donde corra la app.
+  const publicUrl = `/api/images/${key}`;
 
   return { uploadUrl, publicUrl, key };
 }
@@ -126,4 +128,42 @@ export async function deleteObject(key: string): Promise<void> {
       Key: key,
     }),
   );
+}
+
+/**
+ * Lee un objeto de R2 por su clave (usado por el proxy /api/images/[...key]).
+ * Necesario porque la URL pública r2.dev del bucket está desactivada:
+ * las imágenes se sirven a través de la app usando las credenciales S3.
+ *
+ * @param key — Ruta/clave del objeto en el bucket (ej: 'businesses/x/cover/uuid.png')
+ * @returns Stream del objeto + tipo MIME, o null si no existe
+ */
+export async function getR2Object(
+  key: string,
+): Promise<{
+  body: ReadableStream<Uint8Array>;
+  contentType: string | null;
+  contentLength: number | null;
+} | null> {
+  if (!isR2Configured()) return null;
+  const client = getS3Client();
+
+  try {
+    const result = await client.send(
+      new GetObjectCommand({
+        Bucket: R2_BUCKET_NAME!,
+        Key: key,
+      }),
+    );
+    if (!result.Body) return null;
+    return {
+      body: result.Body as ReadableStream<Uint8Array>,
+      contentType: result.ContentType ?? null,
+      contentLength: result.ContentLength ?? null,
+    };
+  } catch (err) {
+    const name = (err as { name?: string }).name ?? '';
+    if (name === 'NoSuchKey') return null;
+    throw err;
+  }
 }

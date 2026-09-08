@@ -21,6 +21,7 @@ import type {
 import { NightPlanner } from '@/components/planner/NightPlanner';
 import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
 import { CapacityBadge } from '@/components/establishment/CapacityBadge';
+import { imageFallback } from '@/components/conecta/image-fallback';
 import {
   Select,
   SelectContent,
@@ -299,6 +300,7 @@ export function HomePage() {
                           src={item.business.coverImage}
                           alt={item.business.name}
                           loading="lazy"
+                          onError={imageFallback(item.business.category)}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -460,6 +462,7 @@ export function HomePage() {
                           src={est.coverImage}
                           alt={est.name}
                           loading="lazy"
+                          onError={imageFallback(est.category)}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />

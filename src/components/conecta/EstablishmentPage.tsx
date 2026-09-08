@@ -40,6 +40,7 @@ import { useAnalytics } from '@/lib/hooks/use-analytics';
 import { fetchBusinessBySlug, createReview, fetchBusinessViews, reportCapacity } from '@/lib/api';
 import type { BookingData, CapacityLevel, CouponRedemption, Offer, Review } from '@/lib/types';
 import { ValuePropositionBanner } from '@/components/establishment/ValuePropositionBanner';
+import { imageFallback } from '@/components/conecta/image-fallback';
 import { PhotoGallery } from '@/components/establishment/PhotoGallery';
 import { SocialContactPanel } from '@/components/establishment/SocialContactPanel';
 import { CapacityBadge } from '@/components/establishment/CapacityBadge';
@@ -525,6 +526,7 @@ export function EstablishmentPage() {
           <motion.img
             key={activePhotoIndex}
             src={est.images[activePhotoIndex]}
+            onError={imageFallback(est.category)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -848,6 +850,7 @@ export function EstablishmentPage() {
               {/* Photo Gallery — 10 immersive photos with lightbox */}
               <PhotoGallery
                 images={est.gallery}
+                category={est.category}
                 establishmentName={est.name}
               />
             </div>

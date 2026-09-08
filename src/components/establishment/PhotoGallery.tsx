@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
+import { imageFallback } from '@/components/conecta/image-fallback';
 
 interface PhotoGalleryProps {
   images: string[];
   establishmentName: string;
+  category?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ interface PhotoGalleryProps {
  *
  * Atomic & scalable: works with any number of images (5, 10, 20…).
  */
-export function PhotoGallery({ images, establishmentName }: PhotoGalleryProps) {
+export function PhotoGallery({ images, establishmentName, category }: PhotoGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const isOpen = lightboxIndex !== null;
 
@@ -88,6 +90,7 @@ export function PhotoGallery({ images, establishmentName }: PhotoGalleryProps) {
               src={src}
               alt={`${establishmentName} — foto ${idx + 1}`}
               loading="lazy"
+              onError={imageFallback(category)}
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -143,6 +146,7 @@ export function PhotoGallery({ images, establishmentName }: PhotoGalleryProps) {
               key={lightboxIndex}
               src={images[lightboxIndex]}
               alt={`${establishmentName} — foto ${lightboxIndex + 1}`}
+              onError={imageFallback(category)}
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.25 }}
