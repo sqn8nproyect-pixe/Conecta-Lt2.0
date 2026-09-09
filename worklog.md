@@ -6967,3 +6967,35 @@ Stage Summary:
 - ✅ El público ve los archivos aprobados como tab 'Fotos de la carta' en el menú
 - ✅ Coexistencia: carta manual + archivos, o solo una de las dos
 - ⏳ PUSH PENDIENTE: commit 44e8f32 local esperando nuevo PAT de GitHub
+
+---
+Task ID: menu-archivos-push-produccion
+Agent: main (Z.ai Code)
+Task: Configurar nuevo PAT de GitHub, hacer push del feature de archivos de menú (pendiente de la sesión anterior), verificar el feature E2E en producción y arreglar el bug de admin detectado durante la verificación
+
+Work Log:
+- Configurado nuevo PAT del usuario en ~/.git-credentials (el anterior fue revocado)
+- Descubierto que el feature menu-archivos-3 YA estaba commiteado localmente (44e8f32) — solo faltaba el push
+- Push 7afa5d4 -> origin/main (feature completo + worklog); Vercel deploy automático
+- Verificado deploy en producción: GET /api/businesses/tasca-los-amigos/menu devuelve campo menuFiles (~25s después del push)
+- E2E COMPLETO EN PRODUCCIÓN (Vercel + Neon + R2 reales):
+  * Login demo cerotraba@gmail.com (dueña de licobar-punto-de-encuentro/Licobar JJ) → 200, role BUSINESS_OWNER
+  * POST /api/upload/presign {fileType:application/pdf, imageType:MENU} → 200 con key businesses/{slug}/menu/{uuid}.pdf
+  * PUT a R2 → 200; proxy /api/images/... sirve el PDF con content-type application/pdf
+  * POST images {type:MENU} → 201, approvalStatus PENDING
+  * GET público del menú con menuVisible=false → menuFiles:0 (menú oculto no expone archivos — correcto)
+  * Login admin sqn8nproyect@gmail.com → approve del archivo → APPROVED con approvedById/approvedAt
+  * Admin sube PNG MENU a tasca-los-amigos (menú visible) → auto-APPROVED → API pública devuelve menuFiles:1 → exposición pública verificada
+  * Limpieza total: 3 DELETE (200) — incluido 1 archivo de prueba huérfano de la sesión anterior que quedó en Licobar JJ; proxy R2 403 (objetos borrados); API pública menuFiles:0
+- BUG ENCONTRADO Y FIXEADO durante la verificación:
+  * Síntoma: admin (sqn8nproyect@gmail.com) recibía 403 al registrar imágenes en negocios ajenos
+  * Causa: requireRole() lee el role del JWT (ADMIN vía isAdminEmail) pero assertBusinessOwnership() leía el role SOLO de la DB (BUSINESS_OWNER, dato pre-RBAC) → inconsistencia
+  * Fix código (efcf2e2): assertBusinessOwnership ahora acepta si db.role==='ADMIN' OR isAdminEmail(email) — ADMIN_EMAILS es la single source of truth
+  * Fix dato: UPDATE user SET role='ADMIN' WHERE email='sqn8nproyect@gmail.com' (aplicado a Neon en vivo)
+- Commit efcf2e2 pushed a origin/main
+
+Stage Summary:
+- ✅ Feature "subir hasta 3 archivos con el menú" LIVE EN PRODUCCIÓN (backend + UI dueño + visor público)
+- ✅ Verificación E2E en producción completa: presign MENU+PDF → R2 → registro PENDING → admin approve → APPROVED → menú público expone menuFiles → delete limpia DB+R2
+- ✅ Bug de inconsistencia de roles JWT-vs-DB fixeado (código + dato); el admin ya puede gestionar cualquier local
+- ✅ Producción limpia (0 archivos de prueba residuales)
