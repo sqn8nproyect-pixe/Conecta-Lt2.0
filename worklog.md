@@ -6877,3 +6877,69 @@ Stage Summary:
 - ✅ Si el dueño entró desde su panel con el buscador: mismo flujo, mismo botón 'Confirmar llegada'
 - ✅robots noindex: las reservas no aparecen en Google
 - 🔒 Cierre de la sesión: sistema de reservas completo end-to-end (crear → notificar → rechazar → QR → validar llegada)
+
+---
+Task ID: menutab-menu-files
+Agent: conecta-frontend (Z.ai Code)
+Task: Sección "Carta en archivos (opcional)" en MenuTab — subida de hasta 3 archivos (JPG/PNG/WebP/PDF) de la carta física, con moderación, badges de aprobación y delete optimista
+
+Work Log:
+- Leído worklog.md (contexto: backend ya listo — ImageType.MENU, presign con PDF (R2 key `businesses/{slug}/menu/{uuid}.{ext}`), POST images con límite 3 + 409, GET owner images devuelve approvalStatus, endpoint público devuelve menuFiles). Leídos: MenuTab.tsx (1438 líneas), image-upload-zone.tsx, api.ts (helpers fetchBusinessImages/deleteBusinessImage/presignUpload), OwnerDashboard.tsx (ImageSection/GallerySection como referencia de badges + delete optimista), schema.prisma (BusinessImage.approvalStatus), route.ts de images (contrato GET/POST/DELETE), r2.ts (publicUrl relativo `/api/images/${key}`).
+- src/components/conecta/owner/MenuTab.tsx (+281 líneas):
+  * Header comment actualizado (nueva sección documentada).
+  * Imports: lucide CheckCircle/Clock/FileText/Info/X/XCircle; `deleteBusinessImage, fetchBusinessImages` de @/lib/api; `ImageUploadZone`.
+  * Constantes: `QK_OWNER_IMAGES(slug) = ['owner','images',slug]` (misma clave que la galería de OwnerDashboard → caché compartida/invalidación cruzada) y `MAX_MENU_FILES = 3` (espejo del backend).
+  * Tipos: `ImageApprovalStatus` ('PENDING'|'APPROVED'|'REJECTED'), `OwnerImageWithApproval` (fila completa del GET con approvalStatus, type-assert en queryFn — mismo approach que OwnerDashboard), `MenuFileImage` (proyección UI). Helper `isPdfUrl(url)`: los publicUrl de R2 son relativos (`/api/images/businesses/{slug}/menu/{uuid}.pdf`) → new URL() lanza, así que try/catch con fallback a endsWith('.pdf').
+  * useQuery de imágenes (queryKey ['owner','images',slug], staleTime 30s) + filter type==='MENU' → menuFileImages; fileCount/filesAtLimit derivados (cuentan TODOS los estados — el backend también cuenta PENDING/REJECTED hacia el límite de 3). Estado `filesOpen` (colapsable, abierto por defecto).
+  * menuFileDeleteMutation: delete optimista con cancelQueries → setQueryData filter → rollback en onError → invalidate en onSettled; toasts 'Archivo eliminado' / error.
+  * UI: nueva `<section glass-card>` DESPUÉS del editor de secciones, ANTES de los dialogs. Header estilo CARTA DIGITAL (FileText gold + mono tracking-[3px] "CARTA EN ARCHIVOS" + chip "(opcional)") + contador "X/3 archivos" (estilo galería) + Button ghost chevron colapsable (aria-expanded + aria-label).
+  * Contenido colapsado→expandido: serif "Carta en archivos (opcional)"; descripción exacta pedida (5 MB c/u, pestaña adicional en carta pública); nota de convivencia en itálica "Tu carta puede tener secciones manuales, archivos, o ambos."; info box amber (border-amber-500/30 bg-amber-500/10 + Info icon) sobre moderación del admin (mismo estilo que galería).
+  * ImageUploadZone compact con businessSlug/imageType="MENU"/maxFiles=3/currentImages=menuFileImages/onImageDelete→mutation/onUploadComplete→invalidate ['owner','images',slug] + ['business',slug]. Oculto a 3/3 → mensaje dashed "Has alcanzado el límite de 3 archivos…" (igual patrón que galería).
+  * Grid de miniaturas grid-cols-2 sm:grid-cols-3: imágenes con <img object-cover loading=lazy>; PDFs con FileText 28px sobre fondo neutro + "Documento PDF" (no se puede thumbnailar PDF). Badges idénticos a galería: Pendiente (bg-amber-500/90 Clock) / Aprobada (bg-emerald-500/90 CheckCircle) / Rechazada (bg-red-500/90 XCircle, tile opacity-60). Delete circular rojo top-right en hover (focus:opacity-100 para teclado).
+- src/components/ui/image-upload-zone.tsx (completar soporte PDF que la tarea daba por hecho a medias):
+  * accept del input condicional: MENU incluye application/pdf (sin esto el file picker bloqueaba PDFs).
+  * Hint "Usa JPG, PNG, WebP o PDF — máx. 5 MB" para MENU ("JPG, PNG o WebP" para el resto) + "Subiendo archivo…" para MENU.
+  * Preview local solo para imágenes (isPdf → objectUrl null; un blob PDF en <img> se ve roto) + revoke condicional en finally.
+  * Toast de éxito "Archivo subido correctamente" para MENU; NUEVO catch general en handleFile para que errores del registro en DB (ej. 409 límite) muestren toast (antes eran unhandled rejection silencioso).
+- src/lib/api.ts (solo firma del cliente, NO backend): presignUpload ahora acepta imageType 'MENU' — alineaba el tipo del cliente con el backend ya actualizado; arregla 2 TS errors pre-existentes en image-upload-zone.tsx (ImageUploadType incluye MENU pero presignUpload no lo aceptaba).
+- Sin tocar: rutas API, schema.prisma, r2.ts, services, BusinessMenuSheet (todo eso es del agente backend anterior, sin commitear). No creados archivos de test.
+- Verificación: `bun run lint` → 0 errores/warnings. `npx tsc --noEmit` → 0 errores en archivos tocados (quedan 15 pre-existentes en archivos ajenos: scripts, presign route [backend, fuera de alcance], Matchmaker, PublicReservationCard, etc.). dev.log compila limpio (✓ Compiled). R2 credential warning en /api/images es pre-existente (R2_ACCESS_KEY_ID con length 34 — env, no código).
+
+Stage Summary:
+- ✅ Nueva sección colapsable "Carta en archivos (opcional)" en la pestaña Menú del dueño, tras el editor de secciones: header gold mono + contador X/3 + chevron
+- ✅ Subida de hasta 3 archivos (JPG/PNG/WebP/PDF ≤5MB) vía ImageUploadZone (type MENU, compact); oculta a 3/3 con mensaje de límite; backend 409 también ahora muestra toast (catch nuevo)
+- ✅ Miniaturas con badge de moderación (Pendiente/Aprobada/Rechazada) y delete en hover con update optimista + rollback; los PDF muestran icono FileText + "Documento PDF"
+- ✅ Convivencia explícita: nota "Tu carta puede tener secciones manuales, archivos, o ambos" — las secciones manuales no se tocan
+- ✅ Caché compartida con la galería (['owner','images',slug]) → uploads/borrados se sincronizan con OwnerDashboard y la ficha pública (['business',slug])
+- ✅ ImageUploadZone completado para PDF (accept, hint, preview, toasts) + api.ts presignUpload acepta MENU (2 TS errors pre-existentes arreglados)
+- ⏳ El preview dialog del dueño sigue mostrando solo secciones manuales (los archivos viven en su propia sección; la pestaña de archivos en el sheet público ya la renderiza el backend/BusinessMenuSheet)
+---
+Task ID: menusheet-menu-files-public
+Agent: conecta-frontend (Z.ai Code)
+Task: Mostrar archivos de carta subidos (fotos/PDF) como pestaña "Fotos de la carta" en el visor público BusinessMenuSheet
+
+Work Log:
+- Leído worklog.md + BusinessMenuSheet.tsx completo (sheet 85vh, fetch lazy React Query enabled:open, tabs sticky con scroll-spy por refs, estados skeleton/vacío/error)
+- src/lib/types.ts: nueva interface MenuFileData (id, url, sortOrder, createdAt opcional — el schema BusinessImage NO tiene createdAt y la UI no lo consume) + BusinessMenu.menuFiles?: MenuFileData[] (opcional → MenuTab.tsx del dueño sigue compilando sin cambios)
+- ⚠️ FIX BLOQUEANTE fuera de mi alcance nominal (backend): GET /api/businesses/[slug]/menu respondía 500 para TODOS los locales porque el select de businessImage.findMany pedía `createdAt: true`, campo inexistente en el modelo BusinessImage (PrismaClientValidationError). Removí esa línea del select (1 línea). Justificación: la verificación de esta tarea exigía la API arriba y la UI era intestable; cambio mínimo, sin tocar schema. Si se quiere createdAt real → requiere migración (decisión para main). Nota: curl de /api/images falla con 'Credential access key has length 34' — pre-existente del proxy R2, no relacionado
+- BusinessMenuSheet.tsx (todo aditivo, comportamiento existente intacto):
+  * Imports: +FileText (lucide), +MenuFileData (types). Header doc actualizado con el contrato { visible, sections, menuFiles? }
+  * Normalización defensiva menuFiles (visible + Array.isArray → EMPTY_MENU_FILES, identidad estable como EMPTY_SECTIONS)
+  * FILES_SECTION_ID='menu-files' + isPdfFile(url) → url.toLowerCase().endsWith('.pdf') (clave R2 conserva extensión)
+  * scrollTargets = secciones manuales + { id: FILES_SECTION_ID, name: 'Fotos de la carta' } al final SOLO si hasMenuFiles; tabs renderizan scrollTargets (antes sections); activeSectionId default = scrollTargets[0]; handleScroll itera scrollTargets con guard first/last type-safe (fix TS2532 de noUncheckedIndexedAccess)
+  * MenuFilesBlock: mismo header dorado mono que MenuSectionBlock + ref registrado en sectionRefs bajo FILES_SECTION_ID → tap en tab y scroll-spy funcionan idéntico a una sección manual; imágenes <figure><img loading="lazy" class="w-full h-auto rounded-xl border border-white/10 bg-white/5" alt="Foto N de la carta de X"> (sin lightbox, pinch-zoom nativo); PDFs → MenuPdfCard (bg-white/5 border-white/10 rounded-xl p-4, icono FileText gold en badge bg-gold/10, "Documento PDF" + hint, botón bg-gold text-obsidian "Abrir PDF" → window.open(url,'_blank','noopener,noreferrer'), aria-label descriptivo, target 40px)
+  * Estado vacío "Carta aún no disponible" ahora SOLO si sections.length===0 && !hasMenuFiles; menú con solo archivos → única tab auto-seleccionada (reset on open setActiveOverride(null) ya lo cubre); sin archivos → UI byte-idéntica a la previa; visible:false → sin sheet (sin cambios)
+- Verificación:
+  * bun run lint → 0 errores/0 warnings; npx tsc --noEmit → 0 errores en archivos tocados (Matchmaker.tsx arrastra 1 error pre-existente)
+  * Probe temporal de datos (creado y ELIMINADO, sin dejar código): 2 filas BusinessImage type=MENU/APPROVED en tasca-los-amigos (1 .png + 1 .pdf) → curl API devolvió menuFiles:[png sortOrder:0, pdf sortOrder:1] ordenado; limpieza → menuFiles:[]
+  * E2E con agent-browser headless: home → age gate → Tasca Los Amigos → VER MENÚ → tabs [Cervezas, Rones y Whisky, Fotos de la carta]; img con lazy+rounded verificada por DOM; botón "Abrir PDF" presente; tap tab fotos → aria-current=true; scroll al fondo del contenido → scroll-spy activa "Fotos de la carta" sola
+  * Edge "solo archivos" con mock de red (route + body estático, desecho después): sections=[] + 2 menuFiles → UNA tab "Fotos de la carta", sin empty state, imagen+PDF renderizadas
+  * Estado final API: {"visible":true,"sections":2,"menuFiles":0} → sheet sin tab de fotos, comportamiento previo intacto; dev.log compila limpio
+- Archivos: ~ src/lib/types.ts (+28), ~ src/components/conecta/BusinessMenuSheet.tsx (+140 aprox), ~ src/app/api/businesses/[slug]/menu/route.ts (-1 línea, fix 500); sin archivos nuevos en src/, sin tests, sin tocar schema.prisma ni servicios backend
+
+Stage Summary:
+- ✅ Pestaña "Fotos de la carta" al final de las tabs cuando hay archivos MENU aprobados (máx 3, filtra el backend); integrada al scroll-spy y al scroll por tap como una sección más
+- ✅ Imágenes full-width rounded-xl lazy con alt en español; PDFs como tarjeta con FileText dorado + botón gold "Abrir PDF" en pestaña nueva (noopener)
+- ✅ Edge cases cubiertos: solo archivos → única tab auto-seleccionada sin empty state; solo secciones → sin cambios; visible:false → sin sheet
+- ✅ Fix colateral de 1 línea: endpoint público de menú volvió de 500 → 200 (select createdAt inexistente en BusinessImage)
+- ✅ Lint/tsc limpios, verificación E2E headless verde, sin regresiones en el flujo previo del visor

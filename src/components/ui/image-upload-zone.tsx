@@ -14,9 +14,17 @@ import { Button } from '@/components/ui/button';
 
 // Tipos permitidos y tamaño máximo
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+// Para la carta en archivos (MENU) también se acepta PDF
+type UploadImageType = 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU';
+const ALLOWED_TYPES_MENU = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
-export type ImageUploadType = 'COVER' | 'GALLERY' | 'PROMOTION';
+export type ImageUploadType = 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU';
 
 export type CurrentImage = {
   id: string;
@@ -54,9 +62,15 @@ export function ImageUploadZone({
   // Flujo principal de subida
   const handleFile = useCallback(
     async (file: File) => {
-      // 1. Validar tipo
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        toast.error('Formato no soportado. Usa JPG, PNG o WebP.');
+      // 1. Validar tipo (MENU acepta además PDF)
+      const allowed =
+        imageType === 'MENU' ? ALLOWED_TYPES_MENU : ALLOWED_TYPES;
+      if (!allowed.includes(file.type)) {
+        toast.error(
+          imageType === 'MENU'
+            ? 'Formato no soportado. Usa JPG, PNG, WebP o PDF.'
+            : 'Formato no soportado. Usa JPG, PNG o WebP.',
+        );
         return;
       }
 
@@ -66,15 +80,24 @@ export function ImageUploadZone({
         return;
       }
 
-      // 3. Verificar límite de archivos (para galería)
-      if (imageType === 'GALLERY' && currentImages.length >= maxFiles) {
-        toast.error(`Máximo ${maxFiles} imágenes en la galería.`);
+      // 3. Verificar límite de archivos (para galería y carta)
+      if (
+        (imageType === 'GALLERY' || imageType === 'MENU') &&
+        currentImages.length >= maxFiles
+      ) {
+        toast.error(
+          imageType === 'GALLERY'
+            ? `Máximo ${maxFiles} imágenes en la galería.`
+            : `Máximo ${maxFiles} archivos de carta.`,
+        );
         return;
       }
 
-      // Mostrar preview local mientras sube
-      const objectUrl = URL.createObjectURL(file);
-      setPreview(objectUrl);
+      // Mostrar preview local mientras sube — solo para imágenes:
+      // los PDF no renderizan dentro de un <img>.
+      const isPdf = file.type === 'application/pdf';
+      const objectUrl = isPdf ? null : URL.createObjectURL(file);
+      if (objectUrl) setPreview(objectUrl);
       setUploading(true);
 
       try {
@@ -114,10 +137,19 @@ export function ImageUploadZone({
         // 7. Callback al padre
         onUploadComplete?.(presignData.publicUrl, presignData.key);
 
-        toast.success('Imagen subida correctamente');
+        toast.success(
+          imageType === 'MENU'
+            ? 'Archivo subido correctamente'
+            : 'Imagen subida correctamente',
+        );
+      } catch (err) {
+        // Errores al registrar en DB (ej. 409 límite alcanzado)
+        toast.error(
+          err instanceof Error ? err.message : 'Error al subir el archivo.',
+        );
       } finally {
         // Limpiar preview y estado
-        URL.revokeObjectURL(objectUrl);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
         setPreview(null);
         setUploading(false);
       }
@@ -212,20 +244,32 @@ export function ImageUploadZone({
               )}
               <div className="text-center">
                 <p className="text-zinc-400 text-sm">
-                  {uploading ? 'Subiendo imagen…' : 'Arrastra imágenes aquí o haz clic'}
+                  {uploading
+                    ? imageType === 'MENU'
+                      ? 'Subiendo archivo…'
+                      : 'Subiendo imagen…'
+                    : 'Arrastra imágenes aquí o haz clic'}
                 </p>
                 {!uploading && (
-                  <p className="text-zinc-500 text-xs mt-1">JPG, PNG o WebP — máx. 5 MB</p>
+                  <p className="text-zinc-500 text-xs mt-1">
+                    {imageType === 'MENU'
+                      ? 'Usa JPG, PNG, WebP o PDF — máx. 5 MB'
+                      : 'JPG, PNG o WebP — máx. 5 MB'}
+                  </p>
                 )}
               </div>
             </>
           )}
 
-          {/* Input oculto */}
+          {/* Input oculto (MENU acepta además PDF) */}
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={
+              imageType === 'MENU'
+                ? 'image/jpeg,image/png,image/webp,application/pdf'
+                : 'image/jpeg,image/png,image/webp'
+            }
             className="hidden"
             onChange={onInputChange}
           />

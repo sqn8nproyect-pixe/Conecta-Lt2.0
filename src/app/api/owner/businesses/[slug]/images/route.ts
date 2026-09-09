@@ -17,11 +17,15 @@ import {
 } from '@/server/services/business.service';
 
 /** Tipos de imagen aceptados en el body POST */
-type ImageTypeParam = 'COVER' | 'GALLERY';
+type ImageTypeParam = 'COVER' | 'GALLERY' | 'MENU';
 const VALID_IMAGE_TYPES: ReadonlySet<string> = new Set<ImageTypeParam>([
   'COVER',
   'GALLERY',
+  'MENU',
 ]);
+
+/** Límite de archivos de carta (MENU) por negocio */
+const MAX_MENU_FILES = 3;
 
 // ─── GET — Listar imágenes del negocio ──────────────────────
 
@@ -98,7 +102,7 @@ export async function POST(
       !VALID_IMAGE_TYPES.has(b.type)
     ) {
       return NextResponse.json(
-        { error: 'type debe ser COVER o GALLERY' },
+        { error: 'type debe ser COVER, GALLERY o MENU' },
         { status: 400 },
       );
     }
@@ -121,6 +125,22 @@ export async function POST(
       if (galleryCount >= 10) {
         return NextResponse.json(
           { error: 'Has alcanzado el límite de 10 fotos en la galería. Elimina alguna para subir una nueva.' },
+          { status: 409 },
+        );
+      }
+    }
+
+    // ── Límite: máx 3 archivos de carta (MENU) por negocio ──
+    if (imageType === 'MENU') {
+      const menuCount = await db.businessImage.count({
+        where: {
+          businessId: biz.id,
+          type: 'MENU' as ImageType,
+        },
+      });
+      if (menuCount >= MAX_MENU_FILES) {
+        return NextResponse.json(
+          { error: `Has alcanzado el límite de ${MAX_MENU_FILES} archivos de carta. Elimina alguno para subir uno nuevo.` },
           { status: 409 },
         );
       }

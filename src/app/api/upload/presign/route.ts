@@ -14,6 +14,7 @@ import {
   isR2Configured,
   generatePresignedUploadUrl,
   ALLOWED_TYPES,
+  ALLOWED_MENU_TYPES,
 } from '@/lib/r2';
 import { randomUUID } from 'crypto';
 
@@ -22,15 +23,17 @@ const EXT_MAP: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  'application/pdf': 'pdf',
 };
 
 /** Tipos de imagen aceptados en el body */
-type ImageTypeParam = 'COVER' | 'GALLERY' | 'PROMOTION';
+type ImageTypeParam = 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU';
 
 const VALID_IMAGE_TYPES: ReadonlySet<string> = new Set<ImageTypeParam>([
   'COVER',
   'GALLERY',
   'PROMOTION',
+  'MENU',
 ]);
 
 export async function POST(request: Request) {
@@ -83,13 +86,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // ── Validar fileType: para MENU se permiten además PDFs ─
+    const isMenuType = b.imageType === 'MENU';
+    const allowedForThis = isMenuType ? ALLOWED_MENU_TYPES : ALLOWED_TYPES;
     if (
       typeof b.fileType !== 'string' ||
-      !ALLOWED_TYPES.includes(b.fileType as (typeof ALLOWED_TYPES)[number])
+      !allowedForThis.includes(
+        b.fileType as (typeof allowedForThis)[number],
+      )
     ) {
       throw new Response(
         JSON.stringify({
-          error: `Tipo de archivo no permitido. Permitidos: ${ALLOWED_TYPES.join(', ')}`,
+          error: `Tipo de archivo no permitido. Permitidos: ${allowedForThis.join(', ')}`,
         }),
         { status: 400, headers: { 'content-type': 'application/json' } },
       );
@@ -101,7 +109,7 @@ export async function POST(request: Request) {
     ) {
       throw new Response(
         JSON.stringify({
-          error: 'imageType debe ser COVER, GALLERY o PROMOTION',
+          error: 'imageType debe ser COVER, GALLERY, PROMOTION o MENU',
         }),
         { status: 400, headers: { 'content-type': 'application/json' } },
       );
@@ -150,10 +158,13 @@ export async function POST(request: Request) {
       case 'GALLERY':
         key = `businesses/${businessSlug}/gallery/${uuid}.${ext}`;
         break;
+      case 'MENU':
+        key = `businesses/${businessSlug}/menu/${uuid}.${ext}`;
+        break;
       default:
         throw new Response(
           JSON.stringify({
-            error: 'imageType debe ser COVER, GALLERY o PROMOTION',
+            error: 'imageType debe ser COVER, GALLERY, PROMOTION o MENU',
           }),
           { status: 400, headers: { 'content-type': 'application/json' } },
         );

@@ -29,7 +29,29 @@ export async function GET(
     }
 
     const sections = await getBusinessMenu(business.id);
-    return NextResponse.json({ visible: true, sections });
+
+    // Archivos de carta subidos por el dueño (máx 3, tipo MENU).
+    // Solo se exponen los APPROVED — los PENDING/REJECTED no son
+    // visibles al público (mismo criterio que fotos de galería).
+    const menuFiles = await db.businessImage.findMany({
+      where: {
+        businessId: business.id,
+        type: 'MENU',
+        approvalStatus: 'APPROVED',
+      },
+      select: {
+        id: true,
+        url: true,
+        sortOrder: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    return NextResponse.json({
+      visible: true,
+      sections,
+      menuFiles,
+    });
   } catch (e) {
     console.error('GET /api/businesses/[slug]/menu error:', e);
     return NextResponse.json(

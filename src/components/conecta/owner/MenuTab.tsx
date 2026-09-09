@@ -12,6 +12,10 @@
 //   - Secciones: crear, renombrar, reordenar (↑/↓), borrar
 //   - Ítems: crear, editar, disponible / destacado (toggles),
 //     reordenar (↑/↓), borrar
+//   - Carta en archivos (opcional): hasta 3 fotos/PDF de la carta
+//     física vía ImageUploadZone (type MENU) — conviven con las
+//     secciones manuales; los archivos requieren aprobación del
+//     admin (mismo flujo que la galería de fotos).
 //   - Vista previa: render de la carta como la ve el público
 //
 // Feedback: addNotification del store global (mismo mecanismo que
@@ -24,19 +28,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   BookOpen,
+  CheckCircle,
   ChevronDown,
   ChevronUp,
+  Clock,
   Eye,
   EyeOff,
+  FileText,
+  Info,
   Pencil,
   Plus,
   Save,
   Star,
   Trash2,
   Utensils,
+  X,
+  XCircle,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import type { BusinessMenu, MenuItemData, MenuSectionData } from '@/lib/types';
+import { deleteBusinessImage, fetchBusinessImages } from '@/lib/api';
+import { ImageUploadZone } from '@/components/ui/image-upload-zone';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +81,9 @@ import {
 
 const QK_OWNER_MENU = (slug: string) => ['owner', 'menu', slug] as const;
 
+/** Misma clave que la galería de OwnerDashboard → caché compartida. */
+const QK_OWNER_IMAGES = (slug: string) => ['owner', 'images', slug] as const;
+
 /** Nombre de sección/ítem: 1–60 caracteres (valida también el backend). */
 const NAME_MAX = 60;
 /** Descripción de ítem: máx 200 caracteres. */
@@ -78,6 +93,8 @@ const PRICE_MAX = 999.99;
 /** Límites anti-abuso del backend (menu.service.ts). */
 const MAX_SECTIONS = 20;
 const MAX_ITEMS_PER_SECTION = 60;
+/** Límite de archivos de carta (MENU) por negocio — espejo del backend. */
+const MAX_MENU_FILES = 3;
 
 type MoveDirection = -1 | 1;
 
@@ -158,6 +175,49 @@ function applyItemPatch(
       ),
     })),
   };
+}
+
+// ─── Carta en archivos (MENU) ─────────────────────────────────
+
+// Espejo de `ImageApprovalStatus` en prisma/schema.prisma:
+//   PENDING → revisión del admin · APPROVED → visible al público
+//   REJECTED → el admin la rechazó (no se publica)
+type ImageApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+/**
+ * Fila que devuelve GET /api/owner/businesses/[slug]/images (modelo
+ * completo de Prisma, incluye approvalStatus). Se aserta el tipo en
+ * el queryFn porque `fetchBusinessImages` aún no expone el campo —
+ * mismo approach que la galería de OwnerDashboard.
+ */
+type OwnerImageWithApproval = {
+  id: string;
+  url: string;
+  type: string;
+  sortOrder: number;
+  storageKey: string;
+  approvalStatus: ImageApprovalStatus;
+  approvedAt?: string | null;
+};
+
+/** Archivo de carta ya proyectado para la UI (thumb + badge). */
+type MenuFileImage = {
+  id: string;
+  url: string;
+  type: string;
+  approvalStatus: ImageApprovalStatus;
+};
+
+/**
+ * Los PDF no renderizan dentro de un <img>: detectarlos por la
+ * extensión del publicUrl de R2 (`businesses/{slug}/menu/{uuid}.pdf`).
+ */
+function isPdfUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.pdf');
+  } catch {
+    return url.toLowerCase().endsWith('.pdf');
+  }
 }
 
 // ─── Acciones que el dueño puede disparar sobre un ítem ───────
@@ -547,6 +607,30 @@ export function MenuTab({ slug, businessName }: MenuTabProps) {
     staleTime: 15_000,
   });
 
+  // ── GET: archivos de carta (MENU) — misma query que la galería ──
+  // Devuelve TODAS las imágenes del negocio (incluye PENDING y
+  // REJECTED); aquí solo nos interesan las de tipo MENU.
+  const {
+    data: ownerImages = [],
+    isLoading: filesLoading,
+  } = useQuery<OwnerImageWithApproval[]>({
+    queryKey: QK_OWNER_IMAGES(slug),
+    queryFn: () =>
+      fetchBusinessImages(slug) as Promise<OwnerImageWithApproval[]>,
+    staleTime: 30_000,
+  });
+
+  const menuFileImages: MenuFileImage[] = ownerImages
+    .filter((img) => img.type === 'MENU')
+    .map((img) => ({
+      id: img.id,
+      url: img.url,
+      type: img.type,
+      approvalStatus: img.approvalStatus ?? 'APPROVED',
+    }));
+  const fileCount = menuFileImages.length;
+  const filesAtLimit = fileCount >= MAX_MENU_FILES;
+
   // ── Estado local de dialogs y formularios ───────────────────
   const [sectionDialog, setSectionDialog] = useState<SectionDialogState | null>(null);
   const [sectionName, setSectionName] = useState('');
@@ -559,6 +643,8 @@ export function MenuTab({ slug, businessName }: MenuTabProps) {
   const [deleteSectionTarget, setDeleteSectionTarget] = useState<MenuSectionData | null>(null);
   const [deleteItemTarget, setDeleteItemTarget] = useState<MenuItemData | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  /** Sección "Carta en archivos" colapsable (abierta por defecto). */
+  const [filesOpen, setFilesOpen] = useState(true);
 
   const visible = menu?.visible ?? false;
   const sections = menu?.sections ?? [];
@@ -899,6 +985,37 @@ export function MenuTab({ slug, businessName }: MenuTabProps) {
     },
   });
 
+  // ── Mutación: borrar archivo de carta (optimista, con rollback) ──
+  const menuFileDeleteMutation = useMutation({
+    mutationFn: (imageId: string) => deleteBusinessImage(slug, imageId),
+    onMutate: async (imageId) => {
+      await queryClient.cancelQueries({ queryKey: QK_OWNER_IMAGES(slug) });
+      const prev = queryClient.getQueryData<OwnerImageWithApproval[]>(
+        QK_OWNER_IMAGES(slug),
+      );
+      queryClient.setQueryData<OwnerImageWithApproval[]>(
+        QK_OWNER_IMAGES(slug),
+        (old) => (old ? old.filter((img) => img.id !== imageId) : old),
+      );
+      return { prev };
+    },
+    onSuccess: () => {
+      addNotification('Archivo eliminado', 'success');
+    },
+    onError: (err, _imageId, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(QK_OWNER_IMAGES(slug), ctx.prev);
+      }
+      addNotification(
+        err instanceof Error ? err.message : 'Error al eliminar el archivo',
+        'info',
+      );
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: QK_OWNER_IMAGES(slug) });
+    },
+  });
+
   // ── Busy global: deshabilita acciones mientras hay una en vuelo ──
   const busy =
     visibilityMutation.isPending ||
@@ -1165,6 +1282,170 @@ export function MenuTab({ slug, businessName }: MenuTabProps) {
           />
         ))
       )}
+
+      {/* ─── Carta en archivos (opcional): fotos/PDF de la carta física ─── */}
+      <section className="glass-card rounded-2xl p-5 sm:p-6">
+        {/* Encabezado: título + contador + colapso */}
+        <div className="flex items-center gap-2">
+          <h2 className="flex min-w-0 flex-1 items-center gap-2 font-mono text-xs font-bold tracking-[3px] text-gold">
+            <FileText size={16} className="shrink-0" aria-hidden />
+            <span className="min-w-0 truncate">CARTA EN ARCHIVOS</span>
+            <span className="shrink-0 text-[10px] font-medium tracking-normal text-white/40">
+              (opcional)
+            </span>
+          </h2>
+          <span className="shrink-0 font-mono text-xs text-white/60">
+            <span className="font-bold text-gold">{fileCount}</span>/
+            {MAX_MENU_FILES} archivos
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-white/40 hover:bg-white/5 hover:text-white"
+            onClick={() => setFilesOpen((v) => !v)}
+            aria-expanded={filesOpen}
+            aria-label={
+              filesOpen
+                ? 'Ocultar la sección de carta en archivos'
+                : 'Mostrar la sección de carta en archivos'
+            }
+            title={filesOpen ? 'Ocultar' : 'Mostrar'}
+          >
+            {filesOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </Button>
+        </div>
+
+        {filesOpen && (
+          <div className="mt-4 space-y-4">
+            {/* Descripción + nota de convivencia */}
+            <div>
+              <p className="font-serif text-lg text-white">
+                Carta en archivos (opcional)
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">
+                Sube fotos de tu carta física o un PDF. Los archivos aprobados
+                aparecen en tu carta pública como una pestaña adicional.
+                Máximo {MAX_MENU_FILES} archivos (JPG, PNG, WebP o PDF, hasta
+                5 MB c/u).
+              </p>
+              <p className="mt-1 text-xs italic leading-relaxed text-white/40">
+                Tu carta puede tener secciones manuales, archivos, o ambos.
+              </p>
+            </div>
+
+            {/* Info: moderación del admin (mismo estilo que la galería) */}
+            <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <Info size={14} className="mt-0.5 shrink-0 text-amber-300" />
+              <p className="text-xs leading-relaxed text-amber-200">
+                Los archivos serán revisados por el administrador antes de ser
+                visibles al público.
+              </p>
+            </div>
+
+            {filesLoading ? (
+              <Skeleton className="h-28 rounded-xl" />
+            ) : (
+              <>
+                {/* Zona de subida (oculta al llegar al límite de 3) */}
+                {!filesAtLimit && (
+                  <ImageUploadZone
+                    businessSlug={slug}
+                    imageType="MENU"
+                    maxFiles={MAX_MENU_FILES}
+                    currentImages={menuFileImages}
+                    onImageDelete={(id) => menuFileDeleteMutation.mutate(id)}
+                    onUploadComplete={() => {
+                      void queryClient.invalidateQueries({
+                        queryKey: QK_OWNER_IMAGES(slug),
+                      });
+                      void queryClient.invalidateQueries({
+                        queryKey: ['business', slug],
+                      });
+                    }}
+                    compact
+                  />
+                )}
+                {filesAtLimit && (
+                  <div className="rounded-xl border-2 border-dashed border-white/15 bg-white/5 p-6 text-center">
+                    <p className="text-xs text-white/50">
+                      Has alcanzado el límite de {MAX_MENU_FILES} archivos de
+                      carta. Elimina alguno para subir uno nuevo.
+                    </p>
+                  </div>
+                )}
+
+                {/* Miniaturas con badge de aprobación */}
+                {fileCount > 0 && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {menuFileImages.map((img) => {
+                      const status = img.approvalStatus;
+                      const isRejected = status === 'REJECTED';
+                      const isPdf = isPdfUrl(img.url);
+                      return (
+                        <div
+                          key={img.id}
+                          className={`group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-white/5 ${
+                            isRejected ? 'opacity-60' : ''
+                          }`}
+                        >
+                          {isPdf ? (
+                            // PDF: no hay thumbnail real → icono sobre fondo neutro
+                            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-white/[0.04] p-2 text-center">
+                              <FileText
+                                size={28}
+                                className="shrink-0 text-white/50"
+                                aria-hidden
+                              />
+                              <span className="text-[10px] font-medium leading-tight text-white/60">
+                                Documento PDF
+                              </span>
+                            </div>
+                          ) : (
+                            <img
+                              src={img.url}
+                              alt="Archivo de la carta"
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          )}
+
+                          {/* Badge de estado de aprobación */}
+                          {status === 'PENDING' && (
+                            <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-amber-950 shadow-sm backdrop-blur-sm">
+                              <Clock size={10} /> Pendiente
+                            </span>
+                          )}
+                          {status === 'APPROVED' && (
+                            <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-950 shadow-sm backdrop-blur-sm">
+                              <CheckCircle size={10} /> Aprobada
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-red-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-red-950 shadow-sm backdrop-blur-sm">
+                              <XCircle size={10} /> Rechazada
+                            </span>
+                          )}
+
+                          {/* Eliminar (aparece al hover) */}
+                          <button
+                            type="button"
+                            onClick={() => menuFileDeleteMutation.mutate(img.id)}
+                            className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 opacity-0 transition-opacity hover:bg-red-500 focus:opacity-100 group-hover:opacity-100"
+                            aria-label="Eliminar archivo de la carta"
+                          >
+                            <X size={12} className="text-white" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* ─── Dialog: crear / renombrar sección ─── */}
       <Dialog

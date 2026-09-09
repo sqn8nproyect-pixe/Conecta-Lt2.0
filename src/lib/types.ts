@@ -514,14 +514,32 @@ export interface MenuSectionData {
 }
 
 /**
+ * Archivo de carta (foto o PDF) subido por el dueño desde su panel
+ * y aprobado por moderación (tipo MENU en BusinessImage, máx 3).
+ * Se sirve vía el proxy de imágenes (`/api/images/...`); la clave
+ * R2 conserva la extensión original, por eso el tipo se deduce del
+ * sufijo de la URL (`.pdf` → documento, resto → imagen).
+ */
+export interface MenuFileData {
+  id: string;
+  url: string;
+  sortOrder: number;
+  /** No garantizado por todas las respuestas — la UI no lo consume. */
+  createdAt?: string;
+}
+
+/**
  * Payload de los endpoints de menú (público y dueño).
  * - Público: `visible` refleja Business.menuVisible — si es false,
- *   `sections` viene vacío.
- * - Dueño: `visible` es el estado actual del switch del panel.
+ *   `sections` viene vacío. `menuFiles` (opcional) son los archivos
+ *   de carta aprobados → pestaña "Fotos de la carta" en el visor.
+ * - Dueño: `visible` es el estado actual del switch del panel y
+ *   `menuFiles` puede no venir (el CRUD vive en BusinessImage).
  */
 export interface BusinessMenu {
   visible: boolean;
   sections: MenuSectionData[];
+  menuFiles?: MenuFileData[];
 }
 
 export interface AppNotification {

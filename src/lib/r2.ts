@@ -26,6 +26,18 @@ const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
 export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 /**
+ * Tipos de archivo permitidos para la carta en archivos (MENU):
+ * imágenes + PDF (los dueños pueden subir la foto de su carta física
+ * o el PDF digital).
+ */
+export const ALLOWED_MENU_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+] as const;
+
+/**
  * Tamaño máximo de imagen en bytes (5 MB).
  * Validado en el endpoint, no aquí.
  */

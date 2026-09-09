@@ -974,11 +974,12 @@ export async function updateOwnerPromotion(
 /**
  * POST /api/upload/presign — obtiene URL firmada para subir a R2.
  * Retorna { uploadUrl, publicUrl, key } o lanza error.
+ * MENU también acepta application/pdf (carta física en PDF).
  */
 export async function presignUpload(
   businessSlug: string,
   fileType: string,
-  imageType: 'COVER' | 'GALLERY' | 'PROMOTION',
+  imageType: 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU',
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const res = await fetch('/api/upload/presign', {
     method: 'POST',
