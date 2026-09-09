@@ -24,6 +24,7 @@ import type {
   SocialMedia,
 } from '@/lib/types';
 import { db } from '@/lib/db';
+import { isAdminEmail } from '@/lib/admin-config';
 import { isPromotionLive } from '@/server/repositories/promotion.repository';
 import { businessRepository } from '@/server/repositories/business.repository';
 import { analyticsRepository } from '@/server/repositories/analytics.repository';
@@ -612,12 +613,17 @@ export async function assertBusinessOwnership(
   if (!business) throw jsonError('Negocio no encontrado', 404);
 
   if (business.ownerId !== userId) {
-    // Allow ADMIN override (admin can edit any business).
+    // Allow ADMIN override (admin can edit any business). ADMIN_EMAILS is
+    // the single source of truth — check BOTH the DB role and the email
+    // allowlist so an admin whose DB role is stale (e.g. BUSINESS_OWNER
+    // from the pre-RBAC era) is still recognized.
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { email: true, role: true },
     });
-    if (user?.role !== 'ADMIN') {
+    const isAdmin =
+      user?.role === 'ADMIN' || isAdminEmail(user?.email) === true;
+    if (!isAdmin) {
       throw jsonError('No tienes permisos para gestionar este local', 403);
     }
   }
