@@ -6943,3 +6943,27 @@ Stage Summary:
 - ✅ Edge cases cubiertos: solo archivos → única tab auto-seleccionada sin empty state; solo secciones → sin cambios; visible:false → sin sheet
 - ✅ Fix colateral de 1 línea: endpoint público de menú volvió de 500 → 200 (select createdAt inexistente en BusinessImage)
 - ✅ Lint/tsc limpios, verificación E2E headless verde, sin regresiones en el flujo previo del visor
+
+---
+Task ID: menu-archivos-3
+Agent: main + 2 subagents (full-stack-developer)
+Task: Subida de hasta 3 archivos con el menú (fotos de la carta física o PDF)
+
+Work Log:
+- Sincronizado sandbox local con origin/main (dd3b04a) tras el reset del sandbox
+- Restaurado .env (Neon + pool params + NEXTAUTH_SECRET + R2 vars)
+- Reinstalado qrcode + deps (bun install)
+- Backend: r2.ts con ALLOWED_MENU_TYPES (jpg/png/webp/pdf); presign acepta imageType=MENU (key: businesses/{slug}/menu/uuid.ext); images route acepta type=MENU con límite 3 (409 si excede) + approval flow (dueño→PENDING, admin→APPROVED); menú público devuelve menuFiles (solo APPROVED, solo si menuVisible=true)
+- image-upload-zone.tsx: acepta PDF cuando imageType=MENU (accept attr + validación + límite)
+- Subagent 1 (MenuTab): sección colapsable 'CARTA EN ARCHIVOS (opcional)' con contador X/3, upload zone con PDF, thumbnails (imágenes renderizadas, PDFs con icono FileText), badges de aprobación, delete optimista
+- Subagent 2 (BusinessMenuSheet): tab 'Fotos de la carta' al final cuando hay archivos aprobados (imágenes full-width lazy, PDFs con botón 'Abrir PDF'); integrada al scroll-spy; solo-archivos → única tab sin empty state. FIX: removió createdAt del select (campo no existe en BusinessImage — bug mío que daba 500)
+- E2E verificado: presign PDF+MENU OK (key generada); PDF+GALLERY rechazado; 3 archivos registrados 201, 4to 409; archivos PENDING para dueña; admin aprueba OK; menú oculto no expone archivos
+- NOTA: el negocio licobar-punto-de-encuentro fue renombrado a 'Licobar JJ' por el usuario en sus pruebas
+- Lint limpio; commit 44e8f32 (local, push pendiente — PAT revocado)
+
+Stage Summary:
+- ✅ Los dueños pueden subir hasta 3 archivos de carta (fotos o PDF) desde MenuTab
+- ✅ Los archivos siguen el mismo flujo de moderación que las fotos
+- ✅ El público ve los archivos aprobados como tab 'Fotos de la carta' en el menú
+- ✅ Coexistencia: carta manual + archivos, o solo una de las dos
+- ⏳ PUSH PENDIENTE: commit 44e8f32 local esperando nuevo PAT de GitHub
