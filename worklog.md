@@ -6857,3 +6857,23 @@ Stage Summary:
 - ✅ API lookup respeta ownership: dueño solo ve datos de clientes de sus propios locales
 - ✅ Visitantes sin auth pueden escanear el QR y ver info pública (status, fecha, business) pero NO datos del cliente
 - Pendiente futuro: página pública /r/[code] (por ahora el QR apunta a esa URL pero la ruta no existe aún — el visitante que escanea verá 404). Se puede añadir en otra iteración
+
+---
+Task ID: pagina-publica-reserva-qr
+Agent: main
+Task: Página pública /r/[code] para escanear QR y ver/validar la reserva
+
+Work Log:
+- CREADO src/app/r/[code]/page.tsx: página server-rendered (no 'use client'). Busca la reserva por confirmationCode en la DB. Si no existe → muestra card 'Reserva no encontrada'. Si existe → renderiza <PublicReservationCard>. generateMetadata con título dinámico + robots noindex (no indexar reservas). 404 si el código no empieza con 'LT-'
+- CREADO src/components/conecta/PublicReservationCard.tsx: componente cliente. Recibe data pública del SSR. Al montar, si hay sesión, hace fetch a /api/reservations/lookup/[code] para obtener datos completos (con ownership check del backend). Si el visitante es dueño del negocio → muestra datos del cliente (nombre, teléfono, email, notas) en caja dorada + botón verde 'Confirmar llegada' (si status=CONFIRMED). Click → PATCH status COMPLETED + mensaje de confirmación. Non-owners solo ven info pública
+- UI: glass-card con cover del negocio, badge de status, QR + código en caja destacada, grid 3 cols (fecha/hora/personas), motivo del rechazo si aplica, datos del cliente (owners only), botón confirmar llegada (owners + CONFIRMED), link 'Volver a CONECTA-LT'
+- Verificado: GET /r/LT-4243-F → 200 renderiza Tasca La Cava + código. GET /r/LT-NOPE-X → 200 muestra card 'no encontrada'. GET /r/INVALID → 404. Lint limpio
+- Commit acd53ff pushed a origin/main
+
+Stage Summary:
+- ✅ Flujo del QR completo: cliente muestra QR → dueño (o cualquier visitante) escanea → cae en /r/LT-XXXX-X → ve info pública de la reserva
+- ✅ Si el visitante es el dueño del negocio: ve datos del cliente + botón 'Confirmar llegada' → marca COMPLETED
+- ✅ Si es un visitante sin auth: solo ve info pública (status, fecha, business) — no datos del cliente
+- ✅ Si el dueño entró desde su panel con el buscador: mismo flujo, mismo botón 'Confirmar llegada'
+- ✅robots noindex: las reservas no aparecen en Google
+- 🔒 Cierre de la sesión: sistema de reservas completo end-to-end (crear → notificar → rechazar → QR → validar llegada)
