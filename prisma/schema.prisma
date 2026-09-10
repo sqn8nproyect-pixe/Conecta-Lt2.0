@@ -235,6 +235,7 @@ model Business {
   proposals       BusinessProposal[]
   menuSections    MenuSection[]
   editorialPosts  EditorialPost[]
+  events          BusinessEvent[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -586,4 +587,46 @@ model EditorialPost {
 
   @@index([status, publishedAt])
   @@index([weekOf])
+}
+
+// ── EVENTOS DE NEGOCIOS (Sprint 8.7 — portada de flyers) ────
+// Cada evento de los dueños de locales se renderiza como un
+// flyer visual en la portada /editorial ("Qué hacer este fin de
+// semana"). Los campos *Label son texto pre-renderizado en
+// español (America/Caracas) para que el flyer no dependa de
+// Intl en runtime y nunca muestre una hora desfasada.
+// `theme` elige la paleta del flyer (gold, purple, red, teal...).
+
+enum BusinessEventStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model BusinessEvent {
+  id          String              @id @default(cuid())
+  business    Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+
+  title       String // "Noche de DJ en vivo"
+  tagline     String // frase corta del flyer (1 línea)
+  emoji       String              @default("🎉")
+  theme       String              @default("gold")
+
+  dayLabel    String // "VIERNES" | "SÁBADO" | "DOMINGO"
+  dateLabel   String // "11 SEP"
+  timeLabel   String // "10:00 PM"
+  startsAt    DateTime // fecha+hora real (orden interno / portada)
+
+  priceNote   String? // "Cover: $5" — solo si el dueño lo confirmó
+  promoNote   String? // "2x1 en nacionales 4 a 8 PM" / código de promo
+
+  weekOf      DateTime            @db.Date // sábado de la semana cubierta
+  sortOrder   Int                 @default(0)
+  status      BusinessEventStatus @default(PUBLISHED)
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, weekOf, startsAt])
+  @@index([businessId])
 }

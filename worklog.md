@@ -905,3 +905,24 @@ Stage Summary:
 - Post v1 en producción con SOLO hechos verificados de la DB; promos vencidas excluidas deliberadamente.
 - Cadencia semanal y 8.6 (ABM admin) pendientes de decisión del dueño; plantilla para próximas ediciones: prisma/seed-editorial.ts + bun run db:seed-editorial.
 - Pendiente menor arrastrado: 6A.1 cifra '28' en layout.tsx (hoy son 33).
+
+---
+Task ID: 8.7
+Agent: main (Super Z)
+Task: Portada editorial con 12 flyers de eventos del fin de semana (petición del dueño: "la gente no lee" — primera página visual, guía escrita como segunda página)
+
+Work Log:
+- Schema: model `BusinessEvent` (+ enum BusinessEventStatus) con campos *Label pre-renderizados en español (America/Caracas) para que el flyer nunca muestre horas desfasadas; relación `events` en Business. `prisma db push` aditivo a Neon OK + generate.
+- Seed: prisma/seed-weekend-events.ts (idempotente: local+título+weekOf → update/create). 12 eventos del 11-13 sep 2026: VIE 4 / SÁB 4 / DOM 4, en locales reales del directorio. 7 anclados a promos vigentes reales de dueños (TERRAZA17, BOTELLON24, TEQUENO2X1, BARRILITO24, DONAROSA4, FRIO6AM) y 5 de rumba de discotecas/tascas sin precios inventados. Re-run 2 veces para verificar idempotencia (0 creados, 12 actualizados). Script npm: db:seed-weekend-events agregado a package.json (mismo patrón que db:seed-editorial).
+- Componente: src/components/conecta/WeekendFlyersGrid.tsx ('use client') — grid 2/3/4 cols, 12 themes de color como clases literales en mapa (Tailwind v4 no genera clases dinámicas), flyer = <Link href="/local/slug"> real con onClick interceptado → modal (SEO-safe). Modal: día/hora, promo chip, dirección real, WhatsApp (wa.me si el local tiene teléfono), botón "Ver ficha del local", cierre Escape/backdrop/✕, scroll lock.
+- Portada: src/app/editorial/page.tsx reescrita — muro de 12 flyers + badge de rango "11 · 12 y 13 de septiembre" (parse directo de dateLabel, sin Date/Intl: bug de TZ del primer intento corregido) + CTA compacto "La guía completa" → post (segunda página). JSON-LD BreadcrumbList + ItemList (12 items → /local/[slug]). Metadata: title sin "| CONECTA-LT" (el template del layout lo duplicaba).
+- Home: widget "ESTE FIN DE SEMANA" ahora apunta a /editorial (portada flyers) en vez del post.
+- Validación: build OK (66 páginas, /editorial estática), eslint limpio, scripts/validate-weekend-flyers.mjs 27/27 (12 flyers, 6 códigos de promo, JSON-LD, CTA guía, canonical). E2E visual agent-browser: desktop 4x3, móvil 2x6, modal Medusa (purple, dirección real CC La Matica) y Africa Burguers (crimson, botón WhatsApp), Escape cierra, "Ver ficha del local" navega a /local/tasca-el-patio, widget home → portada (tras pasar el AgeGate). Sin errores de consola.
+- Nota entorno: el server standalone local necesita las env del .env (en Vercel ya están); la API /api/editorial/active devolvía DATABASE_UNAVAILABLE hasta relanzarlo con `set -a; source .env; set +a`.
+
+Stage Summary:
+- /editorial es ahora una portada visual de 12 flyers (0 párrafos largos): clic → modal → ficha/WhatsApp. La guía escrita queda como segunda página enlazada al pie.
+- El dueño tiene 12 flyers de eventos para este fin de semana (11-13 sep) listos para compartir; 7 promocionan códigos reales ya canjeables en la DB.
+- Para la próxima semana: editar prisma/seed-weekend-events.ts (títulos/horas) + re-ejecutar — mismo patrón que seed-editorial.
+- 12 eventos → sin URLs nuevas en sitemap (viven en /editorial con modal); ItemList JSON-LD enlaza a las 12 fichas.
+- Pendientes: 6A.1 cifra '28' en layout.tsx; 8.6 ABM admin de posts/eventos; datos del dueño (IG Africa Burguers, IG @puntoencuentrolt de Licobar JJ, dirección real de Medusa); revocar PAT tras confirmar deploy.

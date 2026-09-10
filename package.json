@@ -18,6 +18,7 @@
     "db:seed-notifications": "bun run prisma/seed-notifications.ts",
     "db:seed-roles": "bun run prisma/seed-roles.ts",
     "db:seed-editorial": "bun run prisma/seed-editorial.ts",
+    "db:seed-weekend-events": "bun run prisma/seed-weekend-events.ts",
     "prisma": {
       "seed": "bun run prisma/seed.ts"
     },

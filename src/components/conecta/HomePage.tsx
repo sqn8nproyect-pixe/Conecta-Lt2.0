@@ -368,11 +368,12 @@ export function HomePage() {
         </section>
       )}
 
-      {/* Sprint 8 — Editorial semanal (hidden entirely when empty). */}
+      {/* Sprint 8 — Editorial semanal (hidden entirely when empty).
+          Enlaza a la PORTADA de flyers (/editorial), no al artículo. */}
       {editorial && (
         <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-8">
           <Link
-            href={`/editorial/${editorial.slug}`}
+            href="/editorial"
             className="group block glass-card rounded-3xl p-5 sm:p-6 border border-gold/25 hover:border-gold/50 transition-colors"
           >
             <div className="flex items-center gap-4 sm:gap-6">

@@ -4,7 +4,7 @@
 > **Base:** HEAD `31c40f0` (Auth.js v5 migrado) · Neon verificado E2E (28 negocios)
 > **Actualizar tras cada sprint cerrado** — lo lee el boot de sesión vía worklog.
 >
-> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico, robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). ✅ **Sprint 8 implementado 2026-09-11** (modelo EditorialPost, `/editorial` + `/editorial/[slug]` SSG+ISR con JSON-LD Article, sitemap 37 URLs, widget "Este fin de semana" en home; post v1 seedeado con datos verificados). Pendiente: 6A.1 cifra en layout (revisar), 8.6 admin ABM de posts, cadencia semanal con el dueño.
+> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico, robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). ✅ **Sprint 8 implementado 2026-09-11** (modelo EditorialPost, `/editorial` + `/editorial/[slug]` SSG+ISR con JSON-LD Article, sitemap 37 URLs, widget "Este fin de semana" en home; post v1 seedeado con datos verificados). ✅ **8.7 portada de flyers implementada 2026-09-11** (modelo BusinessEvent, 12 eventos del 11-13 sep en `/editorial` como muro visual con modal; guía escrita queda como segunda página; widget home apunta a la portada). Pendiente: 6A.1 cifra en layout (revisar), 8.6 admin ABM de posts/eventos, cadencia semanal con el dueño.
 
 ---
 
@@ -129,9 +129,9 @@
 
 ---
 
-## Sprint 8 — Editorial "Qué hacer este fin de semana" (8-12h) — ✅ IMPLEMENTADO 2026-09-11 (8.1-8.5)
+## Sprint 8 — Editorial "Qué hacer este fin de semana" (8-12h) — ✅ IMPLEMENTADO 2026-09-11 (8.1-8.5 + 8.7 flyers)
 
-**Objetivo:** contenido fresco de long-tail SEO que enlace internamente a los locales (el formato exacto del título captura búsquedas locales semanales).
+**Objetivo:** contenido fresco de long-tail SEO que enlace internamente a los locales (el formato exacto del título captura búsquedas locales semanales). **Refinamiento 8.7:** la gente no lee — la primera pantalla es un muro de 12 flyers visuales con los eventos de los dueños; la guía escrita queda como segunda página.
 
 **Fases (entregable incremental):**
 
@@ -143,11 +143,13 @@
 | 8.4 Post v1 curado | seed | Primer post real: "Qué hacer este fin de semana en Los Teques (18-19 sep)" — **requiere datos del usuario** (eventos/promos reales de la semana) |
 | 8.5 Widget home | `HomePage.tsx` | Card "Este fin de semana" enlazando al post activo (frescura + internal linking desde la home) |
 | 8.6 (futuro) Admin | AdminDashboard | ABM de posts — defer a sprint posterior |
+| 8.7 ✅ Portada de flyers | `BusinessEvent` + `WeekendFlyersGrid` | 12 eventos de los dueños como flyers (grid 2/3/4 cols, 12 themes de color, modal con promo/WhatsApp/ficha). 7 de 12 anclados a promos vigentes reales (códigos en DB). `prisma/seed-weekend-events.ts` idempotente |
 
 **Criterios de done:**
 - [x] Post v1 publicado en `/editorial/[slug]`, indexable, con 3+ links a /local/[slug] — **15 links internos** (body markdown + sección "Locales mencionados")
 - [x] Sitemap incluye el post (37 URLs: 3 estáticas + 33 fichas + 1 post)
 - [x] JSON-LD Article válido (validado E2E: scripts/validate-editorial.mjs 25/25)
+- [x] 8.7: portada `/editorial` = 12 flyers con modal (validate-weekend-flyers.mjs 27/27; E2E visual desktop/móvil; widget home → `/editorial`)
 - [ ] Cadencia semanal definida con el dueño (quién escribe, cuándo) — **pendiente decisión del dueño**; mientras tanto, `prisma/seed-editorial.ts` es la plantilla: se cambia el contenido y `weekOf`, se re-ejecuta (`bun run db:seed-editorial`)
 
 **Notas de implementación (2026-09-11):**
