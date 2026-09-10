@@ -9,9 +9,9 @@
 **Tareas en esta sesión:** 6
 **Chat:** restauración + blindaje (chat original murió el 10-Sep — ver RECOVERY.md)
 
-**Estado del workspace:** 🟢 estable — código = producción (d273e29) + commit local de prevención `68916b6` (push pendiente de PAT)
+**Estado del workspace:** 🟢 estable — código = producción (d273e29) + 2 commits locales de infraestructura sin push: `68916b6` (RECOVERY.md + archivo worklog) y `73cbb9c` (protocolo automatizado boot/health/task)
 
-**En vuelo ahora mismo:** nada — todas las tareas cerradas
+**En vuelo ahora mismo:** nada — protocolo de sesión automatizado recién terminado y probado
 
 **Siguiente paso acordado:** por decidir (candidatas: Sprint 6 Night Route multi-paradas, migración Auth.js v5)
 
