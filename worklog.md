@@ -334,3 +334,18 @@ Stage Summary:
 - Protocolo nuevo: usuario dice "boot" → contexto completo automático en ~30s; tras cada tarea → bun run task da advertencias ANTES de que el chat muera; health >=6 tareas 🔴 obliga a abrir chat nuevo con push previo
 - Con handoff+boot+health, ningún chat nuevo necesita restaurar nada: contexto completo en 1 comando
 - Commit local pendiente de push con próximo PAT
+
+---
+Task ID: push-infraestructura-2026-09-10
+Agent: main (sesión restaurada)
+Task: Push de los commits de prevención + protocolo automatizado a GitHub y verificación de deploy
+
+Work Log:
+- Fetch con PAT para confirmar que origin/main no se movió (0 detrás)
+- Inspeccionados los 2 auto-snapshots UUID antes de subir (worklog + capturas — inofensivos)
+- Push d273e29..c400301 → origin/main OK (5 commits: 3 reales + 2 snapshots)
+- Producción verificada post-deploy: conectalt.com HTTP 200, vercel.app HTTP 200
+
+Stage Summary:
+- Local = remoto = producción. Cero trabajo en riesgo
+- Usuario debe revocar el PAT de escritura YA
