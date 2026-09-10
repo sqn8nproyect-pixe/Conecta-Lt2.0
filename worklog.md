@@ -470,3 +470,32 @@ Stage Summary:
 - Ordenanza completa aplicada: licorería 11-21 Lun-Sáb / licobar 11-23:59 / tasca 11-01(+1) / discoteca 19-03(+1)
 - Decisión documentada: medianoche = '23:59' en DB para no romper planner.availability.ts
 - Interpretación a confirmar con usuario: "12:00pm" = medianoche (no mediodía)
+
+---
+Task ID: horarios-alcaldia-confirmacion
+Agent: main
+Task: Cierre de la ordenanza de horarios
+
+Work Log:
+- Usuario confirmó interpretación: "12:00pm" = medianoche
+- Sin cambios adicionales: DB queda con horarios v2 definitivos
+
+Stage Summary:
+- Ordenanza de la Alcaldía 100% aplicada y confirmada (commits 8a225c9, dbdc327)
+
+---
+Task ID: saneamiento-cifra-descripciones
+Agent: main
+Task: Cifra 21→28 en UI + auditoría y corrección de descripciones
+
+Work Log:
+- Corregida meta description en src/app/layout.tsx: "21 mejores licorerías, tascas y discotecas" → "28 mejores locales: licorerías, tascas, licobares y discotecas con horarios verificados" (añadida categoría licobar que faltaba)
+- Verificado: era la única cifra errónea user-facing; src/lib/data.ts es código muerto (0 imports, candidato a eliminar)
+- Creado scripts/audit-descriptions.js: duplicados exactos, longitud, ficha enriquecida
+- Auditoría: 27/28 descripciones únicas; 17 cortas (<120 chars, pobre SEO); specialty/valueProposition llenos (posiblemente templados)
+- Bug grave detectado: Africa Burguers (tasca de hamburguesas, slug tasca-el-patio) tenía perfil completo de licorería de rones (desc + specialty "Ron Venezolano Añejo" + valueProp de curaduría)
+- Creado y ejecutado scripts/fix-africa-burguers-profile.js: ficha reescrita genérica de categoría, sin datos inventados, pendiente verificación de dueño
+
+Stage Summary:
+- Cifra 21→28 corregida; única duplicación de descripción eliminada
+- Pendiente decisión del usuario: reescritura de las 17 descripciones cortas (propuesta: drafts únicos de 150-250 chars por local para revisión)

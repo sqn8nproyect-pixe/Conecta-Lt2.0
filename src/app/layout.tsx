@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | CONECTA-LT",
   },
   description:
-    "El directorio premium de vida nocturna de Los Teques, Miranda. Descubre las 21 mejores licorerías, tascas y discotecas, oferta exclusivas, reseñas reales y planifica tu salida perfecta.",
+    "El directorio premium de vida nocturna de Los Teques, Miranda. Descubre los 28 mejores locales: licorerías, tascas, licobares y discotecas con horarios verificados, ofertas exclusivas, reseñas reales y planifica tu salida perfecta.",
   keywords: [
     "Los Teques",
     "vida nocturna Los Teques",
