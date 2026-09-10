@@ -567,3 +567,23 @@ Work Log:
 
 Stage Summary:
 - Socials 100% reales en el directorio; verificado Donato = solo @donato_disco
+
+---
+Task ID: revision-directorio-post-venues
+Agent: main
+Task: Revisar el directorio tras la aplicación de venues reales y corregir residuos
+
+Work Log:
+- Creado scripts/review-directory.js: auditoría completa de los 33 locales (categoría, nombre, slug, zona, tel, IG, horarios compactos, reviews/favs/ofertas, flags); salida en scripts/directory-review.txt
+- Revisión: 33/33 nombres reales, horarios correctos, 0 descripciones cortas, 12 con socials (9 IG verificados), GPS 33/33 (campos lat/lng del modelo, mis flags iniciales usaban nombres equivocados latitude/longitude — falso alarme)
+- Slug de Mercaplus verificado limpio ("mercaplus-la-fortaleza"; la pérdida en consola era cosmética del terminal)
+- Detectado: modelo Business no tiene zone como string sino relación Zone (cityId+name unique); city "Los Teques" tenía solo zona "Centro"
+- Creado y ejecutado scripts/cleanup-phones-zones.js: (1) teléfonos 'N/A' → null en 4 locales (Scandalo, Pasatiempos, El Toro, Café Racer); (2) 5 zonas nuevas: Carrizal, San Antonio de Los Altos, San Pedro de los Altos, Panamericana Sur, Laguneta y La Llovizna; (3) asignación slug→zona para 33 locales (guarda: error si falta mapeo)
+- Verificado: 0 teléfonos N/A; resumen final Centro 20, Panamericana Sur 4, SALOS 4, Carrizal 2, Laguneta/Llovizna 2, San Pedro 1
+- Decisión: Jungla Bar y La Estación de la Birra quedan en Centro (su dirección es genérica "Los Teques, municipio Guaicaipuro"); pendiente ubicación precisa
+- Validado impacto planner: zoneId es filtro opcional, UI pasa undefined (búsqueda por ciudad) → sin breaking changes, mejora precisión futura
+
+Stage Summary:
+- Directorio verificado y limpio tras el reemplazo de venues: datos de contacto 100% reales, zonas reales asignadas
+- Commit b3d2775
+- Pendiente conocido: 5 creates sin cover image (El Llanero, Chuky, La Llovizna, La Macarena, Panamericana); coordenadas lat/lng heredadas de slots/plantilla (aproximadas por zona, no verificadas venue a venue); 2 venues con dirección genérica
