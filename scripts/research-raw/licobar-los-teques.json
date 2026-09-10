@@ -1,0 +1,50 @@
+{
+  "query": "licobar Los Teques",
+  "results": [
+    {
+      "url": "https://resy.com",
+      "name": "Book Your Licobar Tijuana Reservation Now on Resy",
+      "snippet": "In the heart of Neidhart, Tijuana, lies Licobar , an essential meeting point for young people and adults in search of a vibrant and memorable experience.",
+      "host_name": "resy.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.yelp.com",
+      "name": "LICOBAR - Updated September 2026 - Blvd",
+      "snippet": "Good spot to socialize, good music , good drinks , it gets super crowded after 10pm , but it's worth the time. Not pricey at all read more. Read more",
+      "host_name": "www.yelp.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.tripadvisor.com",
+      "name": "Restaurants in Los Teques",
+      "snippet": "Best Dining in Los Teques, Capital Region: See 53 Tripadvisor traveler reviews of 6 Los Teques restaurants and search by cuisine, price, location, and more.",
+      "host_name": "www.tripadvisor.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://us.trip.com",
+      "name": "Los Teques Travel Guide 2026: Things to Do, Attractions &",
+      "snippet": "Plan your trip to Los Teques with Trip.com. Discover top attractions, things to do, local food, places to stay and practical itinerary tips.",
+      "host_name": "us.trip.com",
+      "rank": 3,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.waze.com",
+      "name": "Driving directions to Licorería El Barbecho, C. Acueducto,",
+      "snippet": "Driving directions. Licorería El Barbecho. 9X35+RX9, C. Acueducto, Los Teques 1201 , Miranda, Venezuela. Closed now. Thursday20:31 - 18:00. Read more",
+      "host_name": "www.waze.com",
+      "rank": 4,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

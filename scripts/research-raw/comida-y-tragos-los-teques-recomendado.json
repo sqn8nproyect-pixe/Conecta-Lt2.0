@@ -1,0 +1,32 @@
+{
+  "query": "comida y tragos Los Teques recomendado",
+  "results": [
+    {
+      "url": "https://www.tripadvisor.es",
+      "name": "LOS 5 MEJORES restaurantes en Los Teques (2026)",
+      "snippet": "1. La Casita de Maikel . 4,1. 4,1 de 5 burbujas. (14 opiniones) · 2. Sibana's Lunch Deli Cafe. 4,7. 4,7 de 5 burbujas. (3 opiniones) · 3. Casa Agustin. 3,3. 3,3 de ... Read more",
+      "host_name": "www.tripadvisor.es",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.instagram.com",
+      "name": "Restaurante Los Teques",
+      "snippet": "La Churrasquería Show ofrece un formato rodizio con 18 cortes de carne sello morado y la robot Fátima que atiende en Los Teques .",
+      "host_name": "www.instagram.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.degustavenezuela.com",
+      "name": "Restaurantes Caracas Los Teques :: [Degusta]",
+      "snippet": "Dorado (CC la Cascada). Comida Rápida, Pollo · 1 votos ; Citrus. Americana · 46 votos ; Show de Carnes Brasil. Rodizio, Carnes · 72 votos ; American Burger. Americana. Read more",
+      "host_name": "www.degustavenezuela.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

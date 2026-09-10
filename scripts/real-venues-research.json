@@ -1,0 +1,673 @@
+{
+  "generatedAt": "2026-09-10T15:33:32+00:00",
+  "municipality": "Guaicaipuro, Miranda, Venezuela (incluye zona Carrizal / Altos Mirandinos según alcance definido por el proyecto)",
+  "method": {
+    "searchQueriesRun": 68,
+    "pagesRead": ["cybo (danceterias Los Teques)", "tiktok.com/discover/discotecas-en-los-teques-venezuela", "guiapana (bares Carrizal, Scandalo)", "infoguia (licorerías, URL antigua caída)", "alcastars (fichas licorerías)", "todainfo/tripadvisor/facebook/waze (fichas sueltas)"],
+    "rawResultsDir": "scripts/research-raw/",
+    "verificationScripts": ["scripts/research-venues.mjs", "scripts/research-venues-v2.mjs", "scripts/research-venues-v3.mjs", "scripts/research-pages.mjs"]
+  },
+  "queriesUsed": [
+    "licorerías en Los Teques",
+    "licorería Los Teques Miranda Venezuela teléfono",
+    "licorería San Antonio de Los Altos Miranda",
+    "licorería Carrizal Miranda Venezuela",
+    "whisky licorería Los Teques",
+    "botellas Los Teques licor expendio",
+    "licorería Las Brisas de Los Teques",
+    "site:instagram.com licoreria Los Teques",
+    "bares Los Teques Miranda Venezuela",
+    "licobar Los Teques",
+    "bar San Antonio de Los Altos",
+    "botellas San Antonio de Los Altos",
+    "bar Carrizal Altos Mirandinos",
+    "mejores bares Los Teques rumba",
+    "site:instagram.com bar Los Teques",
+    "discotecas Los Teques",
+    "discoteca Los Teques Miranda",
+    "salón de baile Los Teques Miranda",
+    "discoteca Carrizal Miranda",
+    "discoteca San Antonio de Los Altos",
+    "rumba Los Teques donde bailar",
+    "site:instagram.com discoteca Los Teques",
+    "tascas Los Teques",
+    "tasca San Antonio de Los Altos",
+    "restaurante bar San Antonio de Los Altos",
+    "restaurantes San Pedro de Los Altos Miranda",
+    "bar restaurante Paracotos Miranda",
+    "comida y tragos Los Teques recomendado",
+    "Discoteca Donato Los Teques",
+    "discoteca Nonna Los Teques",
+    "Koko Frappe Los Teques",
+    "Discoteca Medusa Los Teques La Matica",
+    "Tasca Discoteca Moreno Los Teques",
+    "Puerta Negra discoteca Carrizal",
+    "Evolution Las Minas San Antonio de Los Altos discoteca",
+    "Prestige Game 8 Club Carrizal",
+    "View Disco Lounge San Antonio de Los Altos",
+    "Club Centro de Amigos Los Teques salsa",
+    "The Q AfterRoom Los Teques",
+    "Hippocampus Show Room Los Teques",
+    "Chapis Club Los Teques",
+    "Jungla Bar Los Teques",
+    "salón baile eventos Los Teques Guaicaipuro",
+    "Scandalo Gastrobar San Antonio de los Altos teléfono",
+    "Ranch Grill Carrizal Altos Mirandinos",
+    "Pasatiempos Grill Carrizal",
+    "Daws Lounge Delicious Food San Antonio de los Altos",
+    "Tequilibrio San Antonio de los Altos",
+    "Café Racer Bar San Antonio de los Altos Venezuela",
+    "La Tasca de Chila Los Teques",
+    "Bar de Pancho Paracotos",
+    "Club Campestre Paracotos restaurante",
+    "Meson de Andres San Antonio de los Altos",
+    "Maute Grill San Antonio de los Altos",
+    "Licorería Don Sancho Los Teques Bolívar",
+    "Licorería El Búnker Los Teques",
+    "Licorería Mi Peldaño Los Teques",
+    "Licorería La Botella de Oro Los Teques teléfono",
+    "Licorería El Barbecho Los Teques Acueducto",
+    "Licorería Madalena Los Teques El Paso",
+    "Licorería Los Picachos San Antonio de los Altos",
+    "Licorería Alto Antonio San Antonio",
+    "Licorería Las Dalias Los Teques Lagunetica",
+    "Licorería Lama Los Teques Camatagua",
+    "Licoreria Droopys Carrizal",
+    "Dimartino Licores Carrizal",
+    "Licorería La Estación de la Birra y el Licor Los Teques",
+    "Licorería El Cartujo Los Teques",
+    "Discoteca Copacabana Los Teques Panamericana",
+    "Discoteca El Emperador La Cascada Carrizal",
+    "Bodegón El Toro Los Teques Panamericana",
+    "Ranch Grill Los Cerritos Los Teques",
+    "Jungla Bar Los Teques dirección Panamericana",
+    "La Casita de Maikel Los Teques",
+    "Discoteca Koko Frappe Los Teques dirección",
+    "Bar Restaurant Shiang Lon San Antonio de Los Altos",
+    "Licorería Abastos La Matica Los Teques"
+  ],
+  "venues": [
+    {
+      "name": "Discoteca Donato",
+      "category": "discoteca",
+      "zone": "Los Teques",
+      "address": "Av. Boyacá, Edif. Parayauta, Mezzanina, Los Teques",
+      "phone": null,
+      "instagram": "https://www.instagram.com/donato_disco",
+      "sourceUrls": [
+        "https://www.tiktok.com/discover/donato-los-teques",
+        "https://www.instagram.com/donato_disco",
+        "https://www.instagram.com/emporio.donato.discotk",
+        "https://www.tiktok.com/@djnene_traktor/video/7610387343878507783"
+      ],
+      "confidence": "ALTA",
+      "notes": "Discoteca salsera activa (posts 2025-2026); TikTok 'Donato Disco: la mejor discoteca en Los Teques'. Cuenta hermana @emporio.donato.discotk publica la dirección (Av. Boyacá, Edif. Parayauta)."
+    },
+    {
+      "name": "Discoteca Medusa",
+      "category": "discoteca",
+      "zone": "Los Teques",
+      "address": "C.C. La Matica, Nivel 2, Km 25 Carretera Panamericana, Los Teques",
+      "phone": null,
+      "instagram": "https://www.instagram.com/medusa.officcial",
+      "sourceUrls": [
+        "https://www.instagram.com/p/DFEXEvdSr1-",
+        "https://www.tiktok.com/discover/discoteca-medusa-los-teques",
+        "https://www.tiktok.com/@losmasrumberos/video/7450591516554333445",
+        "https://www.instagram.com/reel/DWsosW4jsrD",
+        "https://www.instagram.com/reel/DGCKa2Wsakl"
+      ],
+      "confidence": "ALTA",
+      "notes": "Inaugurada dic-2024/feb-2025, activa en 2026 (Viernes Negro, entrada $5). Handle IG visto en posts: @medusa.officcial. Múltiples DJs locales promueven sus fiestas."
+    },
+    {
+      "name": "Disco El Emperador",
+      "category": "discoteca",
+      "zone": "Carrizal",
+      "address": "C.C. La Cascada, Nivel Terraza, Local NT-14, Ctra. Panamericana Km 21, Sector Carrizal, Carrizal 1203",
+      "phone": null,
+      "instagram": "https://www.instagram.com/discoelemperador",
+      "sourceUrls": [
+        "https://www.instagram.com/discoelemperador",
+        "https://www.tiktok.com/discover/discotecas-en-los-teques-venezuela",
+        "https://www.tiktok.com/@losmasrumberos/video/7450591516554333445"
+      ],
+      "confidence": "ALTA",
+      "notes": "Bio IG: 'Discoteca +18... Cócteles y platos'. TikTok oficial de la discoteca publica la dirección completa y fiestas con DJ (Flow / reggaetón). Ubicada en el mall C.C. La Cascada."
+    },
+    {
+      "name": "Discoteca Koko Frappe",
+      "category": "discoteca",
+      "zone": "Los Teques",
+      "address": "Av. Víctor Baptista, Los Teques",
+      "phone": "0424-1624782 / 0414-1639622",
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tiktok.com/discover/discoteca-koko-los-teques",
+        "https://www.tiktok.com/@soymiguelalfonzo/video/7580856548117777720",
+        "https://www.instagram.com/p/CpSSywZg-BI",
+        "https://www.alcastars.com.ve",
+        "https://infoguia.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Mixed signals: TikTok la trata como 'Discoteca Koko Frappe' (rumbas salseras, podcast de Joweelito), infoguia la describe como restaurante de comida rápida y alcastars como 'aperitivos'. Invitaciones salseras (2023) confirman noches de rumba con teléfonos de contacto."
+    },
+    {
+      "name": "Copacabana (New Copacabana)",
+      "category": "discoteca",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": null,
+      "instagram": "https://www.instagram.com/newcopacabana",
+      "sourceUrls": [
+        "https://www.tiktok.com/discover/discotecas-en-los-teques-venezuela",
+        "https://www.instagram.com/p/DYdhScXuuov",
+        "https://www.instagram.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "DJs locales publican 'la rumba es en el Copacabana... la mejor rumba de los Teques' y posts con @newcopacabana + #losteques #copacabana. Sin dirección ni teléfono verificables en la web indexada."
+    },
+    {
+      "name": "Club Centro de Amigos (Salón Cacao)",
+      "category": "discoteca",
+      "zone": "Los Teques",
+      "address": "Sector El Rincón, vía Los Montes Verdes, Los Teques",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tiktok.com/discover/club-centro-de-amigos-los-teques",
+        "https://www.facebook.com/DiarioLaChayota/photos/-este-s%C3%A1bado-17-de-enero-se-prende-la-rumba-el-club-centro-de-amigos-se-llena-de/1319830050159539",
+        "https://www.instagram.com/reel/DNTHxintEnc",
+        "https://www.instagram.com/reel/DOgYSTVDn7a"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Club social que funciona como salón de fiestas/rumba salsera: 'Más de 1500 personas en el salón Cacao' (TikTok); agenda de eventos salseros 2025-2026 con preventas. Adecuado para el cupo 'salón de baile'."
+    },
+    {
+      "name": "Evolution Bar & Restaurant",
+      "category": "discoteca",
+      "zone": "San Antonio de Los Altos",
+      "address": "Zona Industrial Las Minas, San Antonio de Los Altos",
+      "phone": "0412-0225205",
+      "instagram": null,
+      "sourceUrls": [
+        "https://infoguia.com",
+        "https://www.instagram.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Infoguia lo lista en la categoría 'Discotecas' con sede 'Evolution · Las Minas, San Antonio de Los Altos' y horario extendido jue-sáb; IG location page 'Evolution Bar & Restaurant' (Pub, 1.774 posts) muestra el teléfono. Verificar si opera como night club actualmente."
+    },
+    {
+      "name": "Prestige Game 8 Club",
+      "category": "discoteca",
+      "zone": "Carrizal",
+      "address": "Corralito, Carrizal",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://infoguia.com"
+      ],
+      "confidence": "BAJA",
+      "notes": "Única mención: listado de infoguia 'Discotecas en Carrizal: Prestige Game 8 Club · Corralito, Carrizal'. Sin redes ni teléfono encontrados. Requiere verificación manual."
+    },
+    {
+      "name": "View Disco & Lounge",
+      "category": "discoteca",
+      "zone": "San Antonio de Los Altos",
+      "address": null,
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tusdj.com"
+      ],
+      "confidence": "BAJA",
+      "notes": "Artículo de inauguración en tusdj.com ('Inauguración View Disco & Lounge San Antonio de Los Altos'). No se halló actividad reciente; puede haber cerrado. Verificación manual."
+    },
+    {
+      "name": "Jungla Bar",
+      "category": "licobar",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": "0412-5581781",
+      "instagram": "https://www.instagram.com/jungla.bar",
+      "sourceUrls": [
+        "https://www.instagram.com/jungla.bar",
+        "https://www.alcastars.com.ve",
+        "https://infoguia.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Bio IG: 'Los Teques, VE. Jueves a Domingo de 4pm a 4am'. AlcaStars confirma teléfono y '1201 Los Teques'; también listado en infoguia. Bar con horario nocturno amplio."
+    },
+    {
+      "name": "Bodegón El Toro (Terraza del Toro)",
+      "category": "licobar",
+      "zone": "Los Teques",
+      "address": "Km 26 Carretera Panamericana, Los Teques",
+      "phone": "0422-3380356",
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tiktok.com/discover/discotecas-en-los-teques-venezuela"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Bodegón con terraza y rumbas DJ (cover $5, apertura 9PM); 'gran inauguración' promovida por DJs con reservas al (0422) 338.03.56. Formato típico de botellas/licobar con consumo en sitio."
+    },
+    {
+      "name": "Café Racer Bar",
+      "category": "licobar",
+      "zone": "San Antonio de Los Altos",
+      "address": "Zona Industrial Las Minas, San Antonio de Los Altos 1204",
+      "phone": "0414-2488326",
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tripadvisor.es",
+        "https://travelfeed.com/@janaveda/visiting-the-cafe-racer-bar-san-antonio-de-los-altos-city",
+        "https://todainfo.com",
+        "https://infoguia.com",
+        "https://www.facebook.com"
+      ],
+      "confidence": "ALTA",
+      "notes": "Bar y cafetería temática (motos/autos clásicos) con conciertos (ska, gaitas); tripadvisor + travelfeed + todainfo + infoguia. Bien establecido aunque reseñas antiguas (2020)."
+    },
+    {
+      "name": "Licorería La Estación de la Birra y el Licor",
+      "category": "licobar",
+      "zone": "Los Teques",
+      "address": "Av. Bertorelli, Los Teques",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.alcastars.com.ve",
+        "https://www.facebook.com/100089672348243/?locale=nn_NO"
+      ],
+      "confidence": "MEDIA",
+      "notes": "AlcaStars la registra en Av. Bertorelli (horario 9AM-9PM+); en Facebook promueven 'dj weekend party' → formato mixto expendio + consumo. Clasificación licobar tentativa; también cabe como licorería."
+    },
+    {
+      "name": "Licorería Don Sancho",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": "Av. Bolívar con C. Ayacucho, Los Teques",
+      "phone": "0424-2569762",
+      "instagram": "https://www.instagram.com/licoreriadonsancho",
+      "sourceUrls": [
+        "https://www.instagram.com/licoreriadonsancho",
+        "https://www.alcastars.com.ve",
+        "https://www.instagram.com/p/DHorpEXT6BN"
+      ],
+      "confidence": "ALTA",
+      "notes": "YA EXISTE EN LA DB (slug licoreria-don-sancho) — no duplicar. Datos reales confirmados: delivery por WhatsApp 0424-2569762, horario Lun-Sáb 8:00-21:00 (coincide con la ordenanza aplicada)."
+    },
+    {
+      "name": "Licorería El Barbecho",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": "C. Acueducto (Plus code 9X35+RX9), Los Teques 1201",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.waze.com/es-419/live-map/directions/ve/miranda/los-teques/licoreria-el-barbecho?to=place.ChIJ4Zw2UfGMKowRo03NN5kByYw",
+        "https://www.alcastars.com.ve/miranda/los-teques/licoreria-el-barbecho",
+        "https://www.instagram.com/reel/C4q9AE4psyT/?hl=en"
+      ],
+      "confidence": "ALTA",
+      "notes": "Registrada en Waze/Google Places con dirección exacta; también en AlcaStars; reel de @ig_losteques (2024) la muestra como referente de la calle Acueducto."
+    },
+    {
+      "name": "Licorería La Botella de Oro C.A.",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": "0212-3281919",
+      "instagram": null,
+      "sourceUrls": [
+        "https://yandex.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Listado de Yandex Maps: 'Estado Miranda, Municipio Guaicaipuro, Los Teques, ☎️ +58 212 328 19 19'. Nota: la plantilla actual de la DB incluye un local ficticio 'Licorería La Botella' — este es el nombre real más cercano ('La Botella de Oro')."
+    },
+    {
+      "name": "Licorería Los Picachos",
+      "category": "licoreria",
+      "zone": "San Antonio de Los Altos",
+      "address": "Av. Francisco Salías, Edf. Oficentro, Local 7, San Antonio de Los Altos",
+      "phone": "0414-12479xx (infoguia truncado) / 0212-3713047",
+      "instagram": null,
+      "sourceUrls": [
+        "https://todainfo.com",
+        "https://infoguia.com"
+      ],
+      "confidence": "ALTA",
+      "notes": "Fichas en todainfo e infoguia con dirección y teléfonos; describen licores nacionales/importados, cervezas frías, delivery y pick up."
+    },
+    {
+      "name": "Licorería Alto Antonio",
+      "category": "licoreria",
+      "zone": "San Antonio de Los Altos",
+      "address": null,
+      "phone": "0212-3723561",
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.alcastars.com.ve/miranda/san-antonio-de-los-altos/licoreria-alto-antonio"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Ficha AlcaStars con teléfono fijo 0212-3723561. Sin dirección exacta ni redes."
+    },
+    {
+      "name": "Licorería Madalena (Frigorífico Madalena)",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": "Av. Víctor Baptista, frente al mercado municipal de El Paso, Los Teques",
+      "phone": "0412-9774851",
+      "instagram": "https://www.instagram.com/licoreria.madalena",
+      "sourceUrls": [
+        "https://www.instagram.com/licoreria.madalena"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Bio IG activa: 'Licorería Favorita... ubicados en Los Teques Av Victor Baptista frente al mercado municipal el paso... APP 0412/977-48-51', con delivery. Precios publicados en IG."
+    },
+    {
+      "name": "Licorería Las Dalias",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": "Carretera vía Lagunetica, Los Teques",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.alcastars.com.ve",
+        "https://yandex.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "AlcaStars ('Carretera,- Lagunetica, Los Teques') + Yandex Maps ('Estado Miranda, Municipio Guaicaipuro, Los Teques'). Reel de @ig_losteques confirma la zona Vía Lagunetica/Las Dalias."
+    },
+    {
+      "name": "Licorería Lama",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": "Av. Bertorelly Cisneros, sector Camatagua (Plus code 8XM4+8WJ), Los Teques 1201",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.alcastars.com.ve/miranda/los-teques/licoreria-lama",
+        "https://ve.archivo.biz/licoreria-lama"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Dos directorios coinciden en dirección y horario (Lun-Sáb 9:00-18:00). Acepta pagos móviles NFC según AlcaStars."
+    },
+    {
+      "name": "Licorería Droopys (Droopy's Licors)",
+      "category": "licoreria",
+      "zone": "Carrizal",
+      "address": "C.C. Tibisay, Carrizal",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.alcastars.com.ve",
+        "https://www.instagram.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "AlcaStars: 'Licores, bebidas alcohólicas, vinos en Municipio Carrizal'; IG 'Droopy's Licors' confirma ubicación 'CC Tibisay en Carrizal' y vende helados Tio Rico además de licores."
+    },
+    {
+      "name": "Dimartino Licores",
+      "category": "licoreria",
+      "zone": "Carrizal",
+      "address": "Principal Monte Bello, C.C. Monte Bello Plaza, Llano Alto, Carrizal",
+      "phone": "0412-180xxxx (infoguia truncado)",
+      "instagram": null,
+      "sourceUrls": [
+        "https://infoguia.com",
+        "https://todainfo.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Licorería + charcutería en el mall Monte Bello Plaza (Carrizal). WhatsApp listado en infoguia (parcialmente truncado en el snippet)."
+    },
+    {
+      "name": "Abastos La Matica Abajo",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": "Sector La Matica (Km 25-26 Carretera Panamericana), Los Teques — 'donde está el Toldito Verde'",
+      "phone": null,
+      "instagram": "https://www.instagram.com/abastoslamatica",
+      "sourceUrls": [
+        "https://www.instagram.com/abastoslamatica"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Bio IG: 'Todo en Venta de Licores. Los Mejores Precios al Mayor y Detal. Delivery. Lun a Sáb'. Al mayor y detal = mixto; encaja como licorería (o licobar si tiene consumo en sitio)."
+    },
+    {
+      "name": "Licorería Mi Peldaño",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": null,
+      "instagram": "https://www.instagram.com/licoreriamipeldano",
+      "sourceUrls": [
+        "https://www.instagram.com/licoreriamipeldano"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Perfil IG activo: 'Tu lugar de Encuentro... Bebidas Alcohólicas y No Alcohólicas - Productos Nacionales E Importados'. Sin dirección/teléfono en la web indexada."
+    },
+    {
+      "name": "Licorería Mi Gente",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": "0212-32217xx (infoguia truncado)",
+      "instagram": null,
+      "sourceUrls": [
+        "https://infoguia.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Infoguia: 'Venta de Licores Nacionales e Importados, Hielo de Bloque. Sede en Los Teques. Tel (0212)322.17xx'."
+    },
+    {
+      "name": "Bodegón Panamericana",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://todainfo.com"
+      ],
+      "confidence": "BAJA",
+      "notes": "Ficha todainfo: 'selección de bebidas y licores de calidad en Los Teques, delivery disponible'. Única fuente."
+    },
+    {
+      "name": "Licorería El Búnker",
+      "category": "licoreria",
+      "zone": "Los Teques",
+      "address": null,
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.instagram.com/reel/DKVt7JuMY6_"
+      ],
+      "confidence": "BAJA",
+      "notes": "Solo un reel (may-2025) visitando 'licorería búnker los Teques'. Sin más rastros web. Verificación manual."
+    },
+    {
+      "name": "Scandalo Gastrobar",
+      "category": "tasca",
+      "zone": "San Antonio de Los Altos",
+      "address": "La Arboleda, Edif. Faesa, detrás de Galerías Las Américas, San Antonio de Los Altos 1204",
+      "phone": "0422-2664704",
+      "instagram": "https://www.instagram.com/scandalogastrobar",
+      "sourceUrls": [
+        "https://www.instagram.com/scandalogastrobar/?hl=en",
+        "https://guiapana.com/restaurantes/scandalo-gastrobar",
+        "https://www.alcastars.com.ve",
+        "https://infoguia.com"
+      ],
+      "confidence": "ALTA",
+      "notes": "Gastrobar activo (posts 2025-2026): coctelería + platos para compartir; Guiapana 4,22 (32 reseñas) con dirección 'La Arboleda, San Antonio de Los Altos'; reservas 0422-2664704 en posts de eventos."
+    },
+    {
+      "name": "Daws Lounge & Delicious Food",
+      "category": "tasca",
+      "zone": "San Antonio de Los Altos",
+      "address": "Carretera Panamericana Km 13, detrás del C.C. Galerías Las Américas, San Antonio de Los Altos",
+      "phone": null,
+      "instagram": "https://www.instagram.com/dawscasualfood",
+      "sourceUrls": [
+        "https://www.tripadvisor.com/Restaurant_Review-g2205378-d9800840-Reviews-Daws_Lounge_Delicious_Food-San_Antonio_de_los_Altos_Capital_Region.html",
+        "https://www.facebook.com/p/Daws-lounge-Delicious-Food-100068720351461",
+        "https://www.mapquest.com/ve/daws-lounge-delicious-food-777147031",
+        "https://www.setlist.fm/venue/daws-lounge-and-delicious-food-san-antonio-de-los-altos-venezuela-7bd3b6c8.html"
+      ],
+      "confidence": "ALTA",
+      "notes": "Restaurante-lounge consolidado (Tripadvisor 4,3/36 reseñas; FB 4,6/84); ha sido venue de conciertos (setlist.fm). Dirección consistente en 4 fuentes."
+    },
+    {
+      "name": "Pasatiempos Grill",
+      "category": "tasca",
+      "zone": "Carrizal",
+      "address": "Carrizal, vía San Diego de Los Altos, sector Pasatiempo",
+      "phone": "0412-4809090",
+      "instagram": "https://www.instagram.com/pasatiemposgrill",
+      "sourceUrls": [
+        "https://www.instagram.com/pasatiemposgrill/?hl=en",
+        "https://www.instagram.com/p/DE7hEfhu8j0",
+        "https://www.facebook.com/DiarioAvanceWeb/posts/el-restaurante-de-comida-criolla-llanera-pasatiempos-grill-impulsa-el-alquiler-d/1627733526030542",
+        "https://diarioavance.com/elogian-la-atencion-y-el-sabor-de-pasatiempos-grill"
+      ],
+      "confidence": "ALTA",
+      "notes": "Restaurante de comida criolla/llanera con barra, activo y con cobertura de prensa local (Diario Avance). Reservas 0412-4809090 en IG. Nota: un reel de nov-2025 lo ubica también 'San Antonio de Los Altos' (zona limítrofe)."
+    },
+    {
+      "name": "Ranch Grill",
+      "category": "tasca",
+      "zone": "Los Teques",
+      "address": "Km 23 Carretera Panamericana, Los Cerritos, Urb. Club Hípico, Los Teques",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.instagram.com",
+        "https://www.tiktok.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "IG 'Restaurant Bar y Pool Ranch Grill': 'Amplio menú | Estacionamiento | Eventos. Martes a Domingos. KM23, los cerritos, Urb. Club Hípico, Los Teques'. TikTok 'Ranch Grill Los Teques, ambiente campestre'. Pool + bar + parrilla."
+    },
+    {
+      "name": "La Casita de Maikel",
+      "category": "tasca",
+      "zone": "Los Teques",
+      "address": "Laguneta de la Montaña, vía Las Lajas, entrada El Trapiche (Plus code CCF6+F4R), Los Teques 1201",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tripadvisor.es",
+        "https://guiapana.com",
+        "https://www.mapquest.com"
+      ],
+      "confidence": "ALTA",
+      "notes": "Restaurante campestre con churuatas y vista; #1 de Tripadvisor en Los Teques (4,1). Carne en vara recomendada. Guiapana da plus code exacto."
+    },
+    {
+      "name": "Bar Restaurant Shiang Lon",
+      "category": "tasca",
+      "zone": "San Antonio de Los Altos",
+      "address": "Carretera Panamericana, San Antonio de Los Altos",
+      "phone": "0212-3725823",
+      "instagram": null,
+      "sourceUrls": [
+        "https://guiapana.com/restaurantes/miranda/carrizal-miranda/bar",
+        "https://www.alcastars.com.ve",
+        "https://carta.menu"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Cocina china + bar; Guiapana 3,99 (288 reseñas) 'San Antonio de Los Altos'; carta.menu da horario 11:00-22:00 y teléfono vía AlcaStars."
+    },
+    {
+      "name": "La Tasca de Chila",
+      "category": "tasca",
+      "zone": "Los Teques",
+      "address": "Plus code 9XPF+XC3, Los Teques 1201",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.alcastars.com.ve",
+        "https://ve.archivo.biz",
+        "https://wanderlog.com"
+      ],
+      "confidence": "MEDIA",
+      "notes": "ArchivoBiz la clasifica en 'Bares, pubs y tabernas'; popular entre jóvenes (wanderlog). El nombre 'tasca' encaja directo con la categoría."
+    },
+    {
+      "name": "Club Campestre Paracotos",
+      "category": "tasca",
+      "zone": "Paracotos",
+      "address": "726H+H3F, Troncal 1, Paracotos 1201",
+      "phone": "0212-7417077",
+      "instagram": "https://www.instagram.com/acclubparacotos",
+      "sourceUrls": [
+        "https://www.waze.com",
+        "https://mindtrip.ai",
+        "http://wikimapia.org",
+        "https://www.tiktok.com/@acclubparacotos/video/7338121260674616581"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Club recreativo con piscinas y restaurante; wikimapia menciona 'tascas, restaurante'. Encaja débilmente en 'tasca' — evaluar si el directorio acepta club campestre como venue."
+    },
+    {
+      "name": "Paracotos Lunch C.A.",
+      "category": "tasca",
+      "zone": "Paracotos",
+      "address": "Km 37 Autopista Regional del Centro, Paracotos, municipio Guaicaipuro",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://guiapana.com/restaurantes/paracotos-lunch-ca"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Guiapana 4,6: punto de comida venezolana a la altura del km 37 de la ARC. No hay evidencia explícita de barra/licor; podría salir del alcance 'tasca' si el directorio exige consumo de licor."
+    },
+    {
+      "name": "Bar de Pancho",
+      "category": "tasca",
+      "zone": "Paracotos",
+      "address": "Plus code 728W+F2M, Paracotos 1201",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://nb.cybo.com"
+      ],
+      "confidence": "BAJA",
+      "notes": "Única fuente: listado cybo 'Restaurantes en Paracotos'. Los IG 'Don Pancho' hallados corresponden a otros negocios (México). Verificación manual."
+    },
+    {
+      "name": "American Droostore",
+      "category": "tasca",
+      "zone": "San Antonio de Los Altos",
+      "address": "Los Llaneros, Recta de Las Minas, San Antonio de Los Altos 1204",
+      "phone": null,
+      "instagram": null,
+      "sourceUrls": [
+        "https://www.tripadvisor.com",
+        "https://www.tripadvisor.com/Restaurants-g2205378-San_Antonio_de_los_Altos_Capital_Region.html"
+      ],
+      "confidence": "MEDIA",
+      "notes": "Tripadvisor: 'American, Bar, Pub' 4,2, en la Recta de Las Minas. Ambiente retro años 50 (IG). Restaurante temático con barra."
+    }
+  ],
+  "discardedCandidates": [
+    { "name": "Tasca Discoteca Moreno", "reason": "Ubicada a 200 m de la estación Carapita (Caracas/Antímano), fuera del municipio Guaicaipuro. IG @tascaydiscotecamoreno." },
+    { "name": "Chapis Club / Chapis Discoteque", "reason": "Av. Francisco de Miranda, El Rosal/Chacao, Caracas (cybo + IG). Fuera del municipio." },
+    { "name": "Hippocampus Show Room / Hipocampo Sala Show", "reason": "Caracas 1060 según cybo. Fuera del municipio." },
+    { "name": "The Q • AfterRoom", "reason": "Av. Cecilio Acosta, Caracas 1100 según cybo. Fuera del municipio." },
+    { "name": "Puerta Negra", "reason": "No se pudo verificar ubicación; únicas coincidencias de 'Bar La Puerta Negra' son de San Juan del Río, México." },
+    { "name": "Nonna (como discoteca)", "reason": "El único negocio indexado es 'Restaurant La Nonna Raffaela' (Calle Boyacá, Los Teques), restaurante; la mención de TikTok como discoteca no se pudo respaldar." },
+    { "name": "Gulfstream Park", "reason": "Los resultados indexados corresponden al Gulfstream Park de Florida; el IG @gulfstream_food local no es verificable." },
+    { "name": "El Cartujo", "reason": "Es una marca de anís, no un venue; los posts son de Licorería Don Sancho." },
+    { "name": "Maute Grill (San Antonio)", "reason": "El Maute Grill indexado en Tripadvisor está en Las Mercedes (Caracas); el listado de trip.com no es verificable como sede en San Antonio." },
+    { "name": "Show de Carnes Brasil (CC La Cascada)", "reason": "Las fuentes indexadas corresponden a las sedes de California (EE. UU.); no se pudo verificar la sede del C.C. La Cascada." }
+  ],
+  "limitations": [
+    "Las discotecas reales de Los Teques casi no tienen web indexada: viven en TikTok/Instagram (posts de DJs y promotores); las guías web (cybo) devuelven venues de Caracas cuando se busca 'Los Teques'.",
+    "El buscador trunca URLs de varios resultados (solo dominio), lo que impide citar el enlace profundo en algunos casos; el contenido crudo quedó guardado en scripts/research-raw/.",
+    "Varias fichas de directorios (infoguia/alcastars) tienen teléfonos parcialmente truncados en los snippets: se marcaron con 'xx' y requieren confirmación.",
+    "Licobares 'puros' (expendio + consumo en sitio) son los más difíciles de distinguir de licorerías con solo fuentes web; se clasificaron por señales (horario nocturno, DJ parties, terraza/rumba).",
+    "Copacabana, Jungla Bar y Bodegón El Toro carecen de dirección postal exacta en la web indexada.",
+    "Licorería Don Sancho ya existe en la DB como local real; el resto de locales actuales de la DB (Discoteca Eclipse/Glamour/Royal..., Licobar Doña Rosa/El Botellón..., etc.) no fueron encontrados en la red, lo que confirma que son nombres de plantilla."
+  ]
+}

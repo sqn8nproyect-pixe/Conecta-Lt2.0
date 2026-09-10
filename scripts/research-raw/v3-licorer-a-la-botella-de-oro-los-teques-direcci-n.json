@@ -1,0 +1,32 @@
+{
+  "query": "Licorería La Botella de Oro Los Teques dirección",
+  "results": [
+    {
+      "url": "https://yandex.com",
+      "name": "Licoreria La Botella De Oro Ca - Los Teques",
+      "snippet": "Licoreria La Botella De Oro Ca Estado Miranda, Municipio Guaicaipuro, Los Teques , ☎️ +58 212 328 19 19. Business hours Closed until 1:00 PM",
+      "host_name": "yandex.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.waze.com",
+      "name": "Licorería El Barbecho",
+      "snippet": "Licorería El Barbecho. 9X35+RX9, C. Acueducto, Los Teques 1201, Miranda , Venezuela. Abrir en Waze. Ahora cerrado. Jueves20:31 - 18:00. Read more",
+      "host_name": "www.waze.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://drinkdulceoro.com",
+      "name": "Dulce Oro | The House of Sweet Gold",
+      "snippet": "Find where to buy Dulce Oro tequila and mezcal near you. Available at select bars, restaurants, and premium spirits retailers.",
+      "host_name": "drinkdulceoro.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

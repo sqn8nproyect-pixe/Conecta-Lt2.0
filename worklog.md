@@ -499,3 +499,37 @@ Work Log:
 Stage Summary:
 - Cifra 21→28 corregida; única duplicación de descripción eliminada
 - Pendiente decisión del usuario: reescritura de las 17 descripciones cortas (propuesta: drafts únicos de 150-250 chars por local para revisión)
+---
+Task ID: investigacion-locales-reales
+Agent: general-purpose
+Task: Investigar venues reales de vida nocturna en municipio Guaicaipuro para reemplazar 25 locales de plantilla
+
+Work Log:
+- Leído worklog.md (contexto: 28 locales en Neon, 25 con nombres de plantilla; Don Sancho, Africa Burguers y Tasca Los Amigos ya son reales; horarios de ordenanza aplicados)
+- Invocado Skill web-search; creado scripts/research-venues.mjs → lote 1: 28 queries genéricas por categoría/zona (licorerías, bares, discotecas, tascas, salones de baile, botellas, site:instagram.com) → resultados crudos en scripts/research-raw/*.json
+- Creado scripts/research-venues-v2.mjs → lote 2: 43 queries de verificación nominal (cada venue candidato por nombre) para sumar fuentes y extraer teléfonos/direcciones
+- Creado scripts/research-pages.mjs (Skill web-reader): leídos cybo (discotecas "Los Teques" — todas eran Caracas, descartadas), tiktok.com/discover/discotecas-en-los-teques-venezuela (fuente clave: Donato, Medusa, Koko Frappe, Copacabana, Bodegón El Toro, El Emperador), guiapana (Scandalo, bares Carrizal, Paracotos Lunch). infoguia URL antigua cayó (404); resto rate-limited (429) tras 5 páginas
+- Lote 3 (research-venues-v3.mjs, 15 queries): gaps — Moreno (resultó Carapita/Caracas → descartado), Copacabana (@newcopacabana), El Emperador (dirección exacta C.C. La Cascada), Jungla Bar, La Casita de Maikel, Shiang Lon
+- Cruzado contra la DB (Prisma): listados los 28 slugs actuales para marcar duplicados (Don Sancho ya existe; "Licorería La Botella" de plantilla ≈ real "La Botella de Oro")
+- Escrito scripts/real-venues-research.json: 39 venues (9 discoteca, 4 licobar, 15 licoreria, 11 tasca) con nombre/zona/dirección/teléfono/IG/sourceUrls/confidence/notes + sección discardedCandidates (10 venues fuera de alcance: Caracas/México/marcas) + limitations
+
+Stage Summary:
+- Cupos alcanzables con confianza ALTA+MEDIA: discoteca 7/7 (Donato, Medusa y El Emperador en ALTA; Koko Frappe, Copacabana, Club Centro de Amigos, Evolution en MEDIA), tasca 10/6 (Scandalo, Daws, Pasatiempos y La Casita de Maikel en ALTA), licorería 13/6 (El Barbecho, Los Picachos y Don Sancho en ALTA), licobar SOLO 4/6 (Jungla Bar, Bodegón El Toro/Terraza del Toro, Café Racer Bar, La Estación de la Birra) — categoría deficitaria, no hay "licobares" con ese nombre en la web indexada
+- Hallazgos clave: la vida nocturna tequeña vive en TikTok/IG de DJs (discover pages como fuente agregadora); C.C. La Cascada (Carrizal) y C.C. La Matica (Km 25) son hubs reales de discotecas; el Corpus de directorios venezolanos (alcastars/todainfo/infoguia/guiapana) respalda bien las licorerías
+- Limitaciones: URLs truncadas por el buscador (crudos en scripts/research-raw/), teléfonos parciales marcados con 'xx', venues sin dirección exacta (Copacabana, Jungla Bar), Prestige Game 8 Club y View Disco & Lounge solo tienen 1 fuente (BAJA)
+- Entregable: scripts/real-venues-research.json listo para que el próximo agente haga el reemplazo de locales (usar confidence ALTA/MEDIA primero; respetar que licoreria-don-sancho ya existe en DB)
+
+---
+Task ID: investigacion-locales-reales-consolidacion
+Agent: main
+Task: Consolidar hallazgos del agente de investigación de venues reales
+
+Work Log:
+- Agente (agent-a578f9c4) completó 68 queries + 5 páginas agregadoras: 39 venues en scripts/real-venues-research.json (crudos en scripts/research-raw/)
+- Validado JSON: 34 venues con confianza ALTA/MEDIA — discoteca 9, tasca 11, licorería 15, licobar 4
+- Limitaciones documentadas: discotecas reales casi sin web indexada (viven en TikTok/IG), licobares puros no existen como categoría indexada (operan como bodegones/terrazas), teléfonos truncados en snippets
+
+Stage Summary:
+- Cobertura para los 25 slots: discotecas 7/7 ✓, tascas 6/6 ✓, licorerías 6/6 ✓, licobares 4/6 ⚠️
+- Deficit licobar requiere decisión del usuario (26 locales reales o aporta 2 más)
+- Mapeo propuesto presentado al usuario antes de renombrar 25 registros (cambio de slugs = URLs nuevas)

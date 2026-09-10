@@ -1,0 +1,50 @@
+{
+  "query": "restaurantes San Pedro de Los Altos Miranda",
+  "results": [
+    {
+      "url": "https://support.google.com/webmasters/answer/7489871?hl=en",
+      "name": "https://maps.app.goo.gl/eiRzDnyYFrjeiBPs9?g_st=iw",
+      "snippet": "No information is available for this page. Learn why",
+      "host_name": "support.google.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://infoguia.com",
+      "name": "Restaurantes en San Pedro de Los Altos, Guía",
+      "snippet": "Somos un restaurante de carnes, tenemos más de 18 cortes de carnes premium, pista fría y pista caliente, contamos con atención VIP, bebidas, licores, postres.",
+      "host_name": "infoguia.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://guiapana.com",
+      "name": "Restaurantes emblemáticos en Miranda (2026) | GuíaPana",
+      "snippet": "Restaurantes emblemáticos en Miranda · THE PLACE · Il Vero Morandi · Cordero · Madre - pizza y pasta · Accanto Ristorante · Arepera Doña Herminia · Bonsai Bar ...",
+      "host_name": "guiapana.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.tripadvisor.es",
+      "name": "Los mejores restaurantes de San Antonio de los Altos",
+      "snippet": "Los mejores restaurantes de San Antonio de los Altos · 1. Pizzeria Villa Romana . 3,9. 3,9 de 5 burbujas · 2. Amarillo Burger. 4,3. 4,3 de 5 burbujas · 3. American ...",
+      "host_name": "www.tripadvisor.es",
+      "rank": 3,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://en.wikipedia.org",
+      "name": "San Pedro de los Altos",
+      "snippet": "San Pedro de los Altos or San Pedro, is a town and parish in the municipality of Guaicaipuro, in the state of Miranda, in northern Venezuela,",
+      "host_name": "en.wikipedia.org",
+      "rank": 4,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

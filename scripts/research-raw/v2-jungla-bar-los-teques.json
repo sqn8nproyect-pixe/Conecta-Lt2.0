@@ -1,0 +1,41 @@
+{
+  "query": "Jungla Bar Los Teques",
+  "results": [
+    {
+      "url": "https://www.instagram.com",
+      "name": "Los Teques (@jungla.bar)",
+      "snippet": "La música que conecta con tu instinto salvaje   ¡Únete a nuestra tribu! Los Teques, VE Jueves a Domingo de 4pm a 4am . Contáctanos ⬇️.",
+      "host_name": "www.instagram.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.tripadvisor.com",
+      "name": "JUNGLA BAR, Puerto Del Carmen - Restaurant Reviews,",
+      "snippet": "A little gem of a place. Menu has plenty of options for hearty comfort food & snacks . Everything we tried was tasty. Atmosphere is lovely a nice relaxed ...",
+      "host_name": "www.tripadvisor.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.ubereats.com",
+      "name": "La Jungla Bar and Grill",
+      "snippet": "Latin American • Mexican • Vegetarian • Family Meals • Comfort Food • meat • Snacks • Wings • Tacos. Delivery. Pickup. Get it delivered to your door.",
+      "host_name": "www.ubereats.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://cariblue.com",
+      "name": "Restaurante La Jungla | Cocina mediterránea y caribeña",
+      "snippet": "Propuesta de valor. Cocina de autor con identidad caribeña . Una propuesta gastronómica pensada para disfrutar con calma, en un ambiente abierto y rodeado ...",
+      "host_name": "cariblue.com",
+      "rank": 3,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

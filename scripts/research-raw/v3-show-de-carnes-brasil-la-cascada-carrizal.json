@@ -1,0 +1,41 @@
+{
+  "query": "Show de Carnes Brasil La Cascada Carrizal",
+  "results": [
+    {
+      "url": "https://showdecarnes.com",
+      "name": "Locations",
+      "snippet": "3398 El Camino Real Palo Alto, CA 94306 +1 (650) 847-1105 · paloalto@showdecarnes.com.. Downtown San Jose. 167 W San Fernando St San Jose, CA 95113 Read more",
+      "host_name": "showdecarnes.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.yelp.com",
+      "name": "SHOW DE CARNES BRAZILIAN STEAKHOUSE",
+      "snippet": "SHOW DE CARNES BRAZILIAN STEAKHOUSE - Try Our New Menu - 3398 El Camino Real, Palo Alto, CA 94306 , 564 Photos, (650) 847-1105, Mon - 5:00 pm - 9:00 pm, ...",
+      "host_name": "www.yelp.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.opentable.com",
+      "name": "Show de Carnes Brazilian Steakhouse - Palo Alto Restaurant",
+      "snippet": "Show de Carnes Brazilian Steakhouse - Palo Alto. 4.4 (81). $50 and over. Brazilian Steakhouse. 3398 El Camino Real, Palo Alto, CA 94306-2701 . Make a reservation. Read more",
+      "host_name": "www.opentable.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.tripadvisor.com",
+      "name": "SHOW DE CARNES BRAZILIAN STEAKHOUSE - PALO",
+      "snippet": "Join us at Show de Carnes in Palo Alto for the finest Brazilian steakhouse experience! Savor perfectly grilled meats, enjoy refreshing drinks, and immerse ... Read more",
+      "host_name": "www.tripadvisor.com",
+      "rank": 3,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "query": "Tequilibrio San Antonio de los Altos",
+  "results": [
+    {
+      "url": "https://www.tripadvisor.com",
+      "name": "Restaurants in San Antonio de los Altos",
+      "snippet": "The best restaurants in San Antonio de los Altos include: American Droostore · Daws Lounge & Delicious Food · Polo Bistro. What are the best restaurants in San ... Read more",
+      "host_name": "www.tripadvisor.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.doordash.com",
+      "name": "Order TACO JALISCO DE LOS ALTOS - San Antonio, TX",
+      "snippet": "Get delivery or takeout from TACO JALISCO DE LOS ALTOS at 1902 SW Military Dr in San Antonio . Order online and track your order live.",
+      "host_name": "www.doordash.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.toweroftheamericas.com",
+      "name": "Tequila & Tacos Festival - San Antonio",
+      "snippet": "Join us at the base of the Tower for Tequila & Tacos Festival on Saturday, October 17, 2026 from 6 - 9 PM! Featuring tequila, tacos, and live music!",
+      "host_name": "www.toweroftheamericas.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

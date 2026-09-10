@@ -1,0 +1,41 @@
+{
+  "query": "Licorería Mi Peldaño Los Teques",
+  "results": [
+    {
+      "url": "https://www.alcastars.com.ve",
+      "name": "Licoreria Lama: Horarios, Opiniones y Teléfono",
+      "snippet": "Licoreria Lama. Licoreria Lama, Av Bertorelly Cisneros, sec Camatagua. Los Teques , Venezuela. Métodos de Pago. Pagos móviles mediante NFC. Read more",
+      "host_name": "www.alcastars.com.ve",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.waze.com",
+      "name": "Licorería El Barbecho",
+      "snippet": "Licorería El Barbecho. 9X35+RX9, C. Acueducto, Los Teques 1201, Miranda, Venezuela. Abrir en Waze. Ahora cerrado. Jueves20:31 - 18:00. Read more",
+      "host_name": "www.waze.com",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://infoguia.com",
+      "name": "Licoreria Mi Gente en Los Teques",
+      "snippet": "Venta de Licores Nacionales e Importados , Hielo de Bloque, Licorerias. Sede en Los Teques. Sede en Los Teques. Ver Teléfonos. Telefonos Llamar (0212)322.17. Read more",
+      "host_name": "infoguia.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://todainfo.com",
+      "name": "Bodegón Panamericana | Bebidas y Licores en Los Teques",
+      "snippet": "Bodegón Panamericana ofrece una selección de bebidas y licores de calidad en Los Teques, Miranda. Servicio de delivery disponible.",
+      "host_name": "todainfo.com",
+      "rank": 3,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}

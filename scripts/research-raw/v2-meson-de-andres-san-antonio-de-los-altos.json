@@ -1,0 +1,32 @@
+{
+  "query": "Meson de Andres San Antonio de los Altos",
+  "results": [
+    {
+      "url": "https://www.booking.com",
+      "name": "Meson de San Andres, Querétaro (updated prices 2026)",
+      "snippet": "Meson de San Andres in Querétaro offers a ground-floor apartment with a private bathroom, terrace, and inner courtyard views . Located 14 mi from Querétaro ...",
+      "host_name": "www.booking.com",
+      "rank": 0,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "https://www.tripadvisor.es",
+      "name": "EL MESON DE ANDRES, Caracas - Carta, fotos y opiniones",
+      "snippet": "Buen ambiente, buena comida, buen servicio ... En medio de la ciudad, està el Meson de Andres Mucha gentileza de los mozos, cocina rápida y muy buena, así como ...",
+      "host_name": "www.tripadvisor.es",
+      "rank": 1,
+      "date": "",
+      "favicon": ""
+    },
+    {
+      "url": "http://www.mesondesanandres.com",
+      "name": "MESÓN DE SAN ANDRÉS",
+      "snippet": "Situado en el corazón del centro histórico de la ciudad de Santiago de Querétaro , el Mesón de San Andrés busca ofrecer la estancia ideal para cada tipo de ...",
+      "host_name": "www.mesondesanandres.com",
+      "rank": 2,
+      "date": "",
+      "favicon": ""
+    }
+  ]
+}
