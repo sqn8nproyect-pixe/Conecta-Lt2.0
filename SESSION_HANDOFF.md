@@ -13,7 +13,7 @@
 
 **En vuelo ahora mismo:** commit local de migración v5 esperando push cuando haya PAT nuevo
 
-**Siguiente paso acordado:** Sprint 6 Night Route multi-paradas (FASE 15) — auth foundation ya estable
+**Siguiente paso acordado:** implementar PLAN-MEJORAS-ESTRUCTURALES.md (Sprints 6A-8, SEO+UX). Orden: saneamiento datos → rutas /local/[slug] → sitemap+JSON-LD → AgeGate/login → editorial. Sprint 6A listos para arrancar. Night Route queda postergada
 
 **Pendientes del usuario:**
 - Revocar PAT usado para fetch (ghp_...ler)

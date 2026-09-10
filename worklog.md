@@ -402,3 +402,20 @@ Stage Summary:
 - Stack auth: next-auth@5.0.0-beta.32 + oauth4webapi — patch de node_modules eliminado, deuda crítica saldada
 - PROJECT_STATUS.md gotchas reescritos (patch marcado ELIMINADO, contrato v5 documentado)
 - Sin PAT: commit local pendiente de push; recuerda revocar PAT viejo y rotar Neon al cerrar
+
+---
+Task ID: plan-mejoras-estructurales-2026-09-10
+Agent: main (mismo chat)
+Task: Priorizar 5 mejoras estructurales propuestas por el usuario y diseñar plan de implementación
+
+Work Log:
+- Diagnóstico en código: metadata "21" localizada (layout.tsx:29 → corregir a 28); data.ts es código muerto (0 imports); slugs 28/28 únicos en DB (rutas /local/[slug] sin migración); 1/28 descripciones duplicadas; AgeGate usa sessionStorage (por sesión); NO existen sitemap.ts/robots.ts; negocios sin URL indexable (view client-side 'detail')
+- Orden definido: 6A saneamiento → 6B rutas /local/[slug] → 7A sitemap+JSON-LD → 7B AgeGate 30d+login contextual (ortogonal) → 8 editorial
+- Creado PLAN-MEJORAS-ESTRUCTURALES.md: 5 sprints con tareas, archivos, criterios de done, riesgos y métricas
+- Verificado: prisma db push en sync (el db:push del platform será no-op seguro)
+- SESSION_HANDOFF apunta al plan
+
+Stage Summary:
+- Roadmap aprobado para implementación; Sprint 6A (saneamiento) listo para arrancar
+- Bloqueante parcial del dueño: horarios reales verificados por negocio (6A.4)
+- Métricas de éxito definidas: 28 locales indexados en GSC post-deploy
