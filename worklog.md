@@ -607,3 +607,26 @@ Stage Summary:
 - Dato falso del seed eliminado; 2 venues ganaron dirección y socials reales de paso
 - Commit post-b3d2775
 - Pendiente: dirección real de Licobar JJ (preguntar al usuario); confirmar si los socials @elpatio de Africa Burguers le pertenecen
+
+---
+Task ID: direccion-licobar-jj-y-coords
+Agent: main
+Task: Dirección real de Licobar JJ (usuario) + saneamiento de coordenadas outliers
+
+Work Log:
+- Usuario aportó dirección de Licobar JJ: "calle carabobo, diagonal a CC Hito"
+- Verificado con IG del C.C. Hito (@centrocomercialhito + post 2020): entre Calle Carabobo y Bulevar Bermúdez, centro de Los Teques → zona Centro ratificada
+- Creado y ejecutado scripts/fix-licobar-jj-address.js con escaneo de sanidad de coords por rangos zonales → 6 outliers detectados
+- Búsqueda CC La Cascada (mapcarta/tripadvisor/moovit): Panamericana sector Corralito, Carrizal → coords correctas para El Emperador
+- Creado y ejecutado scripts/fix-outlier-coords.js:
+  * Don Sancho: -67.043 (19km oeste, vicio seed) → 10.3452,-66.8552 (Av. Bolívar con Ayacucho, ±200m)
+  * El Emperador: 10.3493 (en Los Teques) → 10.31,-66.99 (CC La Cascada, Corralito)
+  * Pasatiempos: 10.3467 (en Los Teques) → 10.32,-66.985 (Vía San Diego, Carrizal)
+  * Licobar JJ: -67.0241 → 10.3443,-66.855 (bloque CC Hito)
+- Africa Burguers: -67.0354 → 10.3445,-66.85 (aprox centro, pendiente precisar Calle 9 con el usuario)
+- Verificado Bertorelli Cisneros (8 fuentes): avenida urbana con sectores La Unión y El Cabotaje → Mercaplus (10.3561,-66.8468) y Casita de Maikel quedan como plausibles-no-verificados; refinar en pasada GPS venue a venue
+
+Stage Summary:
+- Coordenadas 30/33 en rango geográfico; 4 killers del seed corregidos (licobar JJ, Don Sancho, Africa Burguers, + Emperador/Pasatiempos reposicionados en Carrizal)
+- Commit 4ca966d
+- Pendiente: precisar Calle 9 de Africa Burguers + confirmar socials @elpatio (pregunta abierta al usuario); pasada GPS venue a venue para el resto
