@@ -1,0 +1,214 @@
+TOTAL: 33 locales
+
+
+========== Tasca/Bar (7) ==========
+
+· Africa Burguers  [tasca-el-patio]
+  zona: — | tel: +584145553344 | IG: https://instagram.com/elpatio
+  dir: Calle 9, Los Teques
+  hrs: Dom-Sáb 11:00-01:00
+  reviews:5 favs:2 ofertas:2  ⚠ sin GPS, otros socials: 4
+
+· Daws Lounge & Delicious Food  [daws-lounge]
+  zona: — | tel: — | IG: @dawscasualfood
+  dir: Carretera Panamericana, Km 13, San Antonio de Los Altos
+  hrs: Dom-Sáb 11:00-01:00
+  reviews:5 favs:0 ofertas:2  ⚠ sin GPS
+
+· La Casita de Maikel  [la-casita-de-maikel]
+  zona: — | tel: — | IG: —
+  dir: Laguneta de la Montaña, Los Teques
+  hrs: Dom-Sáb 11:00-01:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Pasatiempos Grill  [pasatiempos-grill]
+  zona: — | tel: N/A | IG: @pasatiemposgrill
+  dir: Vía San Diego, Carrizal
+  hrs: Dom-Sáb 11:00-01:00
+  reviews:5 favs:1 ofertas:2  ⚠ sin GPS
+
+· Ranch Grill  [ranch-grill]
+  zona: — | tel: — | IG: —
+  dir: Carretera Panamericana, Km 23, Los Cerritos, Los Teques
+  hrs: Dom-Sáb 11:00-01:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Scandalo Gastrobar  [scandalo-gastrobar]
+  zona: — | tel: N/A | IG: @scandalogastrobar
+  dir: Galerías Las Américas, San Antonio de Los Altos
+  hrs: Dom-Sáb 11:00-01:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Tasca - Bodegón San Pedro  [tasca-san-pedro]
+  zona: — | tel: — | IG: —
+  dir: Calle Principal del Pueblo, San Pedro de los Altos, Municipi…
+  hrs: Dom: cerrado | Lun-Sáb 11:00-20:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+========== Licorería (13) ==========
+
+· Bodegón Bicentenario  [bodegon-bicentenario]
+  zona: — | tel: +58 212-3225443 | IG: —
+  dir: Av. Juan Germán Roscio, frente al sector El Rincón, Los Tequ…
+  hrs: Dom: cerrado | Lun-Sáb 09:00-20:00
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS
+
+· Bodegón Bravamar  [bodegon-bravamar]
+  zona: — | tel: +58 424-7398291 | IG: @bodegonbravamar
+  dir: Calle Ribas, Edif. Centro, al lado del CC, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 08:00-20:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Bodegón Naikel  [bodegon-naikel]
+  zona: — | tel: +58 412-7320080 | IG: @bodegonnaikel
+  dir: CC Ambrosi, Calle Boyacá, Sector Centro, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 09:00-20:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Bodegón Panamericana  [bodegon-panamericana]
+  zona: — | tel: — | IG: —
+  dir: Carretera Panamericana, tramo urbano, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 10:00-20:30
+  reviews:0 favs:0 ofertas:0  ⚠ sin GPS, cover?
+
+· El Llanero  [el-llanero]
+  zona: — | tel: — | IG: —
+  dir: Calle El Carmen, Sector Centro, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 10:00-20:30
+  reviews:0 favs:0 ofertas:0  ⚠ sin GPS, cover?
+
+· Licorería Chuky  [licoreria-chuky]
+  zona: — | tel: — | IG: —
+  dir: Av. Víctor Baptista, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 11:00-21:00
+  reviews:0 favs:0 ofertas:0  ⚠ sin GPS, cover?
+
+· Licorería Cúrametono  [licoreria-curametono]
+  zona: — | tel: — | IG: —
+  dir: Casco Central, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 11:00-21:00
+  reviews:6 favs:1 ofertas:2  ⚠ sin GPS
+
+· Licorería Don Sancho  [licoreria-don-sancho]
+  zona: — | tel: +584242569762 | IG: https://instagram.com/licoreriadonsancho
+  dir: Av. Bolívar con C. Ayacucho, Los Teques 1201, Miranda
+  hrs: Dom: cerrado | Lun-Sáb 11:00-21:00
+  reviews:9 favs:3 ofertas:2  ⚠ sin GPS, otros socials: 1
+
+· Licorería El Barbecho  [licoreria-el-barbecho]
+  zona: — | tel: — | IG: —
+  dir: Calle Acueducto, Urbanización El Barbecho, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 11:00-20:30
+  reviews:4 favs:3 ofertas:2  ⚠ sin GPS
+
+· Licorería La Botella de Oro C.A.  [licoreria-la-botella-de-oro]
+  zona: — | tel: +58 212-3281919 | IG: —
+  dir: Calle Arismendi, Local N° 6, Sector El Llano, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 10:00-20:30
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Licorería La Llovizna  [licoreria-la-llovizna]
+  zona: — | tel: — | IG: —
+  dir: Carretera Los Teques - Lagunetica, Sector La Llovizna, Los T…
+  hrs: Dom: cerrado | Lun-Sáb 10:00-20:30
+  reviews:0 favs:0 ofertas:0  ⚠ sin GPS, cover?
+
+· Licorería La Macarena  [licoreria-la-macarena]
+  zona: — | tel: — | IG: —
+  dir: Carretera Panamericana, Sector La Macarena, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 10:30-20:30
+  reviews:0 favs:0 ofertas:0  ⚠ sin GPS, cover?
+
+· Licorería MIS AMORES  [licoreria-mis-amores]
+  zona: — | tel: +58 414-2168351 | IG: —
+  dir: Calle 80 Livia, Sector El Llano y cercanías, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 11:00-21:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+========== Licobar (6) ==========
+
+· Bodegón El Toro  [bodegon-el-toro]
+  zona: — | tel: N/A | IG: —
+  dir: Carretera Panamericana, Km 26, Los Teques
+  hrs: Dom-Sáb 11:00-23:59
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS
+
+· Café Racer Bar  [cafe-racer-bar]
+  zona: — | tel: N/A | IG: —
+  dir: Zona Industrial Las Minas, San Antonio de Los Altos
+  hrs: Dom-Sáb 11:00-23:59
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS
+
+· Jungla Bar  [jungla-bar]
+  zona: — | tel: — | IG: —
+  dir: Los Teques, municipio Guaicaipuro
+  hrs: Dom-Sáb 11:00-23:59
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS
+
+· La Estación de la Birra y el Licor  [la-estacion-de-la-birra]
+  zona: — | tel: — | IG: —
+  dir: Los Teques, municipio Guaicaipuro
+  hrs: Dom-Sáb 11:00-23:59
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS
+
+· Licobar JJ  [licobar-punto-de-encuentro]
+  zona: — | tel: +584143096321 | IG: https://instagram.com/puntoencuentrolt
+  dir: Sector Guacara, Los Teques
+  hrs: Dom-Sáb 11:00-23:59
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS, otros socials: 1
+
+· Mercaplus La Fortaleza  [mercaplus-la-fortaleza]
+  zona: — | tel: — | IG: @mercapluslafortaleza
+  dir: Av. Bertorelli Cisneros, Sector Camatagua, Los Teques
+  hrs: Dom: cerrado | Lun-Sáb 11:00-01:00
+  reviews:3 favs:0 ofertas:1  ⚠ sin GPS
+
+========== Discoteca (7) ==========
+
+· Club Centro de Amigos  [club-centro-de-amigos]
+  zona: — | tel: — | IG: —
+  dir: Sector Centro, Los Teques
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Disco El Emperador  [disco-el-emperador]
+  zona: — | tel: — | IG: @discoelemperador
+  dir: CC La Cascada, Local NT-14, Carrizal
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:1 ofertas:2  ⚠ sin GPS
+
+· Discoteca Donato  [discoteca-donato]
+  zona: — | tel: — | IG: @donato_disco
+  dir: Av. Boyacá, Edif. Parayauta, Los Teques
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Discoteca Koko Frappe  [discoteca-koko-frappe]
+  zona: — | tel: — | IG: —
+  dir: Av. Víctor Baptista, Los Teques
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Discoteca Medusa  [discoteca-medusa]
+  zona: — | tel: — | IG: @medusa.officcial
+  dir: CC La Matica, Km 25, Los Teques
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· Evolution Bar & Restaurant  [evolution-bar-restaurant]
+  zona: — | tel: — | IG: —
+  dir: Zona Industrial Las Minas, San Antonio de Los Altos
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+· New Copacabana  [new-copacabana]
+  zona: — | tel: — | IG: —
+  dir: Sector Centro, Los Teques
+  hrs: Dom-Sáb 19:00-03:00
+  reviews:4 favs:0 ofertas:2  ⚠ sin GPS
+
+
+===== RESUMEN =====
+Sin GPS: 33/33
+Descripción corta (<120): 0/33
+Con socials: 12/33
