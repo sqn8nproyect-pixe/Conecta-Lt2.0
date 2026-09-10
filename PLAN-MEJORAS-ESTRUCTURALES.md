@@ -4,7 +4,7 @@
 > **Base:** HEAD `31c40f0` (Auth.js v5 migrado) · Neon verificado E2E (28 negocios)
 > **Actualizar tras cada sprint cerrado** — lo lee el boot de sesión vía worklog.
 >
-> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico (35 URLs), robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). Pendiente: 6A.1 cifra en layout (revisar), Sprint 8 (editorial).
+> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico, robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). ✅ **Sprint 8 implementado 2026-09-11** (modelo EditorialPost, `/editorial` + `/editorial/[slug]` SSG+ISR con JSON-LD Article, sitemap 37 URLs, widget "Este fin de semana" en home; post v1 seedeado con datos verificados). Pendiente: 6A.1 cifra en layout (revisar), 8.6 admin ABM de posts, cadencia semanal con el dueño.
 
 ---
 
@@ -129,7 +129,7 @@
 
 ---
 
-## Sprint 8 — Editorial "Qué hacer este fin de semana" (8-12h)
+## Sprint 8 — Editorial "Qué hacer este fin de semana" (8-12h) — ✅ IMPLEMENTADO 2026-09-11 (8.1-8.5)
 
 **Objetivo:** contenido fresco de long-tail SEO que enlace internamente a los locales (el formato exacto del título captura búsquedas locales semanales).
 
@@ -145,10 +145,17 @@
 | 8.6 (futuro) Admin | AdminDashboard | ABM de posts — defer a sprint posterior |
 
 **Criterios de done:**
-- [ ] Post v1 publicado en `/editorial/[slug]`, indexable, con 3+ links a /local/[slug]
-- [ ] Sitemap incluye el post
-- [ ] JSON-LD Article válido
-- [ ] Cadencia semanal definida con el dueño (quién escribe, cuándo)
+- [x] Post v1 publicado en `/editorial/[slug]`, indexable, con 3+ links a /local/[slug] — **15 links internos** (body markdown + sección "Locales mencionados")
+- [x] Sitemap incluye el post (37 URLs: 3 estáticas + 33 fichas + 1 post)
+- [x] JSON-LD Article válido (validado E2E: scripts/validate-editorial.mjs 25/25)
+- [ ] Cadencia semanal definida con el dueño (quién escribe, cuándo) — **pendiente decisión del dueño**; mientras tanto, `prisma/seed-editorial.ts` es la plantilla: se cambia el contenido y `weekOf`, se re-ejecuta (`bun run db:seed-editorial`)
+
+**Notas de implementación (2026-09-11):**
+- Post v1: "Qué hacer este fin de semana en Los Teques (12 y 13 de septiembre)" — seedeado SOLO con datos verificados de la DB (7 promos vigentes con endDate ≥ 12-sep, horarios de BusinessHours, ratings con reviewCount real). Las promos vencidas (endDate < hoy) NO se citan aunque sigan status=ACTIVE en la DB.
+- Los slugs de los links se resuelven en runtime desde la DB (si un local no existe, el nombre queda sin link) — el seed es idempotente (upsert por slug).
+- Widget home: client-side via `/api/editorial/active` (staleTime 10 min); se oculta si no hay post — la home nunca muestra un widget vacío.
+- react-markdown renderiza el body; links internos (`/local/...`) → `<Link>`, externos → `<a target=_blank>`.
+- 8.6 (ABM de posts en AdminDashboard) diferido a sprint posterior; editar posts = editar `prisma/seed-editorial.ts` y re-seede.
 
 ---
 

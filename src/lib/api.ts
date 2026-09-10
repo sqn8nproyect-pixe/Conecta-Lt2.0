@@ -341,6 +341,24 @@ export async function fetchPopularBusinesses(
   return res.json();
 }
 
+// ── Editorial semanal (Sprint 8) ─────────────────────────────
+// Post publicado más reciente para el widget "Este fin de
+// semana" de la HomePage. null → el widget no se renderiza.
+
+export interface ActiveEditorial {
+  slug: string;
+  title: string;
+  excerpt: string;
+  weekOf: string;
+}
+
+export async function fetchActiveEditorial(): Promise<ActiveEditorial | null> {
+  const res = await fetch('/api/editorial/active');
+  if (!res.ok) throw new Error('Failed to fetch editorial');
+  const data = (await res.json()) as { post: ActiveEditorial | null };
+  return data.post;
+}
+
 export async function fetchBusinessViews(
   slug: string,
 ): Promise<BusinessViewCount> {

@@ -234,6 +234,7 @@ model Business {
   reservations    Reservation[]
   proposals       BusinessProposal[]
   menuSections    MenuSection[]
+  editorialPosts  EditorialPost[]
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -554,4 +555,35 @@ model BusinessProposal {
 
   @@index([businessId, status])
   @@index([proposerId, status])
+}
+
+// ── EDITORIAL SEMANAL (Sprint 8) ────────────────────────────
+// Posts "Qué hacer este fin de semana en Los Teques": contenido
+// fresco de long-tail SEO con linking interno a /local/[slug].
+// body es markdown (los links internos usan href="/local/slug").
+// `businesses` (M-N implícita) alimenta la sección "Locales
+// mencionados" de la página del post. El ABM de posts queda
+// para un sprint posterior (8.6) — por ahora se seedean.
+
+enum EditorialStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model EditorialPost {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  title       String
+  excerpt     String
+  body        String          @db.Text // markdown
+  weekOf      DateTime        @db.Date // sábado de la semana cubierta
+  publishedAt DateTime?
+  status      EditorialStatus @default(DRAFT)
+  businesses  Business[]      // locales mencionados
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([weekOf])
 }

@@ -17,6 +17,7 @@
     "db:seed-capacity": "bun run prisma/seed-capacity.ts",
     "db:seed-notifications": "bun run prisma/seed-notifications.ts",
     "db:seed-roles": "bun run prisma/seed-roles.ts",
+    "db:seed-editorial": "bun run prisma/seed-editorial.ts",
     "prisma": {
       "seed": "bun run prisma/seed.ts"
     },

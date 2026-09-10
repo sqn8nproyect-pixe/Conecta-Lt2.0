@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Star, Heart, Clock, Eye, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Search, Sparkles, Star, Heart, Clock, Eye, TrendingUp, AlertTriangle, RefreshCw, CalendarDays, ArrowRight } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useFavoriteActions } from '@/lib/hooks/use-favorite-actions';
 import { useAnalytics } from '@/lib/hooks/use-analytics';
@@ -11,6 +12,7 @@ import {
   fetchBusinesses,
   fetchBulkBusinessViews,
   fetchPopularBusinesses,
+  fetchActiveEditorial,
 } from '@/lib/api';
 import type {
   Category,
@@ -94,6 +96,16 @@ export function HomePage() {
     queryKey: ['analytics', 'popular'],
     queryFn: () => fetchPopularBusinesses(8),
     staleTime: 5 * 60 * 1000, // 5 min
+  });
+
+  // Sprint 8 — Editorial semanal: guía "Este fin de semana".
+  // Hidden entirely cuando no hay post publicado (o la API falla):
+  // la home nunca muestra un widget vacío.
+  const { data: editorial } = useQuery({
+    queryKey: ['editorial', 'active'],
+    queryFn: () => fetchActiveEditorial(),
+    staleTime: 10 * 60 * 1000, // 10 min
+    retry: false,
   });
 
   const goToDetail = useAppStore((s) => s.goToDetail);
@@ -353,6 +365,37 @@ export function HomePage() {
                   );
                 })}
           </div>
+        </section>
+      )}
+
+      {/* Sprint 8 — Editorial semanal (hidden entirely when empty). */}
+      {editorial && (
+        <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-8">
+          <Link
+            href={`/editorial/${editorial.slug}`}
+            className="group block glass-card rounded-3xl p-5 sm:p-6 border border-gold/25 hover:border-gold/50 transition-colors"
+          >
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gold/15 border border-gold/30 flex items-center justify-center shrink-0">
+                <CalendarDays className="text-gold" size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-gold tracking-[3px] text-[10px] sm:text-xs font-bold font-mono mb-1">
+                  ESTE FIN DE SEMANA
+                </div>
+                <h3 className="font-serif text-lg sm:text-2xl font-bold text-white group-hover:text-gold transition-colors leading-tight">
+                  {editorial.title}
+                </h3>
+                <p className="text-white/55 text-xs sm:text-sm mt-1.5 line-clamp-2 leading-relaxed">
+                  {editorial.excerpt}
+                </p>
+              </div>
+              <ArrowRight
+                className="text-gold group-hover:translate-x-1 transition-transform shrink-0 hidden sm:block"
+                size={22}
+              />
+            </div>
+          </Link>
         </section>
       )}
 

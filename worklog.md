@@ -885,3 +885,23 @@ Stage Summary:
 - Sprint 7B ya en GitHub → Vercel desplegará AgeGate cookie 30d + login contextual.
 - El dueño confirmó que aún NO revocó el PAT; recordarle revocarlo tras confirmar el deploy.
 - Siguiente sprint del plan: 8 (editorial semanal, requiere datos del dueño). Pendiente menor: 6A.1 cifra '28' en layout.tsx (hoy son 33).
+
+---
+Task ID: sprint-8
+Agent: Z.ai (sesión continua)
+Task: Sprint 8 — Editorial "Qué hacer este fin de semana" (8.1-8.5).
+
+Work Log:
+- 8.1: prisma/schema.prisma + enum EditorialStatus (DRAFT/PUBLISHED) + model EditorialPost (slug unique, body markdown @db.Text, weekOf @db.Date, publishedAt, M-N implícita con Business) + editorialPosts en Business. `prisma db push` a Neon OK (aditivo) + generate.
+- 8.4: prisma/seed-editorial.ts — post v1 "Qué hacer este fin de semana en Los Teques (12 y 13 de septiembre)" (weekOf 2026-09-12). Investigación previa con scripts/editorial-research.mjs: 21 negocios con promos, pero SOLO se citan las 7 vigentes (endDate ≥ 12-sep: El Toro BARRILITO24, Café Racer BOTELLON24, Mercaplus TEQUENO2X1, Estación Birra FRIO6AM, Licobar JJ PUNTO24, Bicentenario TERRAZA17, Jungla DONAROSA4) — las vencidas 09-sep no se citan. Horarios y ratings con reviewCount real tomados de la DB. Slugs de links resueltos en runtime (15/15 conectados). Idempotente (upsert). Bugfix: en upsert create no existe `set` para M-N → connect en create / set en update. Script npm: db:seed-editorial.
+- 8.2: src/app/editorial/page.tsx — hub SSG+ISR (revalidate 3600), posts PUBLISHED ordenados por weekOf desc, cards con fecha "Fin de semana del X de septiembre" (Intl es-VE timeZone UTC) + nº de locales, JSON-LD BreadcrumbList, metadata canonical /editorial, empty state.
+- 8.3: src/app/editorial/[slug]/page.tsx — SSG (generateStaticParams fallback [] si DB cae) + ISR, generateMetadata (OG type article, publishedTime, canonical, OG/Twitter con cover del primer local mencionado), body markdown con react-markdown (a interna → Link /externa → _blank, estilos obsidian/gold coherentes con /local), sección "Locales mencionados" con cards a /local/[slug] (cover, rating, categoría, zona, priceRange), CTA a la app, notFound() si DRAFT/inexistente. JSON-LD @graph Article + BreadcrumbList (buildArticleJsonLd añadido a src/lib/seo.ts).
+- Sitemap: /editorial (0.8 weekly) + posts PUBLISHED (0.7 weekly, lastModified=updatedAt) → 37 URLs totales.
+- 8.5: API pública GET /api/editorial/active (post más reciente, 503-safe) + fetchActiveEditorial() en api.ts + widget "ESTE FIN DE SEMANA" en HomePage (useQuery staleTime 10min, hidden si no hay post; card glass-card con CalendarDays, título, excerpt, flecha).
+- Validación: build OK (/editorial estática + post SSG + 33 fichas + sitemap), eslint limpio, scripts/validate-editorial.mjs 25/25 checks E2E (JSON-LD Article completo, 15 links internos únicos, canonical, OG article, 404 slug falso, sitemap 37 URLs, API devuelve post).
+
+Stage Summary:
+- Google ahora tiene 37 URLs indexables (3 estáticas + 33 fichas + 1 post) con rich result Article potencial.
+- Post v1 en producción con SOLO hechos verificados de la DB; promos vencidas excluidas deliberadamente.
+- Cadencia semanal y 8.6 (ABM admin) pendientes de decisión del dueño; plantilla para próximas ediciones: prisma/seed-editorial.ts + bun run db:seed-editorial.
+- Pendiente menor arrastrado: 6A.1 cifra '28' en layout.tsx (hoy son 33).

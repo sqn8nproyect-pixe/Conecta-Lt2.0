@@ -171,6 +171,40 @@ export interface BreadcrumbItem {
   path: string;
 }
 
+/**
+ * Article (schema.org) para los posts editoriales /editorial/[slug].
+ * Requiere image + datePublished + dateModified + author/publisher
+ * (recomendaciones de Google para rich results de artículos).
+ */
+export function buildArticleJsonLd(input: {
+  slug: string;
+  title: string;
+  excerpt: string;
+  publishedAt: Date | null;
+  updatedAt: Date;
+  imageUrl?: string | null;
+}) {
+  const url = `${SITE_URL}/editorial/${input.slug}`;
+  const image = input.imageUrl ?? '/images/hero.png';
+
+  const jsonLd: Record<string, unknown> = {
+    '@type': 'Article',
+    '@id': `${url}#article`,
+    headline: input.title,
+    description: input.excerpt,
+    url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    author: { '@type': 'Organization', name: 'CONECTA-LT', url: SITE_URL },
+    publisher: { '@type': 'Organization', name: 'CONECTA-LT', url: SITE_URL },
+    image: [image.startsWith('http') ? image : `${SITE_URL}${image}`],
+    dateModified: input.updatedAt.toISOString(),
+  };
+  if (input.publishedAt) {
+    jsonLd.datePublished = input.publishedAt.toISOString();
+  }
+  return jsonLd;
+}
+
 /** BreadcrumbList con URLs absolutas (requisito de Google). */
 export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]) {
   return {
