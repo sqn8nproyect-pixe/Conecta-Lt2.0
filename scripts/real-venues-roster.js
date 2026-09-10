@@ -26,7 +26,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'discoteca-estelar', source: 'agente',
     name: 'Discoteca Medusa', slug: 'discoteca-medusa', cat: 'discoteca',
     zone: 'CC La Matica, Los Teques', address: 'CC La Matica, Km 25, Los Teques',
-    ig: 'medusa.officcial', lat: 10.3379, lng: -66.8452,
+    ig: 'medusa.officcial', lat: 10.337378, lng: -67.0394874, // pin real Google Maps 2026-09
     hours: { open: '19:00', close: '03:00', closedDays: [] },
     description: 'Discoteca en el centro comercial La Matica, uno de los puntos de rumba más comentados de Los Teques. Música, luces y ambiente de club nocturno hasta el cierre oficial.',
     specialty: 'Rumba en CC La Matica', valueProposition: 'Discoteca de referencia en la zona de La Matica, con ambiente de club y programación nocturna activa en redes.',
@@ -91,7 +91,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'licobar-el-barrilito', source: 'agente',
     name: 'Bodegón El Toro', slug: 'bodegon-el-toro', cat: 'licobar',
     zone: 'Km 26, Los Teques', address: 'Carretera Panamericana, Km 26, Los Teques',
-    phone: 'N/A', lat: 10.3221, lng: -66.8668,
+    phone: 'N/A', lat: 10.3311, lng: -67.0411, // pin real Google Maps 2026-09
     hours: { open: '11:00', close: '23:59', closedDays: [] },
     description: 'Bodegón con terraza en el Km 26 de la carretera Panamericana. Mixto: expendio de envase cerrado y consumo en el sitio, con el ambiente de bodegón que caracteriza la salida tequeña.',
     specialty: 'Terraza de bodegón Km 26', valueProposition: 'Terraza de bodegón en la Panamericana para el trago de la tarde-noche, con venta al detal y consumo en el lugar.',
@@ -109,7 +109,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'licobar-el-tequeno', source: 'usuario',
     name: 'Mercaplus La Fortaleza', slug: 'mercaplus-la-fortaleza', cat: 'licobar',
     zone: 'Camatagua, Los Teques', address: 'Av. Bertorelli Cisneros, Sector Camatagua, Los Teques',
-    ig: 'mercapluslafortaleza', lat: 10.3561, lng: -66.8468,
+    ig: 'mercapluslafortaleza', lat: 10.332984, lng: -67.0424898, // pin real Google Maps 2026-09
     hours: { open: '11:00', close: '01:00', closedDays: [0] },
     description: 'Bodegón con modalidad mixta de expendio y consumo en la avenida Bertorelli Cisneros, sector Camatagua. Abre de lunes a sábado hasta la 1:00 a.m., de los más extensos del municipio.',
     specialty: 'Bodegón mixto hasta la 1:00 a.m.', valueProposition: 'Expendio de licor y consumo en el sitio con el horario más extendido de la zona Camatagua, según datos verificados en Google Maps.',
@@ -118,7 +118,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'licobar-la-esquina-del-frio', source: 'agente',
     name: 'La Estación de la Birra y el Licor', slug: 'la-estacion-de-la-birra', cat: 'licobar',
     zone: 'Los Teques', address: 'Los Teques, municipio Guaicaipuro',
-    lat: 10.3412, lng: -66.8425,
+    lat: 10.3338621, lng: -67.04263, // pin real Google Maps 2026-09
     hours: { open: '11:00', close: '23:59', closedDays: [] },
     description: 'Estación de cerveza y licores en Los Teques con opción de consumo en el sitio. Comercio mixto dentro del horario oficial de licobares del municipio Guaicaipuro.',
     specialty: 'Cerveza y licores al detalle', valueProposition: 'Estación especializada en birra y licor: compra tu envase o tómatelo en el sitio, en pleno Los Teques.',
@@ -221,7 +221,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'tasca-la-esquina', source: 'agente',
     name: 'La Casita de Maikel', slug: 'la-casita-de-maikel', cat: 'tasca',
     zone: 'Laguneta de la Montaña, Los Teques', address: 'Laguneta de la Montaña, Los Teques',
-    lat: 10.3268, lng: -66.8992,
+    lat: 10.3267369, lng: -67.1443813, // pin real Google Maps 2026-09-11
     hours: { open: '11:00', close: '01:00', closedDays: [] },
     description: 'Tasca-restaurante en la zona de Laguneta de la Montaña, Los Teques, con reseña en TripAdvisor y presencia en directorios. Ambiente de casita para comer y brindar fuera del bullicio del centro.',
     specialty: 'Tasca de Laguneta', valueProposition: 'El punto de comida y trago de Laguneta de la Montaña, recomendado en TripAdvisor por su ambiente acogedor.',
@@ -230,7 +230,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'tasca-la-parrilla', source: 'agente',
     name: 'Ranch Grill', slug: 'ranch-grill', cat: 'tasca',
     zone: 'Km 23, Los Cerritos, Los Teques', address: 'Carretera Panamericana, Km 23, Los Cerritos, Los Teques',
-    lat: 10.3183, lng: -66.8829,
+    lat: 10.347115, lng: -67.019501, // pin real Google Maps 2026-09
     hours: { open: '11:00', close: '01:00', closedDays: [] },
     description: 'Grill sobre la carretera Panamericana en el Km 23, sector Los Cerritos de Los Teques. Propuesta de parrilla y barra para el plan de carretera dentro del municipio Guaicaipuro.',
     specialty: 'Grill de carretera Km 23', valueProposition: 'Parrilla de carretera en Los Cerritos: parada de comida y trago en el corredor Panamericano sur de Los Teques.',
