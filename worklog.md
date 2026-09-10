@@ -679,3 +679,20 @@ Work Log:
 Stage Summary:
 - 2/33 pins exactos (Africa Burguers, El Toro); 31 aproximados
 - Commit post-de62766
+
+---
+Task ID: pins-lote2
+Agent: main
+Task: Aplicar 4 pins exactos de Google Maps (lote 2 del usuario)
+
+Work Log:
+- Usuario envió 4 links: Medusa, Ranch Grill, Mercaplus, La Estación
+- Resueltos con curl (marcador !3d/!4d de cada URL), places verificados contra los nombres reales
+- Creado y ejecutado scripts/apply-pins-lote2.js: 4 updates con reporte de desplazamiento de la aproximación previa (1.2-2.1 km)
+- Geografía: Mercaplus + La Estación + El Toro = clúster sur de ~300m (zona licorera real de Los Teques); Medusa 600m al norte; Ranch Grill al este (Los Cerritos)
+- Panamericana Sur: 5/5 locales con pin exacto
+
+Stage Summary:
+- 6/33 pins exactos (Africa Burguers, El Toro, Medusa, Ranch Grill, Mercaplus, La Estación)
+- Commit post-44ae2be
+- Pendiente: 27 aproximaciones — prioridad pines de Centro (Donato, Koko Frappe, Copacabana, Club Centro de Amigos) y Laguneta (Casita de Maikel, La Llovizna); SALOS/Carrizal/San Pedro siguen siendo confiables de la investigación original
