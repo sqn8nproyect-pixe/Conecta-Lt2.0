@@ -756,3 +756,17 @@ Work Log:
 Stage Summary:
 - 8/33 pines exactos verificados por el usuario: Africa Burguers, El Toro, Medusa, Ranch Grill, Mercaplus, La Estación, La Casita de Maikel, La Villa de San Pedro.
 - Pendiente: dirección real de La Villa de San Pedro; resto ~25 coords aproximadas.
+
+---
+Task ID: address-villa-san-pedro
+Agent: Z.ai (sesión continua)
+Task: Actualizar dirección de Tasca Restaurante La Villa de San Pedro con la dirección exacta de Google Maps.
+
+Work Log:
+- Usuario envió la dirección de Google Maps: "9W78+WGQ, Via Principal de San Pedro, 1201, Miranda".
+- DB actualizada (scripts/update-address-villa-san-pedro.mjs): address = "9W78+WGQ, Vía Principal de San Pedro, 1201, Miranda".
+- Roster sincronizado. Commit: ver git log.
+
+Stage Summary:
+- La Villa de San Pedro: 100% verificada (nombre, pin, dirección). 8/33 pines exactos.
+- Pendiente general: ~25 coords aproximadas restantes; IG de La Villa (si tiene) no capturado.
