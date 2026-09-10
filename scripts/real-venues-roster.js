@@ -239,8 +239,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'tasca-los-amigos', source: 'usuario',
     name: 'Tasca Restaurante La Villa de San Pedro', slug: 'tasca-san-pedro', cat: 'tasca',
     zone: 'San Pedro de los Altos', address: 'Calle Principal del Pueblo, San Pedro de los Altos, Municipio Guaicaipuro',
-    // ⚠️ coords ERRÓNEAS (~28 km del pueblo real) — pendiente pin del usuario
-    lat: 10.4068, lng: -66.9035,
+    lat: 10.3648294, lng: -67.0836514, // pin real Google Maps 2026-09-11
     hours: { open: '11:00', close: '20:00', closedDays: [0] },
     description: 'Tasca-bodegón en la calle principal del pueblo de San Pedro de los Altos, parroquia del municipio Guaicaipuro. Mixto de expendio y comida, con el horario tranquilo de pueblo de montaña.',
     specialty: 'Tasca-bodegón de pueblo', valueProposition: 'El punto de encuentro de San Pedro de los Altos: bodegón y tasca en la calle principal del pueblo.',
