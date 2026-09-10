@@ -712,3 +712,17 @@ Work Log:
 Stage Summary:
 - Pins verificados exactos: 7/33 (Africa Burguers, El Toro, Medusa, Ranch Grill, Mercaplus, La Estación, La Casita de Maikel).
 - Pendientes usuario: pin de tasca-san-pedro (coords erróneas ~28 km); confirmar zona de La Casita de Maikel (¿"Laguneta y La Llovizna" o "San Pedro de los Altos"?); resto ~26 coords siguen aproximadas.
+
+---
+Task ID: pin-casita-maikel-confirmacion
+Agent: Z.ai (sesión continua)
+Task: Usuario confirma que el pin aplicado de La Casita de Maikel es el real, verificado por él.
+
+Work Log:
+- Sin cambios en DB (el pin 10.3267369,-67.1443813 ya estaba aplicado en b48c5ac).
+- La zona se mantiene en "Laguneta y La Llovizna": el usuario verificó el pin pero no pidió cambio de zona (su criterio geográfico manda; no mover sin instrucción explícita).
+- Usuario pidió que toda interacción sea en español a partir de ahora.
+
+Stage Summary:
+- La Casita de Maikel: coordenadas VERIFICADAS por el usuario. 7/33 pins exactos.
+- Sigue pendiente: pin de tasca-san-pedro (coords erróneas ~28 km).
