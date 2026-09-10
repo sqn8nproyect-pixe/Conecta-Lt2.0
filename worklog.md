@@ -419,3 +419,18 @@ Stage Summary:
 - Roadmap aprobado para implementación; Sprint 6A (saneamiento) listo para arrancar
 - Bloqueante parcial del dueño: horarios reales verificados por negocio (6A.4)
 - Métricas de éxito definidas: 28 locales indexados en GSC post-deploy
+
+---
+Task ID: horarios-alcaldia-prep
+Agent: main
+Task: Preparar terreno para adaptar horarios oficiales de la Alcaldía de Los Teques a los 28 locales
+
+Work Log:
+- Creado scripts/audit-business-hours.js: audita BusinessHours de todos los negocios, imprime tabla + JSON (hours-audit.json)
+- Auditado Neon: 28 locales (7 por categoría), 0 sin horarios, pero datos claramente templados
+
+Stage Summary:
+- Hallazgos clave: 7 discotecas idénticas 09:00-22:00 diario (imposible para discoteca), 7 tascas idénticas 09:00-22:00, 6/7 licorerías 09:00-22:00
+- Anomalías detectadas: Licobar JJ Sáb:22:00-21:00(+1) inválido (23h); Africa Burguers usa slug tasca-el-patio (mismatch nombre/slug); Licobar La Terraza cierra 00:00 y lunes cerrado; El Botellón cruza medianoche 4 días
+- Schema BusinessHours soporta: dayOfWeek 0-6, openTime/closeTime HH:mm, isClosed, cruce de medianoche
+- Esperando datos oficiales del usuario para mapear por categoría + overrides por local
