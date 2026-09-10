@@ -66,7 +66,7 @@ const FIXES = {
 // Rangos de sanidad CORRECTOS (post-auditoría)
 const RANGOS = {
   Centro: { lat: [10.33, 10.37], lng: [-67.06, -67.01] },
-  'Panamericana Sur': { lat: [10.34, 10.38], lng: [-67.05, -66.98] }, // corredor Km 23-27 + Bertorelli (pins pendientes)
+  'Panamericana Sur': { lat: [10.32, 10.38], lng: [-67.05, -66.98] }, // corredor sur (pin El Toro 10.331,-67.041 confirma lat baja) + Bertorelli (pins pendientes)
   'San Antonio de Los Altos': { lat: [10.37, 10.41], lng: [-66.97, -66.93] },
   Carrizal: { lat: [10.29, 10.33], lng: [-67.02, -66.97] },
   'San Pedro de los Altos': { lat: [10.39, 10.43], lng: [-66.92, -66.88] },
