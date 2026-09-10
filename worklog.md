@@ -696,3 +696,19 @@ Stage Summary:
 - 6/33 pins exactos (Africa Burguers, El Toro, Medusa, Ranch Grill, Mercaplus, La Estación)
 - Commit post-44ae2be
 - Pendiente: 27 aproximaciones — prioridad pines de Centro (Donato, Koko Frappe, Copacabana, Club Centro de Amigos) y Laguneta (Casita de Maikel, La Llovizna); SALOS/Carrizal/San Pedro siguen siendo confiables de la investigación original
+
+---
+Task ID: pin-casita-maikel
+Agent: Z.ai (sesión continua)
+Task: Aplicar pin de Google Maps de "la casita de maikel" (https://maps.app.goo.gl/pFcwfsTxg4VAa83A7)
+
+Work Log:
+- Resueltos los 5 short-links pendientes: los 4 anteriores (Medusa 10.337378,-67.0394874; Ranch Grill 10.347115,-67.019501; Mercaplus 10.332984,-67.0424898; La Estación 10.3338621,-67.04263) YA estaban aplicados en DB de la sesión previa.
+- La Casita de Maikel: pin real 10.3267369,-67.1443813. DB tenía aproximado (10.325,-67.065) → corrección de ~8.5 km al oeste. Aplicado vía scripts/apply-pin-casita-maikel.mjs.
+- Análisis geo (scripts/geo-overview.mjs): el pin queda a 11.3 km del centro de Los Teques, 9.8+ km del negocio más cercano. Anomalía detectada: tasca-san-pedro tiene coords (10.4068,-66.9035) claramente erróneas — San Pedro de los Altos está a ~10.32,-67.13; pedir pin al usuario.
+- Riesgo de regresión corregido: scripts/real-venues-roster.js (fuente de apply-real-venues.js) seguía con coords de la meridiana errónea (-66.8x). Sincronizados los 6 negocios con pin verificado en el roster.
+- Commit: b48c5ac.
+
+Stage Summary:
+- Pins verificados exactos: 7/33 (Africa Burguers, El Toro, Medusa, Ranch Grill, Mercaplus, La Estación, La Casita de Maikel).
+- Pendientes usuario: pin de tasca-san-pedro (coords erróneas ~28 km); confirmar zona de La Casita de Maikel (¿"Laguneta y La Llovizna" o "San Pedro de los Altos"?); resto ~26 coords siguen aproximadas.
