@@ -15,6 +15,7 @@ import type { Metadata } from 'next';
 import { ArrowRight, CalendarDays, Newspaper } from 'lucide-react';
 import { db } from '@/lib/db';
 import WeekendFlyersGrid, { type FlyerEvent } from '@/components/conecta/WeekendFlyersGrid';
+import AccessButton from '@/components/conecta/AccessButton';
 import {
   SITE_URL,
   buildBreadcrumbJsonLd,
@@ -172,11 +173,14 @@ export default async function EditorialCoverPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-        <nav aria-label="Ruta de navegación" className="mb-5 text-sm text-white/50">
-          <Link href="/" className="hover:text-gold transition-colors">Inicio</Link>
-          <span className="mx-2">›</span>
-          <span className="text-white/80">Fin de semana</span>
-        </nav>
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <nav aria-label="Ruta de navegación" className="text-sm text-white/50">
+            <Link href="/" className="hover:text-gold transition-colors">Inicio</Link>
+            <span className="mx-2">›</span>
+            <span className="text-white/80">Fin de semana</span>
+          </nav>
+          <AccessButton standalone />
+        </div>
 
         <header className="mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-xs font-semibold uppercase tracking-wider mb-3">

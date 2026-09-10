@@ -15,6 +15,7 @@ import type { Metadata } from 'next';
 import { CalendarDays, ArrowRight, MapPin, Star, Sparkles } from 'lucide-react';
 import Markdown, { type Components } from 'react-markdown';
 import { db } from '@/lib/db';
+import AccessButton from '@/components/conecta/AccessButton';
 import {
   SITE_URL,
   categoryLabel,
@@ -251,13 +252,16 @@ export default async function EditorialPostPage({
 
       <article className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
         {/* Breadcrumbs visibles (coherentes con el JSON-LD) */}
-        <nav aria-label="Ruta de navegación" className="mb-6 text-sm text-white/50">
-          <Link href="/" className="hover:text-gold transition-colors">Inicio</Link>
-          <span className="mx-2">›</span>
-          <Link href="/editorial" className="hover:text-gold transition-colors">Editorial</Link>
-          <span className="mx-2">›</span>
-          <span className="text-white/80">Fin de semana del {formatWeek(post.weekOf)}</span>
-        </nav>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <nav aria-label="Ruta de navegación" className="text-sm text-white/50">
+            <Link href="/" className="hover:text-gold transition-colors">Inicio</Link>
+            <span className="mx-2">›</span>
+            <Link href="/editorial" className="hover:text-gold transition-colors">Editorial</Link>
+            <span className="mx-2">›</span>
+            <span className="text-white/80">Fin de semana del {formatWeek(post.weekOf)}</span>
+          </nav>
+          <AccessButton standalone />
+        </div>
 
         {/* Encabezado */}
         <header className="mb-10">

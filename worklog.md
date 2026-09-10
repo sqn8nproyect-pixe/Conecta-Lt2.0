@@ -926,3 +926,21 @@ Stage Summary:
 - Para la próxima semana: editar prisma/seed-weekend-events.ts (títulos/horas) + re-ejecutar — mismo patrón que seed-editorial.
 - 12 eventos → sin URLs nuevas en sitemap (viven en /editorial con modal); ItemList JSON-LD enlaza a las 12 fichas.
 - Pendientes: 6A.1 cifra '28' en layout.tsx; 8.6 ABM admin de posts/eventos; datos del dueño (IG Africa Burguers, IG @puntoencuentrolt de Licobar JJ, dirección real de Medusa); revocar PAT tras confirmar deploy.
+
+---
+Task ID: 8.8
+Agent: main (Super Z)
+Task: Botón global "Acceder" con animación mínima, conviviendo con el login contextual (petición del dueño: "podemos usar las 2 maneras")
+
+Work Log:
+- Diagnóstico previo (pregunta del dueño "¿qué pasó con el botón de Google?"): el botón fijo de login del navbar se quitó a propósito en 7B (login solo contextual). Además useAuthProviders() depende de NEXT_PUBLIC_GOOGLE_CLIENT_ID horneada en build — si falta en Vercel el modal muestra "Acceso demo" en vez de "Continuar con Google". El dueño debe verificar esa variable en Vercel (nombre EXACTO con prefijo NEXT_PUBLIC_ — .env.example la documenta trampa como GOOGLE_CLIENT_ID) y redeploy.
+- globals.css: keyframes access-glow (glow dorado pulsante 2.8s, box-shadow suave) + .animate-access-glow + prefers-reduced-motion → sin animación.
+- Nuevo componente: src/components/conecta/AccessButton.tsx ('use client') — botón dorado "Acceder" con shine diagonal al hover (span gradiente group-hover) y glow pulsante; onClick → store.requestLogin(mensaje amistoso) → abre EL MISMO LoginPromptModal del login contextual (misma vía Google/demo y retorno post-login; cero duplicación). Prop `standalone` para páginas server: monta su propia copia del modal (el global de la SPA no existe allí).
+- Navbar.tsx: botón Acceder visible SOLO para visitantes (!user), tamaño compacto en móvil. Se eliminó el comentario "sin CTA global" (7B) por la nota de convivencia 7B+8.8.
+- /editorial (portada) y /editorial/[slug] (guía): fila superior breadcrumb izquierda + AccessButton standalone derecha.
+- Validación: eslint limpio, build OK, E2E agent-browser: portada standalone abre modal ("Inicia sesión para guardar favoritos, reservar mesas y canjear cupones." + Acceso demo/Ahora no), home con AgeGate → navbar muestra Acceder → 1 solo dialog (no duplicado con el global), móvil 390px sin solapamientos, consola sin errores.
+
+Stage Summary:
+- Login por 2 vías: botón "Acceder" siempre visible (navbar SPA + páginas editoriales) Y modal contextual en acciones — ambos abren el mismo flujo.
+- PENDIENTE DEL DUEÑO: definir NEXT_PUBLIC_GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET en Vercel y redeploy para que el botón diga "Continuar con Google" (sin la var muestra "Acceso demo").
+- Pendientes previos intactos: 6A.1 cifra '28', 8.6 ABM admin, revocar PAT tras confirmar deploy.

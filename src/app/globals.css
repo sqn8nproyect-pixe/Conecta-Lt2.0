@@ -670,3 +670,19 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 @media (prefers-reduced-motion: reduce) {
   .conecta-user-pulse { animation: none !important; opacity: 0.3; }
 }
+
+/* ============================================
+   CONECTA-LT — Botón "Acceder" (Sprint 8.8)
+   Glow dorado pulsante mínimo + shine al hover.
+   Respeta prefers-reduced-motion.
+   ============================================ */
+@keyframes access-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.35); }
+  50%      { box-shadow: 0 0 18px 3px rgba(212, 175, 55, 0.25); }
+}
+.animate-access-glow {
+  animation: access-glow 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-access-glow { animation: none !important; }
+}

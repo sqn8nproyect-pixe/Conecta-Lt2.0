@@ -23,6 +23,7 @@ import {
   useNotificationActions,
 } from '@/lib/hooks/use-notifications-sync';
 import { isAdminEmail } from '@/lib/admin-config';
+import AccessButton from '@/components/conecta/AccessButton';
 import { formatRelativeTime } from '@/lib/utils';
 import type { View } from '@/lib/types';
 
@@ -415,9 +416,10 @@ export function Navbar() {
               </button>
             </div>
           )}
-          {/* Sprint 7B — sin CTA global de login para visitantes: el
-              login aparece contextualmente al favoritar/reservar/
-              canjear (LoginPromptModal montado en page.tsx). */}
+          {/* Sprint 7B — login contextual al favoritar/reservar/canjar.
+              Sprint 8.8 — además, CTA global "Acceder" para visitantes:
+              abre el MISMO LoginPromptModal (misma vía, cero duplicación). */}
+          {!user && <AccessButton className="px-3.5 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm" />}
         </div>
       </div>
 
