@@ -44,7 +44,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'discoteca-la-luna', source: 'agente',
     name: 'Discoteca Koko Frappe', slug: 'discoteca-koko-frappe', cat: 'discoteca',
     zone: 'Av. Víctor Baptista, Los Teques', address: 'Av. Víctor Baptista, Los Teques',
-    lat: 10.3494, lng: -66.8394,
+    lat: 10.3524877, lng: -67.0624853, // pin real Google Maps 2026-09-11
     hours: { open: '19:00', close: '03:00', closedDays: [] },
     description: 'Discoteca en la avenida Víctor Baptista de Los Teques, con teléfono de contacto y presencia en directorios locales. Ambiente nocturno dentro del horario oficial del municipio.',
     specialty: 'Nocturno en Av. Víctor Baptista', valueProposition: 'Discoteca de contacto directo por teléfono en una de las avenidas de mayor movimiento nocturno de Los Teques.',
@@ -62,7 +62,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'discoteca-royal', source: 'agente',
     name: 'Club Centro de Amigos', slug: 'club-centro-de-amigos', cat: 'discoteca',
     zone: 'Centro, Los Teques', address: 'Sector Centro, Los Teques',
-    lat: 10.3457, lng: -66.8365,
+    lat: 10.335632, lng: -67.0511182, // pin real Google Maps 2026-09-11 (CAPEM)
     hours: { open: '19:00', close: '03:00', closedDays: [] },
     description: 'Club nocturno con salón de baile (Salón Cacao) en el centro de Los Teques. Espacio de baile social y eventos dentro del horario oficial de discotecas y salones del municipio.',
     specialty: 'Salón de baile Cacao', valueProposition: 'Salón de baile tradicional para quienes buscan música bailable y eventos de club en el centro de Los Teques.',
@@ -82,7 +82,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'licobar-dona-rosa', source: 'agente',
     name: 'Jungla Bar', slug: 'jungla-bar', cat: 'licobar',
     zone: 'Los Teques', address: 'Los Teques, municipio Guaicaipuro',
-    lat: 10.3422, lng: -66.8372,
+    lat: 10.3534872, lng: -67.0590708, // pin real Google Maps 2026-09-11
     hours: { open: '11:00', close: '23:59', closedDays: [] },
     description: 'Bar de ambiente relajado en Los Teques, activo de jueves a domingo en el circuito de rumba local. Expendio de licores y consumo en el sitio dentro del horario oficial de licobares.',
     specialty: 'Bar de ambiente jungle', valueProposition: 'Bar con presencia activa en redes y horario extendido de fin de semana, dentro del circuito nocturno tequeño.',
@@ -128,8 +128,8 @@ module.exports = [
   {
     mode: 'rename', oldSlug: 'licoreria-central', source: 'usuario',
     name: 'Bodegón Naikel', slug: 'bodegon-naikel', cat: 'licoreria',
-    zone: 'Centro, Los Teques', address: 'CC Ambrosi, Calle Boyacá, Sector Centro, Los Teques',
-    phone: '+58 412-7320080', ig: 'bodegonnaikel', lat: 10.3462, lng: -66.8310,
+    zone: 'Centro, Los Teques', address: 'C.C. Ambrosi, C. Boyacá, Los Teques 1201, Miranda',
+    phone: '+58 412-7320080', ig: 'bodegonnaikel', lat: 10.3416974, lng: -67.0394664, // pin real Google Maps 2026-09-11
     hours: { open: '09:00', close: '20:00', closedDays: [0] },
     description: 'Bodegón-licorería en el centro comercial Ambrosi, sobre la calle Boyacá del centro de Los Teques. Licores y envases cerrados de lunes a sábado, con contacto directo por teléfono e Instagram.',
     specialty: 'Bodegón en CC Ambrosi', valueProposition: 'Ubicación de centro comercial en la Boyacá con horario matinal extendido: licorería de paso fácil en el centro tequeño.',
@@ -174,7 +174,7 @@ module.exports = [
     mode: 'rename', oldSlug: 'licoreria-vinos-del-valle', source: 'usuario',
     name: 'Licorería Cúrametono', slug: 'licoreria-curametono', cat: 'licoreria',
     zone: 'Casco Central, Los Teques', address: 'Casco Central, Los Teques',
-    lat: 10.3447, lng: -66.8342,
+    lat: 10.3416056, lng: -67.0437958, // pin real Google Maps 2026-09-11
     hours: { open: '11:00', close: '21:00', closedDays: [0] },
     description: 'Licorería del casco central de Los Teques, con horario de lunes a sábado hasta las 9:00 p.m. Expendio de envase cerrado en el corazón histórico y comercial de la ciudad.',
     specialty: 'Licorería del casco central', valueProposition: 'Cierre a las 9:00 p.m. en el casco central: la última parada de envase cerrado antes de la salida nocturna.',
@@ -182,8 +182,8 @@ module.exports = [
   {
     mode: 'rename', oldSlug: 'licobar-la-terraza', source: 'usuario',
     name: 'Bodegón Bicentenario', slug: 'bodegon-bicentenario', cat: 'licoreria',
-    zone: 'El Rincón, Los Teques', address: 'Av. Juan Germán Roscio, frente al sector El Rincón, Los Teques',
-    phone: '+58 212-3225443', lat: 10.3352, lng: -66.8478,
+    zone: 'El Rincón, Los Teques', address: 'Local 1, frente sector El Rincón, Av. Juan Germán Roscio, esq. C. Flor de Mayo, Los Teques 1201, Miranda',
+    phone: '+58 212-3225443', lat: 10.3399733, lng: -67.0462708, // pin real Google Maps 2026-09-11
     hours: { open: '09:00', close: '20:00', closedDays: [0] },
     description: 'Bodegón sobre la avenida Juan Germán Roscio, frente al sector El Rincón de Los Teques. Abre a las 9:00 a.m. de lunes a sábado, con línea telefónica local de contacto.',
     specialty: 'Bodegón de Av. Roscio', valueProposition: 'Ubicación sobre la avenida principal con teléfono fijo de contacto y horario matinal temprano.',
@@ -258,8 +258,8 @@ module.exports = [
   {
     mode: 'create', source: 'usuario',
     name: 'Bodegón Panamericana', slug: 'bodegon-panamericana', cat: 'licoreria',
-    zone: 'Carretera Panamericana, Los Teques', address: 'Carretera Panamericana, tramo urbano, Los Teques',
-    lat: 10.3308, lng: -66.8552,
+    zone: 'Carretera Panamericana, Los Teques', address: '8XVC+955, Carr. Panamericana, Los Teques 1201, Miranda',
+    lat: 10.3433268, lng: -67.0295853, // pin real Google Maps 2026-09-11
     hours: { open: '10:00', close: '20:30', closedDays: [0] },
     description: 'Bodegón sobre el tramo urbano de la carretera Panamericana en Los Teques. Expendio de envase cerrado de lunes a sábado, en el corredor de mayor tráfico vehicular de la ciudad.',
     specialty: 'Bodegón de la Panamericana', valueProposition: 'Compra de envase cerrado sin salir del corredor Panamericano, con horario amplio de lunes a sábado.',
@@ -285,8 +285,8 @@ module.exports = [
   {
     mode: 'create', source: 'usuario',
     name: 'Licorería Chuky', slug: 'licoreria-chuky', cat: 'licoreria',
-    zone: 'Av. Víctor Baptista, Los Teques', address: 'Av. Víctor Baptista, Los Teques',
-    lat: 10.3489, lng: -66.8401,
+    zone: 'Av. Víctor Baptista, Los Teques', address: '9W2X+5RH, Av. Víctor Batista, Los Teques 1201, Miranda',
+    lat: 10.3504442, lng: -67.0503921, // pin real Google Maps 2026-09-11
     hours: { open: '11:00', close: '21:00', closedDays: [0] },
     description: 'Licorería sobre la avenida Víctor Baptista de Los Teques, en pleno corredor comercial y nocturno de la ciudad. Expendio de envase cerrado de lunes a sábado hasta las 9:00 p.m.',
     specialty: 'Licorería de Av. Víctor Baptista', valueProposition: 'Envase cerrado hasta las 9:00 p.m. sobre la avenida de la rumba tequeña, misma zona de las discotecas.',
