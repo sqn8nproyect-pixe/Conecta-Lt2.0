@@ -451,3 +451,22 @@ Stage Summary:
 - Anomalías corregidas de paso: Licobar JJ Sáb 22:00-21:00 (inválido), Doña Rosa/El Tequeño/Tasca Los Amigos ahora abren domingo
 - Frontend ya soporta cruce de medianoche (PlannerSteps + business.service.ts) — solo fueron cambios de datos
 - Pendiente: regla específica para licorerías si la Alcaldía la tiene; Africa Burguers slug tasca-el-patio (se aborda en saneamiento de nombres)
+
+---
+Task ID: horarios-alcaldia-v2
+Agent: main
+Task: Aplicar regla de licorerías (envase cerrado) y corrección de licobares de la ordenanza
+
+Work Log:
+- Usuario pasó: Licorerías Lun-Sáb 11:00-21:00 (domingo cerrado); licobares cierre mayor 11:00→12:00pm (interpretado como medianoche)
+- Edge case detectado ANTES de aplicar: guardar closeTime '00:00' rompe isBusinessOpenAt() (closeMin<openMin cae en rama cruce-medianoche → local abierto indefinidamente desde las 11:00)
+- Solución sin cambios de código: licobares guardan closeTime '23:59' (rama normal, renderiza 11:59 PM)
+- Verificado slug exacto de categoría: 'licoreria' (sin tilde)
+- Editado scripts/apply-alcaldia-hours.js a v2: REGLAS con closedDays[], licorería Lun-Sáb 11:00-21:00 + domingo isClosed
+- Ejecutado: 28/28 locales actualizados, verificación 7 registros cerrados = 7 domingos de licorerías
+- Audit final: licobares 11:00-23:59 7/7; licorerías Lun-Sáb 11:00-21:00 con Dom:cerrado; tascas y discotecas intactas
+
+Stage Summary:
+- Ordenanza completa aplicada: licorería 11-21 Lun-Sáb / licobar 11-23:59 / tasca 11-01(+1) / discoteca 19-03(+1)
+- Decisión documentada: medianoche = '23:59' en DB para no romper planner.availability.ts
+- Interpretación a confirmar con usuario: "12:00pm" = medianoche (no mediodía)
