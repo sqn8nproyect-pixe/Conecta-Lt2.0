@@ -770,3 +770,18 @@ Work Log:
 Stage Summary:
 - La Villa de San Pedro: 100% verificada (nombre, pin, dirección). 8/33 pines exactos.
 - Pendiente general: ~25 coords aproximadas restantes; IG de La Villa (si tiene) no capturado.
+
+---
+Task ID: ig-villa-san-pedro
+Agent: Z.ai (sesión continua)
+Task: Agregar Instagram de La Villa de San Pedro (@lavilladesanpedroclub).
+
+Work Log:
+- Creado businessSocial INSTAGRAM para tasca-san-pedro vía scripts/add-ig-villa-san-pedro.mjs (relación es `socials`, no `businessSocial` — primer intento falló por nombre de relación).
+- Audito el pipeline de render: EstablishmentPage usa est.instagram (extractInstagramHandle tolera cualquier formato) pero SocialContactPanel usa socialMedia.instagram CRUDO como href → solo funciona con URL completa.
+- Normalizados 11 socials INSTAGRAM de '@handle'/'handle' a 'https://instagram.com/handle' vía scripts/normalize-instagram-urls.mjs. 3 ya estaban OK. 14 IG en total.
+- apply-real-venues.js (setInstagram) actualizado para guardar URL completa.
+
+Stage Summary:
+- La Villa de San Pedro: nombre + pin + dirección + Instagram verificados.
+- Formato canónico de socials INSTAGRAM en DB: URL completa.
