@@ -814,3 +814,18 @@ Stage Summary:
 - 16/33 pines exactos · 8/33 direcciones reales.
 - Datos curiosos: Club Centro de Amigos = CAPEM según Google; Koko Frappe y Jungla Bar quedan ~2.5 km NW del centro (zona noreste-norte, revisar zona si el usuario quiere).
 - Pendientes: 17 pins aproximados, 5 sin cover, IGs sin confirmar.
+
+---
+Task ID: covers-5-faltantes
+Agent: Z.ai (sesión continua)
+Task: Cierre de sesión — generar y conectar las 5 portadas faltantes.
+
+Work Log:
+- Invocado skill image-generation; 5 portadas 1024x1024 generadas vía scripts/generate-covers.sh (estilo ámbar cálido consistente, sin texto).
+- Verificadas visualmente (bodegon-panamericana, licoreria-la-llovizna).
+- DB actualizada vía scripts/attach-covers.mjs → coverImage = /images/<slug>.png. 33/33 con portada.
+- Commit: ver git log.
+
+Stage Summary:
+- Cierre del día: 16/33 pines exactos · 8/33 direcciones reales · 33/33 portadas · 14 IGs en URL canónica.
+- Pendiente próxima sesión: 17 pines aproximados; confirmar IG de Africa Burguers (@elpatio) y Licobar JJ (@puntoencuentrolt); zonas de Koko Frappe/Jungla Bar/La Casita de Maikel opcionales.
