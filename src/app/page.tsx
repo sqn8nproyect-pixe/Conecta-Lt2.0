@@ -61,6 +61,8 @@ function getAgeVerifiedServerSnapshot() {
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
+  const selectedSlug = useAppStore((s) => s.selectedEstablishmentSlug);
+  const goToDetail = useAppStore((s) => s.goToDetail);
   const ageVerified = useSyncExternalStore(
     subscribeAgeVerified,
     getAgeVerifiedSnapshot,
@@ -82,6 +84,40 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [view]);
+
+  // ── URL ↔ vista (Sprint 6B) ────────────────────────────────
+  // 1) Deep link: /?local=<slug> (CTA de las fichas indexables
+  //    /local/[slug]) abre la ficha en la SPA y limpia el param.
+  // 2) La barra de direcciones siempre refleja el estado real:
+  //    vista detail → /local/<slug>; cualquier otra vista → /.
+  //    Se usa replaceState (sin navegación) para no recargar la
+  //    SPA; Next sincroniza su router con updates externos.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const local = params.get('local');
+    if (local) {
+      goToDetail(local);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('local');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        url.pathname + url.search,
+      );
+    }
+  }, [goToDetail]);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (view === 'detail' && selectedSlug) {
+      const expected = `/local/${selectedSlug}`;
+      if (path !== expected) {
+        window.history.replaceState(window.history.state, '', expected);
+      }
+    } else if (path.startsWith('/local/')) {
+      window.history.replaceState(window.history.state, '', '/');
+    }
+  }, [view, selectedSlug]);
 
   return (
     <div className="min-h-screen bg-obsidian text-white font-sans relative flex flex-col">

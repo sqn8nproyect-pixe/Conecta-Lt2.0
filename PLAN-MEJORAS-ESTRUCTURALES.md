@@ -3,6 +3,8 @@
 > **Creado:** 2026-09-10 · **Estado:** aprobado para implementación · **Origen:** chat sesión restaurada
 > **Base:** HEAD `31c40f0` (Auth.js v5 migrado) · Neon verificado E2E (28 negocios)
 > **Actualizar tras cada sprint cerrado** — lo lee el boot de sesión vía worklog.
+>
+> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico (35 URLs), robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Pendiente: 6A.1 cifra en layout (revisar), 7B, 8, registrar sitemap en Search Console tras deploy.
 
 ---
 
@@ -61,9 +63,11 @@
 
 ---
 
-## Sprint 6B — Rutas dedicadas `/local/[slug]` (4-6h)
+## Sprint 6B — Rutas dedicadas `/local/[slug]` (4-6h) ✅ IMPLEMENTADO 2026-09-11
 
 **Objetivo:** cada negocio en una URL real, renderizada en servidor, indexable, con metadatos y canonical propios.
+
+**Implementación real:** `src/app/local/[slug]/page.tsx` (Server Component, SSG+ISR `revalidate=3600`, generateStaticParams con fallback sin DB, generateMetadata con canonical/OG/Twitter) · hub `src/app/local/page.tsx` (directorio por categoría, 33 links internos) · URL sync en la SPA (`src/app/page.tsx`: deep-link `/?local=slug` → vista detail, y `replaceState('/local/slug')` en navegación in-app) · la UI interactiva de `EstablishmentPage` se mantiene como vista in-app (6B.3 resuelto vía ficha server + CTA `/?local=slug`, sin refactor riesgoso de 1652 líneas).
 
 | Tarea | Archivo | Detalle |
 |-------|---------|---------|
@@ -83,9 +87,11 @@
 
 ---
 
-## Sprint 7A — Sitemap dinámico + JSON-LD (2-3h)
+## Sprint 7A — Sitemap dinámico + JSON-LD (2-3h) ✅ IMPLEMENTADO 2026-09-11
 
 **Objetivo:** que Google descubra las URLs y muestre rich results.
+
+**Implementación real:** `src/app/sitemap.ts` (35 URLs, ISR 1h, fallback sin DB) · `src/app/robots.ts` (reemplaza public/robots.txt) · JSON-LD en `src/lib/seo.ts` + `src/app/local/[slug]/page.tsx`: un solo bloque `@graph` con LocalBusiness/subtipo (LiquorStore/NightClub/BarOrPub por categoría), AggregateRating solo si `reviewCount>0`, BreadcrumbList (Inicio→Locales→Local), openingHoursSpecification agrupada, geo, sameAs. Validado E2E con `scripts/validate-jsonld.mjs`.
 
 | Tarea | Archivo | Detalle |
 |-------|---------|---------|
