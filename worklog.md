@@ -798,3 +798,19 @@ Work Log:
 Stage Summary:
 - Estado: 8/33 pins exactos; 4/33 direcciones reales; 14 IG; 8 teléfonos de directorio; 5 sin cover; 33/33 con descripción (redactada por agente, no verificada).
 - Suspiciosos detectados: IG @puntoencuentrolt en Licobar JJ (parece del nombre viejo); atribución de @elpatio a Africa Burguers sin confirmar; dirección "CC La Matica Km 25" de Medusa contradice su pin (centro).
+
+---
+Task ID: pins-lote-centro
+Agent: Z.ai (sesión continua)
+Task: Lote de 8 pines verificados por el usuario (Bicentenario, Naikel, Panamericana, Club Centro de Amigos, Koko Frappe, Jungla Bar, Chuky, Cúrametono) + 4 direcciones.
+
+Work Log:
+- 8 short links resueltos y aplicados vía scripts/apply-pins-batch-centro.mjs (Δ 0.3–2.6 km).
+- Direcciones reales: Bicentenario (Local 1, frente El Rincón, Av. Roscio esq. Flor de Mayo), Naikel (C.C. Ambrosi, C. Boyacá), Panamericana (8XVC+955), Chuky (9W2X+5RH, Av. Víctor Batista).
+- Solo pin (dirección sin cambios): Club Centro de Amigos (CAPEM), Koko Frappe, Jungla Bar (conserva Mercado Municipal El Paso), Cúrametono.
+- Roster sincronizado (8 entradas). Commit: ver git log.
+
+Stage Summary:
+- 16/33 pines exactos · 8/33 direcciones reales.
+- Datos curiosos: Club Centro de Amigos = CAPEM según Google; Koko Frappe y Jungla Bar quedan ~2.5 km NW del centro (zona noreste-norte, revisar zona si el usuario quiere).
+- Pendientes: 17 pins aproximados, 5 sin cover, IGs sin confirmar.
