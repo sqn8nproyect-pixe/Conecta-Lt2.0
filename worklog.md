@@ -630,3 +630,21 @@ Stage Summary:
 - Coordenadas 30/33 en rango geográfico; 4 killers del seed corregidos (licobar JJ, Don Sancho, Africa Burguers, + Emperador/Pasatiempos reposicionados en Carrizal)
 - Commit 4ca966d
 - Pendiente: precisar Calle 9 de Africa Burguers + confirmar socials @elpatio (pregunta abierta al usuario); pasada GPS venue a venue para el resto
+
+---
+Task ID: coords-v2-teques
+Agent: main
+Task: Pin exacto de Africa Burguers (usuario) destapa error sistemático de geocodificación
+
+Work Log:
+- Usuario envió pin de Africa Burguers (maps.app.goo.gl/f1QaZQ276pPnk9f48) → resuelto: 10.3587,-67.0346, Plus Code 9X58+F5J "Los Teques"
+- ALARMA: la longitud -67.03 coincide con coords que yo había "corregido" como outliers → verificado centro real de Los Teques: 10.344,-67.043 (Wikipedia 10°20'28"N 67°02'26"O, geodatos, 123coordenadas)
+- ERROR RAÍZ: asumí centro en -66.85 (18km al este); mi escaneo anterior con rangos equivocados "validó" coords en la Cordillera de la Costa y moví Licobar JJ/Don Sancho/Africa Burguers a posiciones peores; el seed original de Don Sancho (10.3473,-67.0430) era correcto
+- Creado y ejecutado scripts/fix-coords-v2-teques.js: 26 coordenadas corregidas — Africa Burguers pin exacto, Don Sancho restaurado, Licobar JJ aprox CC Hito, 19 Centro por calle/sector (ancla Plaza Bolívar), 5 Panamericana Sur interpolación Km 13→27 + Bertorelli, 2 Laguneta vía El Jarillo; SALOS/San Pedro/Carrizal intactos (eran correctos)
+- Escaneo final con rangos correctos: 33/33 en rango geográfico (Panamericana Sur ampliado a lng [-67.05,-66.98] como corredor con pins pendientes)
+- Lección registrada: verificar coordenadas de referencia de la ciudad ANTES de auditar; los pines de Google Maps del usuario son la fuente más confiable
+
+Stage Summary:
+- Coordenadas 33/33 en rango; error sistemático del seed eliminado; 1 pin exacto (Africa Burguers)
+- Commit post-4ca966d
+- Pendiente: 32 coords son aproximaciones (±500m-1.5km) — recolectar pines de Google Maps del usuario venue a venue; zona "Panamericana Sur" podría renombrarse si el corredor es más este que sur (decisión del usuario)
