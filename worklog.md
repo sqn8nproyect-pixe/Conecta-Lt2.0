@@ -349,3 +349,17 @@ Work Log:
 Stage Summary:
 - Local = remoto = producción. Cero trabajo en riesgo
 - Usuario debe revocar el PAT de escritura YA
+
+---
+Task ID: restore-session-2026-09-10-b
+Agent: main (nuevo chat)
+Task: Restaurar workspace desde GitHub y arrancar sesión (clone → bun install → session-boot.sh)
+
+Work Log:
+- git clone Conecta-Lt2.0 → /home/z/my-project (HEAD f0d69a1, árbol limpio, 0 sin push)
+- bun install OK (890 paquetes, 10.9s)
+- session-boot.sh + session-health.sh ejecutados; contexto de SESSION_HANDOFF.md cargado
+
+Stage Summary:
+- Workspace restaurado al 100% = origin/main. Veredicto health: 🔴 solo por ENV (.env ausente) — bloqueado por DATABASE_URL que el usuario enviará
+- Siguiente acción: construir .env (RECOVERY.md paso 6) → prisma generate → dev server → verificación E2E
