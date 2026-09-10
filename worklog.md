@@ -829,3 +829,25 @@ Work Log:
 Stage Summary:
 - Cierre del día: 16/33 pines exactos · 8/33 direcciones reales · 33/33 portadas · 14 IGs en URL canónica.
 - Pendiente próxima sesión: 17 pines aproximados; confirmar IG de Africa Burguers (@elpatio) y Licobar JJ (@puntoencuentrolt); zonas de Koko Frappe/Jungla Bar/La Casita de Maikel opcionales.
+
+---
+Task ID: seo-6b-7a
+Agent: Z.ai (sesión continua)
+Task: Generar sitemap.xml dinámico y añadir JSON-LD (LocalBusiness, AggregateRating, BreadcrumbList) — Sprint 7A + prerrequisito 6B.
+
+Work Log:
+- Diagnóstico: 7A requería URLs indexables (6B) — la app era SPA client-side sin rutas para locales.
+- src/lib/seo.ts: helpers JSON-LD (SITE_URL, categoryToSchemaType → LiquorStore/NightClub/BarOrPub, buildOpeningHours con agrupación de días, buildLocalBusinessJsonLd con AggregateRating solo si reviewCount>0, buildBreadcrumbJsonLd, serializeJsonLd @graph).
+- src/app/local/[slug]/page.tsx: Server Component SSG+ISR revalidate=3600, generateStaticParams (33 slugs, fallback [] si DB cae), generateMetadata (title/description/canonical/OG/Twitter), HTML crudo con contenido (portada, badges, rating, descripción, dirección+Maps, horarios via formatSchedule, teléfono, IG, CTA → /?local=slug), JSON-LD @graph (LocalBusiness+BreadcrumbList), 404 para inactivos/inexistentes.
+- src/app/local/page.tsx: hub/directorio server agrupado por categoría (13 licorerías, 7 tascas, 7 discotecas, 6 licobares) con 33 links internos.
+- src/app/sitemap.ts: 35 URLs (/ + /local + 33 /local/[slug]), lastModified desde updatedAt, revalidate 1h, fallback estático si DB falla.
+- src/app/robots.ts: allow /, disallow /api/ y /r/, sitemap + host; eliminado public/robots.txt (conflicto Next).
+- src/app/page.tsx (SPA): deep-link /?local=slug → goToDetail + limpia query; useEffect [view, selectedSlug] sincroniza URL con replaceState (/local/slug ↔ /).
+- Validación: build prerenderiza 33 fichas + /local + sitemap + robots; scripts/validate-jsonld.mjs en verde (BarOrPub/NightClub correctos, rating 4.6(24) en El Toro, 404 en slug falso, 0 bloques JSON-LD en home); HTML crudo muestra nombre/dirección/horario; directorio expone 33 hrefs; eslint limpio.
+- PLAN-MEJORAS-ESTRUCTURALES.md actualizado (6B+7A marcados implementados con nota de decisiones).
+
+Stage Summary:
+- Google ahora tiene 35 URLs indexables con rich results potenciales.
+- Commit: ver git log. Pendiente post-deploy: registrar sitemap en Search Console (tarea externa 7A.6).
+- Nota: fichas server no llevan AgeGate (info factual del local); si el dueño quiere gate también en fichas, es decisión de producto.
+- Siguientes sprints según plan: 7B (AgeGate cookie 30d + login contextual) y 8 (editorial semanal).
