@@ -5,13 +5,13 @@
 > chat nuevo perderá contexto jamás.
 
 **Fecha inicio sesión:** 2026-09-10
-**Última actividad:** 2026-09-10 03:07 UTC
-**Tareas en esta sesión:** 6
-**Chat:** restauración + blindaje (chat original murió el 10-Sep — ver RECOVERY.md)
+**Última actividad:** 2026-09-10 13:55 UTC
+**Tareas en esta sesión:** 2 (restauración chat nuevo + reconexión Neon/E2E)
+**Chat:** segundo restore — sesión re-abierta tras muerte del chat anterior
 
-**Estado del workspace:** 🟢 estable — TODO respaldado en GitHub (c400301 = producción + infraestructura de prevención)
+**Estado del workspace:** 🟢 estable — f0d69a1 = origin/main = producción. Local verificado E2E tras reconstruir .env (Neon OK: 28 negocios, 40 users, 115 reviews, smoke test HTTP 200 en /, /api/businesses, /api/categories)
 
-**En vuelo ahora mismo:** nada — infraestructura de prevención push-eada y verificada en producción
+**En vuelo ahora mismo:** nada — entorno local 100% operativo
 
 **Siguiente paso acordado:** por decidir (candidatas: Sprint 6 Night Route multi-paradas, migración Auth.js v5)
 
@@ -21,5 +21,6 @@
 
 
 **Gotchas activos:**
-- `unset DATABASE_URL DIRECT_URL` antes de cualquier comando prisma CLI (el shell del sandbox pisa el .env con SQLite vieja)
-- worklog.md recién archivado: 10 entradas activas + worklog-archivo-2026-09.md (123 entradas)
+- `unset DATABASE_URL DIRECT_URL` antes de cualquier comando prisma CLI / node (el shell del sandbox pisa el .env con SQLite vieja)
+- El sandbox mata procesos background entre tool calls: para probar la app usar `bash scripts/smoke-test.sh` (levanta server + prueba + apaga en 1 llamada). Nunca asumir que un server sigue vivo de un tool call anterior
+- worklog.md: 12 entradas activas + worklog-archivo-2026-09.md (123 entradas)

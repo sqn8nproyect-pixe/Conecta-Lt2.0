@@ -363,3 +363,20 @@ Work Log:
 Stage Summary:
 - Workspace restaurado al 100% = origin/main. Veredicto health: 🔴 solo por ENV (.env ausente) — bloqueado por DATABASE_URL que el usuario enviará
 - Siguiente acción: construir .env (RECOVERY.md paso 6) → prisma generate → dev server → verificación E2E
+
+---
+Task ID: neon-reconexion-2026-09-10
+Agent: main (mismo chat)
+Task: Reconstruir .env con DATABASE_URL de Neon, regenerar Prisma Client y verificar E2E
+
+Work Log:
+- .env reconstruido: DATABASE_URL (pooler) + DIRECT_URL (directo) + NEXTAUTH/AUTH_SECRET generados con openssl
+- prisma generate v6.19.2 OK, schema validado
+- scripts/verify-db-connection.js: Neon OK en 3.8s (28 negocios, 40 users, 115 reviews — igual al estado del 10-Sep)
+- Descubierto gotcha: el sandbox mata procesos background entre tool calls (setsid no sobrevive) → creado scripts/smoke-test.sh que prueba todo en 1 llamada
+- Smoke test E2E: / 200, /api/businesses 200 con datos reales, /api/categories 200, home renderiza contenido
+
+Stage Summary:
+- Entorno local 100% operativo: .env → Neon → Prisma → Next.js → API con datos reales
+- SESSION_HANDOFF.md actualizado (gotcha de procesos background documentado)
+- Pendiente sin cambios: revocar PAT, rotar contraseña Neon al terminar de iterar
