@@ -4,7 +4,7 @@
 > **Base:** HEAD `31c40f0` (Auth.js v5 migrado) · Neon verificado E2E (28 negocios)
 > **Actualizar tras cada sprint cerrado** — lo lee el boot de sesión vía worklog.
 >
-> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico (35 URLs), robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Pendiente: 6A.1 cifra en layout (revisar), 7B, 8, registrar sitemap en Search Console tras deploy.
+> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico (35 URLs), robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). Pendiente: 6A.1 cifra en layout (revisar), Sprint 8 (editorial).
 
 ---
 

@@ -851,3 +851,22 @@ Stage Summary:
 - Commit: ver git log. Pendiente post-deploy: registrar sitemap en Search Console (tarea externa 7A.6).
 - Nota: fichas server no llevan AgeGate (info factual del local); si el dueño quiere gate también en fichas, es decisión de producto.
 - Siguientes sprints según plan: 7B (AgeGate cookie 30d + login contextual) y 8 (editorial semanal).
+
+---
+Task ID: sprint-7b
+Agent: Z.ai (sesión continua)
+Task: Sprint 7B — AgeGate cookie 30 días + login contextual + retorno post-login.
+
+Work Log:
+- 7B.1-2: page.tsx migró AgeGate de sessionStorage a cookie 'age-verified=1' (Max-Age 2592000, SameSite=Lax, Secure solo https). Patrón anti-hydration (useSyncExternalStore + getServerSnapshot=false) intacto. Nota regulatoria en comentario (criterio dueño).
+- 7B.3: store.ts +requestLogin/clearLoginPrompt + tipo PendingIntent (favorite/redeem/reserve). requestLogin persiste en sessionStorage 'pending-intent' (bug inicial detectado en E2E: estado zustand no sobrevivía redirect → corregido).
+- LoginPromptModal.tsx nuevo (montado en page.tsx): mensaje contextual + botón Google/demo vía beginLogin() extraído a src/lib/auth-login.ts (producción redirect:true / dev redirect:false / demo modal).
+- Hooks use-favorite/reservation/redemption-actions: notificaciones 'Inicia sesión...' → requestLogin() con intención; catch NOT_AUTHENTICATED también abre modal.
+- 7B.4: use-pending-intent.ts (montado en page.tsx): al authenticated + intent persistido → favorite/redeem auto-ejecutados; reserve → goToDetail(slug) para confirmar con datos del usuario; limpia intent antes de ejecutar (sin bucles de reintento).
+- Navbar: CTA global de login eliminado para visitantes (solo avatar/notifications/logout con sesión); DemoLoginModal movido al LoginPromptModal; imports/GoogleIcon limpiados; lógica de login en auth-login.ts.
+- E2E agent-browser (server standalone + env del .env): gate visible → click SOY MAYOR → document.cookie 'age-verified=1' → reload → gate 0 veces, cookie persiste. Corazón Bodegón Bravamar sin sesión → modal 'Inicia sesión para guardar Bodegón Bravamar en tus favoritos' → pending-intent '{"type":"favorite",...}' en sessionStorage. Build 63 páginas + eslint limpio.
+
+Stage Summary:
+- Criterios done 7B cumplidos (verificados con agent-browser salvo auto-ejecución post-OAuth real, que sigue el patrón de hooks ya probados).
+- Commits: 3f6275e (6B+7A) → d73a722 (7B). Push a GitHub realizado por el dueño con PAT (Vercel despliega). Sitemap registrado en Search Console por el dueño.
+- Siguiente sprint del plan: 8 (editorial 'Qué hacer este fin de semana', requiere datos reales del dueño). Pendiente menor: 6A.1 cifra '28' en layout.tsx (hoy son 33).
