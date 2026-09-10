@@ -7017,3 +7017,23 @@ Stage Summary:
 - Sin pendientes del chat roto: última sesión (9-Sep) verificó E2E el feature de archivos de menú y dejó producción limpia
 - Pendiente: credenciales Neon (DATABASE_URL/DIRECT_URL) para levantar dev con datos reales
 - Usuario debe revocar el PAT usado para fetch
+
+---
+Task ID: conexion-neon-completa-2026-09-10
+Agent: main (sesión restaurada)
+Task: Conectar base de datos Neon real y verificar la app E2E en el sandbox restaurado
+
+Work Log:
+- Usuario proveyó pooled connection string de Neon
+- Configurado .env: DATABASE_URL (pooler) + DIRECT_URL (sin pooler) + NEXTAUTH_SECRET nuevo
+- Quitado channel_binding=require (Prisma no lo soporta)
+- GOTCHA CONOCIDO CONFIRMADO: el shell del sandbox exporta DATABASE_URL=custom.db (SQLite vieja) que pisa el .env → fix: unset DATABASE_URL DIRECT_URL antes de arrancar dev server
+- bun run db:verify-neon → 28 negocios ACTIVE (incluye los 7 Licobar), 227 imágenes, 115 reviews, 6716 analytics events
+- Dev server reiniciado con env limpia: API /api/businesses devuelve datos reales ✅
+- Verificación visual con agent-browser: AgeGate OK → Home con hero slider OK → Populares (Licobar JJ #1 con 8 vistas) OK → Explora Locales con filtros OK → 0 errores de página
+- Screenshots guardados en db/verificacion-*.png
+
+Stage Summary:
+- PROYECTO 100% OPERATIVO en sandbox: código d273e29 (= producción) + Neon conectado + UI verificada
+- Seguridad: PAT de GitHub usado solo para fetch (usuario debe revocarlo); contraseña Neon expuesta en chat (recomendar rotación futura en Neon console)
+- Listo para iterar nuevas features
