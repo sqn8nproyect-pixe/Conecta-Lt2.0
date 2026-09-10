@@ -726,3 +726,18 @@ Work Log:
 Stage Summary:
 - La Casita de Maikel: coordenadas VERIFICADAS por el usuario. 7/33 pins exactos.
 - Sigue pendiente: pin de tasca-san-pedro (coords erróneas ~28 km).
+
+---
+Task ID: rename-tasca-villa-san-pedro
+Agent: Z.ai (sesión continua)
+Task: Usuario pregunta si "Tasca Restaurante La Villa De San Pedro" está en el catálogo.
+
+Work Log:
+- Verificado en DB: no existía con ese nombre; había una entrada genérica "Tasca - Bodegón San Pedro" (slug tasca-san-pedro, zona San Pedro de los Altos, coords erróneas 10.4068,-66.9035).
+- Renombrado a "Tasca Restaurante La Villa de San Pedro" vía scripts/rename-tasca-villa-san-pedro.mjs (slug estable tasca-san-pedro para no romper enlaces).
+- Roster actualizado (nombre + comentario de coords erróneas pendientes).
+- Commit: ver git log (rename-tasca-villa-san-pedro).
+
+Stage Summary:
+- Catálogo 33/33 con nombre real de la tasca de San Pedro.
+- Pendiente: pin de Google Maps de la tasca para corregir coords (~28 km off) y validar la dirección "Calle Principal del Pueblo".
