@@ -11,7 +11,16 @@
 
 ## 🔁 Protocolo de Sesión (LEER PRIMERO)
 
-> **Cada nueva sesión de chat debe empezar con este protocolo para no perder contexto.**
+> **⚡ VERSIÓN AUTOMATIZADA (desde el 10-Sep):** el flujo completo se ejecuta con 3 comandos.
+> El usuario solo dice **"boot"** en un chat nuevo y el agente hace el resto:
+>
+> | Momento | Comando | Qué hace |
+> |---------|---------|----------|
+> | Al iniciar | `bash scripts/session-boot.sh` | Limpia gotchas, deps, dev server, health y carga TODO el contexto (handoff + status + worklog tail) |
+> | Tras cada tarea | `bash scripts/session-task.sh` | Incrementa contador de sesión + advertencias 🟢🟡🔴 |
+> | Diagnóstico | `bash scripts/session-health.sh` | 6 checks: worklog, git, push, fatiga de chat, Neon, app viva |
+>
+> Los pasos 1-6 de abajo son el detalle manual de cada fase (por si los comandos fallan).
 
 ### Paso 1 — Recuperar contexto
 El usuario envía como primer mensaje:

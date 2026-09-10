@@ -3,17 +3,30 @@
 > **Instrucciones para cualquier agente AI que trabaje en este proyecto.**
 > **Lee esto ANTES de hacer cualquier cambio.**
 
-## 🔄 Recuperación de contexto (OBLIGATORIO al inicio)
+## ⚡ Protocolo automático de sesión (OBLIGATORIO — 3 comandos)
 
-Al iniciar una sesión nueva, SIEMPRE:
+> **El usuario solo dice "boot" y todo arranca solo. Nada de restaurar desde cero.**
 
-1. **Lee `PROJECT_STATUS.md`** completo — estado actual del proyecto
-2. **Lee el tail de `worklog.md`** (últimas 3 secciones separadas por `---`) — historial reciente
-3. **Ejecuta `git log --oneline -10`** — commits recientes
-4. **Health check:** `curl -sS -o /dev/null -w "%{http_code}" https://conecta-lt2-0.vercel.app/api/auth/providers` — debe dar 200
-5. **Solo entonces**, procede con la tarea del usuario
+### Al INICIAR sesión (o cuando el usuario diga "boot"):
+```bash
+bash scripts/session-boot.sh
+```
+Usa SU OUTPUT como contexto completo (incluye handoff, estado git, health de app,
+y la última entrada del worklog). **NUNCA leas worklog.md completo** — está
+podado a propósito; el historial viejo está en `worklog-archivo-*.md`.
+Confirma al usuario en 1 mensaje: versión, estado y tarea en vuelo.
 
-**NUNCA asumas el estado del proyecto sin verificar.** Usa los archivos y comandos de arriba.
+### Tras CERRAR cada tarea:
+1. Append al `worklog.md` (formato de abajo)
+2. Actualizar `SESSION_HANDOFF.md` (estado, en vuelo, siguiente paso)
+3. Ejecutar `bash scripts/session-task.sh` → incrementa contador + da ADVERTENCIAS 🟢🟡🔴
+
+### Al CERRAR la sesión (o si health da 🔴 por fatiga de chat):
+1. Push ritual a GitHub (PAT temporal → push → usuario revoca)
+2. Avisar al usuario: abrir **chat nuevo** y decir "boot"
+3. Si algo se rompe de verdad → plan de rescate en `RECOVERY.md`
+
+**NUNCA asumas el estado del proyecto sin ejecutar el boot script.**
 
 ## 🚫 Lo que NO debes hacer
 
@@ -38,6 +51,8 @@ Al iniciar una sesión nueva, SIEMPRE:
 - **Footer sticky al bottom** (`min-h-screen flex flex-col` + `mt-auto`)
 - **Mobile-first responsive** (`sm:`, `md:`, `lg:`, `xl:`)
 - **Apega una sección a `worklog.md`** después de cada task (formato abajo)
+- **Actualiza `SESSION_HANDOFF.md`** tras cada task y ejecuta `bash scripts/session-task.sh`
+- **Hazle caso a las advertencias 🟡/🔴 de `session-health.sh`** — existen para que el chat no muera
 
 ## 📝 Formato de worklog (OBLIGATORIO)
 
@@ -117,6 +132,7 @@ Después de cualquier cambio en auth/api/db:
 
 ## 🆘 Si algo se rompe
 
+0. **Chat trabado con "¡Ups! Algo salió mal"** → NO insistir más de 2-3 veces → plan de rescate en **`RECOVERY.md`** (probado el 10-Sep: recuperación completa en ~30 min)
 1. **Lee `dev.log`** para errores de runtime
 2. **Lee `worklog.md`** (últimas secciones) para ver qué cambió recientemente
 3. **`git log --oneline -20`** + **`git diff HEAD~3`** para ver cambios recientes

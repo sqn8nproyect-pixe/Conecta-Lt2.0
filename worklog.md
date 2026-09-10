@@ -315,3 +315,22 @@ Work Log:
 Stage Summary:
 - Proyecto blindado: chats desechables + boot protocol + push por tarea + worklog ligero + secretos en gestor + plan de rescate documentado
 - Jerarquía de backups definida: GitHub (código) / gestor de contraseñas (secretos) / tar del panel (sandbox) / Neon (datos)
+
+---
+Task ID: protocolo-automatizado-2026-09-10
+Agent: main (sesión restaurada)
+Task: Sistema de protocolo de sesión automatizado (petición del usuario: boot casi automático + advertencias + cero restauraciones desde cero)
+
+Work Log:
+- Creado SESSION_HANDOFF.md — "RAM" del proyecto (máx 40 líneas): estado volátil, contador de tareas del chat, en-vuelo, siguiente paso, gotchas activos
+- Creado scripts/session-boot.sh (bun run boot): 10 pasos — limpia gotcha DATABASE_URL, verifica deps/Prisma/.env/Neon, arranca dev server, health HTTP+API, estado git, y escupe TODO el contexto (handoff + cabecera status + última entrada worklog)
+- Creado scripts/session-health.sh (bun run health): 6 checks con semáforo 🟢🟡🔴 — peso del worklog (>10 🟡, >15 🔴), árbol git sucio, commits sin push (>5 🔴), fatiga del chat (>=4 🟡, >=6 🔴 ABRIR CHAT NUEVO), Neon en .env, app viva con datos. Exit code = severidad
+- Creado scripts/session-task.sh (bun run task): incrementa contador en handoff + timestamp + corre health
+- Hooks instalados: CLAUDE.md ahora define el protocolo de 3 comandos (los agentes lo leen automáticamente); PROJECT_STATUS.md con tabla de la versión automatizada; package.json con scripts boot/health/task
+- Bugs corregidos durante pruebas: patrones grep/perl no matcheaban formato markdown **negrita** (contador quedaba en 0) y regex de fecha con . en vez de .* (timestamp no actualizaba)
+- Tests en vivo: boot OK (contexto completo en un output), health OK (detectó 3 🟡 reales), task OK (4→5, fecha actualizada)
+
+Stage Summary:
+- Protocolo nuevo: usuario dice "boot" → contexto completo automático en ~30s; tras cada tarea → bun run task da advertencias ANTES de que el chat muera; health >=6 tareas 🔴 obliga a abrir chat nuevo con push previo
+- Con handoff+boot+health, ningún chat nuevo necesita restaurar nada: contexto completo en 1 comando
+- Commit local pendiente de push con próximo PAT
