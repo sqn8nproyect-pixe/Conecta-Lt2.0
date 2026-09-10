@@ -55,6 +55,7 @@ export function useReservationActions() {
   const queryClient = useQueryClient();
 
   const addNotification = useAppStore((s) => s.addNotification);
+  const requestLogin = useAppStore((s) => s.requestLogin);
 
   // Per-instance set of reservation IDs currently being cancelled — drives
   // the "CANCELANDO…" + spinner state on the CANCELAR button.
@@ -69,7 +70,12 @@ export function useReservationActions() {
       input: CreateReservationInput,
     ): Promise<CreateReservationResult | null> => {
       if (status !== 'authenticated') {
-        addNotification('Inicia sesión para reservar.', 'info');
+        // Sprint 7B — login contextual: tras el login llevamos al
+        // usuario a la ficha para confirmar la reserva.
+        requestLogin('Inicia sesión para completar tu reserva.', {
+          type: 'reserve',
+          slug: input.businessSlug,
+        });
         return null;
       }
       setIsCreating(true);
@@ -92,18 +98,23 @@ export function useReservationActions() {
         return data;
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
-        addNotification(
-          msg === 'NOT_AUTHENTICATED'
-            ? 'Inicia sesión para reservar.'
-            : msg || 'No se pudo crear la reserva. Intenta de nuevo.',
-          'info',
-        );
+        if (msg === 'NOT_AUTHENTICATED') {
+          requestLogin('Inicia sesión para completar tu reserva.', {
+            type: 'reserve',
+            slug: input.businessSlug,
+          });
+        } else {
+          addNotification(
+            msg || 'No se pudo crear la reserva. Intenta de nuevo.',
+            'info',
+          );
+        }
         return null;
       } finally {
         setIsCreating(false);
       }
     },
-    [status, addNotification, queryClient],
+    [status, addNotification, queryClient, requestLogin],
   );
 
   const cancelReservation = useCallback(

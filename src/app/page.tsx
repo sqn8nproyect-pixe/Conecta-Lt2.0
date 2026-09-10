@@ -15,22 +15,32 @@ import { AgeGate } from '@/components/conecta/AgeGate';
 import { LegalPage } from '@/components/conecta/LegalPage';
 import { AboutPage } from '@/components/conecta/AboutPage';
 import { Footer } from '@/components/conecta/Footer';
+import { LoginPromptModal } from '@/components/conecta/LoginPromptModal';
+import { usePendingIntent } from '@/lib/hooks/use-pending-intent';
 
-// ── Age verification external store ───────────────────────────
-// We use `useSyncExternalStore` to read sessionStorage without
-// causing a hydration mismatch. The pattern:
-//   - `getServerSnapshot` always returns `false` (server has no
-//     sessionStorage → renders the AgeGate).
-//   - `getSnapshot` on the client reads sessionStorage AFTER
-//     hydration, so the server HTML and the first client render
-//     match. React then re-renders with the client snapshot.
-//   - `confirmAge` writes to sessionStorage AND notifies listeners
-//     so the component re-renders without AgeGate.
+// ── Age verification (Sprint 7B) ───────────────────────────
+// Persistencia en COOKIE propia (30 días) en lugar de
+// sessionStorage. Criterio del dueño: una cookie de 30 días
+// sigue cumpliendo la "verificación razonable de edad" exigida
+// para sitios con promoción de alcohol — el gate reaparece cada
+// 30 días, no en cada sesión de navegador. Además la cookie
+// sobrevive el reload completo del flujo OAuth de Google (el
+// callback vuelve a / y el usuario ya no ve el gate).
 //
-// sessionStorage (not localStorage) ensures the check resets when
-// the browser closes — keeps the intent of "ask once per session"
-// for alcohol regulations while not breaking the Google OAuth
-// callback flow (which does a full page reload back to /).
+// Anti-hydration-mismatch (patrón original intacto):
+//   - `getServerSnapshot` siempre devuelve `false` (el server no
+//     conoce las cookies del cliente → renderiza el AgeGate).
+//   - `getSnapshot` en el cliente lee la cookie DESPUÉS de la
+//     hidratación, así el HTML del server y el primer render
+//     cliente coinciden. React luego re-renderiza con el valor
+//     real de la cookie.
+//   - `confirmAge` escribe la cookie Y notifica a los listeners
+//     para re-render sin recargar.
+//   - `Secure` solo en https (en localhost http las cookies
+//     Secure se pierden en algunos navegadores).
+
+const AGE_COOKIE = 'age-verified';
+const AGE_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 días en segundos
 
 let ageVerifiedInMemory = false;
 const ageVerifiedListeners = new Set<() => void>();
@@ -49,7 +59,13 @@ function subscribeAgeVerified(listener: () => void) {
 function getAgeVerifiedSnapshot() {
   if (ageVerifiedInMemory) return true;
   try {
-    return sessionStorage.getItem('age-verified') === 'true';
+    return document.cookie
+      .split('; ')
+      .some(
+        (c) =>
+          c.startsWith(`${AGE_COOKIE}=`) &&
+          c.split('=')[1] === '1',
+      );
   } catch {
     return false;
   }
@@ -57,6 +73,20 @@ function getAgeVerifiedSnapshot() {
 
 function getAgeVerifiedServerSnapshot() {
   return false;
+}
+
+function writeAgeVerifiedCookie() {
+  try {
+    const secure =
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:'
+        ? '; Secure'
+        : '';
+    document.cookie = `${AGE_COOKIE}=1; Max-Age=${AGE_COOKIE_MAX_AGE}; Path=/; SameSite=Lax${secure}`;
+  } catch {
+    // document.cookie puede fallar en contextos restringidos —
+    // el flag en memoria basta para esta pestaña.
+  }
 }
 
 export default function Home() {
@@ -69,14 +99,13 @@ export default function Home() {
     getAgeVerifiedServerSnapshot,
   );
 
+  // Sprint 7B — login contextual: ejecuta la acción pendiente
+  // (favorito/cupón/reserva) tras volver del login con sesión activa.
+  usePendingIntent();
+
   const confirmAge = useCallback(() => {
     ageVerifiedInMemory = true;
-    try {
-      sessionStorage.setItem('age-verified', 'true');
-    } catch {
-      // sessionStorage may throw in private mode / blocked storage —
-      // the in-memory flag above is enough for this tab.
-    }
+    writeAgeVerifiedCookie();
     emitAgeVerifiedChange();
   }, []);
 
@@ -131,6 +160,7 @@ export default function Home() {
       {!ageVerified && <AgeGate onConfirm={confirmAge} />}
 
       <Notifications />
+      <LoginPromptModal />
       <Navbar />
 
       <main className="pt-28 sm:pt-20 flex-1 relative z-10">

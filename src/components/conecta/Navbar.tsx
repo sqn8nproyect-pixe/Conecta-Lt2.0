@@ -11,10 +11,9 @@ import {
   Shield,
   Star,
   Ticket,
-  User,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { useAppStore } from '@/lib/store';
 import { useFavoritesSync } from '@/lib/hooks/use-favorites-sync';
 import { useRedemptionsSync } from '@/lib/hooks/use-redemptions-sync';
@@ -23,41 +22,9 @@ import {
   useNotificationsSync,
   useNotificationActions,
 } from '@/lib/hooks/use-notifications-sync';
-import { useAuthProviders } from '@/lib/hooks/use-auth-providers';
 import { isAdminEmail } from '@/lib/admin-config';
 import { formatRelativeTime } from '@/lib/utils';
-import { DemoLoginModal } from '@/components/conecta/DemoLoginModal';
 import type { View } from '@/lib/types';
-
-/** Google "G" logo (official 4-color mark) — used in the sign-in button. */
-function GoogleIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path
-        fill="#FFC107"
-        d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
-      />
-      <path
-        fill="#FF3D00"
-        d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
-      />
-    </svg>
-  );
-}
 
 // ── Notification icon mapping ─────────────────────────────────
 // Each notification type gets its own lucide icon so the user can
@@ -315,8 +282,6 @@ export function Navbar() {
   const user = useAppStore((s) => s.user);
   const setView = useAppStore((s) => s.setView);
   const addNotification = useAppStore((s) => s.addNotification);
-  const { googleEnabled } = useAuthProviders();
-  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // Hydrate favorites + expose toggle() to children via the store.
   // Calling this here means every page has the favorites hydrated
@@ -386,68 +351,6 @@ export function Navbar() {
     </button>
   );
 
-  const handleLogin = () => {
-    // Two different flows depending on provider:
-    //
-    // GOOGLE (OAuth): en Vercel usamos redirect:true (default) — signIn
-    //   hace un form POST que termina en 302 redirect del navegador a
-    //   Google. Esto funciona mejor que redirect:false (fetch) en
-    //   NextAuth v4 + Next.js 16, donde el flujo fetch falla con
-    //   OAuthCallback error (probable issue de cookies/state entre
-    //   el POST inicial y el callback de Google).
-    //   En localhost usamos redirect:false porque el sandbox puede
-    //   tener issues cross-origin (localhost vs 127.0.0.1).
-    //
-    // DEMO (Credentials): abre un modal para que el usuario escriba
-    //   su email. Solo autentica usuarios ya existentes en la DB
-    //   (creados previamente vía Google OAuth). No crea usuarios
-    //   nuevos ni pisa name/image — Google es la única fuente de
-    //   verdad para identidad.
-    if (googleEnabled) {
-      // true si estamos en producción (dominio real, no localhost/sandbox).
-      const isProduction = typeof window !== 'undefined'
-        && !window.location.hostname.includes('localhost')
-        && !window.location.hostname.startsWith('127.0.0.1');
-
-      if (isProduction) {
-        // Flujo OAuth tradicional: form POST + 302 redirect.
-        void signIn('google', { callbackUrl: '/' }).catch(() => {
-          addNotification('Error de conexión al iniciar sesión con Google.', 'info');
-        });
-        return;
-      }
-
-      // Google en localhost/dev — flujo fetch (redirect:false)
-      void signIn('google', { callbackUrl: '/', redirect: false })
-        .then((res) => {
-          if (res?.error) {
-            addNotification('No se pudo iniciar sesión. Intenta de nuevo.', 'info');
-          } else if (res?.url && res.url.includes('/api/auth/error')) {
-            const errorMatch = res.url.match(/[?&]error=([^&]+)/);
-            const errorCode = errorMatch ? decodeURIComponent(errorMatch[1]) : 'unknown';
-            console.error('[auth] OAuth provider error:', errorCode, res.url);
-            addNotification(
-              `Error de autenticación con Google. Código: ${errorCode}. Revisa la configuración OAuth.`,
-              'info',
-            );
-          } else if (res?.url) {
-            window.location.href = res.url;
-          } else {
-            window.location.reload();
-          }
-        })
-        .catch(() => {
-          addNotification('Error de conexión al iniciar sesión. Intenta de nuevo.', 'info');
-        });
-      return;
-    }
-
-    // Google no configurado → abrir modal demo para que el usuario
-    // escriba su email. Solo funciona para usuarios ya existentes
-    // (creados previamente vía Google OAuth en producción).
-    setDemoModalOpen(true);
-  };
-
   const handleLogout = () => {
     void signOut({ redirect: false }).then(() => {
       setView('home');
@@ -489,7 +392,7 @@ export function Navbar() {
             {user && isAdminEmail(user.email) && adminNavItem()}
           </div>
 
-          {user ? (
+          {user && (
             <div className="flex items-center gap-3 sm:gap-4 sm:pl-4 sm:border-l border-white/10">
               <div className="flex items-center gap-2 text-sm">
                 <img
@@ -511,31 +414,10 @@ export function Navbar() {
                 <LogOut size={14} /> <span className="hidden sm:inline">Salir</span>
               </button>
             </div>
-          ) : (
-            <button
-              onClick={handleLogin}
-              title={
-                googleEnabled
-                  ? 'Iniciar sesión con Google'
-                  : 'Cuenta demo (Google no configurado)'
-              }
-              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full bg-white text-obsidian font-semibold hover:bg-gold hover:text-obsidian active:scale-95 transition-all text-xs tracking-wider glow-gold"
-            >
-              {googleEnabled ? (
-                <>
-                  <GoogleIcon size={15} />
-                  <span className="hidden sm:inline">CONTINUAR CON GOOGLE</span>
-                  <span className="sm:hidden">GOOGLE</span>
-                </>
-              ) : (
-                <>
-                  <User size={15} />
-                  <span className="hidden sm:inline">CUENTA DEMO</span>
-                  <span className="sm:hidden">ACCEDER</span>
-                </>
-              )}
-            </button>
           )}
+          {/* Sprint 7B — sin CTA global de login para visitantes: el
+              login aparece contextualmente al favoritar/reservar/
+              canjear (LoginPromptModal montado en page.tsx). */}
         </div>
       </div>
 
@@ -549,9 +431,6 @@ export function Navbar() {
           : null}
         {user && isAdminEmail(user.email) && adminNavItem()}
       </div>
-
-      {/* Modal de login demo (cuando Google OAuth no está configurado) */}
-      <DemoLoginModal open={demoModalOpen} onOpenChange={setDemoModalOpen} />
     </nav>
   );
 }

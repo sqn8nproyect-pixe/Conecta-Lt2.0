@@ -11,6 +11,51 @@ import type {
   View,
 } from './types';
 
+// ── Sprint 7B — Login contextual ─────────────────────────────
+// Intención pendiente que el usuario intentó sin sesión. Se
+// persiste en sessionStorage (clave 'pending-intent') porque el
+// flujo Google OAuth recarga la página por completo y las
+// closures/estado en memoria no sobreviven. Tras el login,
+// `usePendingIntent` la lee y completa la acción original
+// (deep-linking de intención).
+export type PendingIntent =
+  | { type: 'favorite'; slug: string; name?: string }
+  | { type: 'redeem'; promotionId: string; title: string }
+  | { type: 'reserve'; slug: string };
+
+const PENDING_INTENT_KEY = 'pending-intent';
+
+export function savePendingIntent(intent: PendingIntent | null) {
+  try {
+    if (intent) {
+      sessionStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(intent));
+    } else {
+      sessionStorage.removeItem(PENDING_INTENT_KEY);
+    }
+  } catch {
+    // sessionStorage puede fallar en modo privado — sin riesgo real:
+    // solo se pierde la auto-completación post-login.
+  }
+}
+
+export function readPendingIntent(): PendingIntent | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_INTENT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingIntent;
+    if (
+      parsed?.type === 'favorite' ||
+      parsed?.type === 'redeem' ||
+      parsed?.type === 'reserve'
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 interface AppState {
   // Navigation
   view: View;
@@ -53,10 +98,22 @@ interface AppState {
   // and a dropdown with the latest entries.
   persistentNotifications: PersistentNotification[];
 
+  // Login contextual (Sprint 7B) — modal global que se abre cuando el
+  // usuario intenta favoritar/reservar/canjear sin sesión. Guarda el
+  // mensaje contextual y la intención pendiente para completarla tras
+  // el login (ver `usePendingIntent`).
+  loginPromptOpen: boolean;
+  loginPromptMessage: string | null;
+  pendingIntent: PendingIntent | null;
+
   // Actions: navigation
   setView: (view: View) => void;
   goToDetail: (slug: string) => void;
   setSelectedMapEstablishment: (est: Establishment | null) => void;
+
+  // Actions: login contextual (Sprint 7B)
+  requestLogin: (message: string, intent?: PendingIntent | null) => void;
+  clearLoginPrompt: () => void;
 
   // Actions: auth — called by the Navbar after useSession resolves.
   setUser: (user: User | null) => void;
@@ -92,11 +149,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   reservations: [],
   notifications: [],
   persistentNotifications: [],
+  loginPromptOpen: false,
+  loginPromptMessage: null,
+  pendingIntent: null,
 
   setView: (view) => set({ view }),
   goToDetail: (slug) =>
     set({ view: 'detail', selectedEstablishmentSlug: slug }),
   setSelectedMapEstablishment: (est) => set({ selectedMapEstablishment: est }),
+
+  requestLogin: (message, intent = null) => {
+    // Persistir la intención: el redirect de Google OAuth recarga la
+    // página completa y el estado Zustand no sobrevive.
+    savePendingIntent(intent);
+    set({
+      loginPromptOpen: true,
+      loginPromptMessage: message,
+      pendingIntent: intent,
+    });
+  },
+  // Solo cierra el modal; la intención persistida se mantiene para que
+  // usePendingIntent la complete si el usuario loguea después.
+  clearLoginPrompt: () => set({ loginPromptOpen: false }),
 
   setUser: (user) => {
     const prev = get().user;

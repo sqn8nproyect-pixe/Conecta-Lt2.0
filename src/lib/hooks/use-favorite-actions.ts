@@ -29,11 +29,17 @@ export function useFavoriteActions() {
   const addFavoriteLocal = useAppStore((s) => s.addFavoriteLocal);
   const removeFavoriteLocal = useAppStore((s) => s.removeFavoriteLocal);
   const addNotification = useAppStore((s) => s.addNotification);
+  const requestLogin = useAppStore((s) => s.requestLogin);
 
   const toggle = useCallback(
     async (slug: string, name?: string) => {
       if (status !== 'authenticated') {
-        addNotification('Inicia sesión para guardar tus favoritos.', 'info');
+        // Sprint 7B — login contextual: modal con la intención
+        // pendiente; tras el login el favorito se aplica solo.
+        requestLogin(
+          `Inicia sesión para guardar${name ? ` ${name}` : ' este local'} en tus favoritos.`,
+          { type: 'favorite', slug, name },
+        );
         return;
       }
       const isFav = useAppStore.getState().favorites.includes(slug);
@@ -72,15 +78,20 @@ export function useFavoriteActions() {
           removeFavoriteLocal(slug);
         }
         const msg = err instanceof Error ? err.message : '';
-        addNotification(
-          msg === 'NOT_AUTHENTICATED'
-            ? 'Inicia sesión para guardar favoritos.'
-            : 'No se pudo actualizar el favorito. Intenta de nuevo.',
-          'info',
-        );
+        if (msg === 'NOT_AUTHENTICATED') {
+          requestLogin(
+            `Inicia sesión para guardar${name ? ` ${name}` : ' este local'} en tus favoritos.`,
+            { type: 'favorite', slug, name },
+          );
+        } else {
+          addNotification(
+            'No se pudo actualizar el favorito. Intenta de nuevo.',
+            'info',
+          );
+        }
       }
     },
-    [status, addNotification, addFavoriteLocal, removeFavoriteLocal, queryClient],
+    [status, addNotification, addFavoriteLocal, removeFavoriteLocal, queryClient, requestLogin],
   );
 
   const isFav = useCallback(

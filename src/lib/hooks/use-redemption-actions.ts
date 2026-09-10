@@ -37,6 +37,7 @@ export function useRedemptionActions() {
     (s) => s.removeRedeemedPromotionId,
   );
   const addNotification = useAppStore((s) => s.addNotification);
+  const requestLogin = useAppStore((s) => s.requestLogin);
 
   // Per-instance set of promotion IDs currently being redeemed — drives the
   // "RECLAMANDO…" + spinner state on the offer buttons.
@@ -45,7 +46,13 @@ export function useRedemptionActions() {
   const redeem = useCallback(
     async (promotionId: string, promoTitle: string): Promise<boolean> => {
       if (status !== 'authenticated') {
-        addNotification('Inicia sesión para reclamar cupones.', 'info');
+        // Sprint 7B — login contextual: tras el login el cupón se
+        // reclama automáticamente.
+        requestLogin(`Inicia sesión para reclamar el cupón: ${promoTitle}.`, {
+          type: 'redeem',
+          promotionId,
+          title: promoTitle,
+        });
         return false;
       }
       // Already claimed? Short-circuit (defensive — the UI hides the button).
@@ -80,12 +87,18 @@ export function useRedemptionActions() {
         // Roll back the optimistic add.
         removeRedeemedPromotionId(promotionId);
         const msg = err instanceof Error ? err.message : '';
-        addNotification(
-          msg === 'NOT_AUTHENTICATED'
-            ? 'Inicia sesión para reclamar cupones.'
-            : msg || 'No se pudo reclamar el cupón. Intenta de nuevo.',
-          'info',
-        );
+        if (msg === 'NOT_AUTHENTICATED') {
+          requestLogin(`Inicia sesión para reclamar el cupón: ${promoTitle}.`, {
+            type: 'redeem',
+            promotionId,
+            title: promoTitle,
+          });
+        } else {
+          addNotification(
+            msg || 'No se pudo reclamar el cupón. Intenta de nuevo.',
+            'info',
+          );
+        }
         return false;
       } finally {
         setPendingIds((prev) => {
@@ -102,6 +115,7 @@ export function useRedemptionActions() {
       addRedeemedPromotionId,
       removeRedeemedPromotionId,
       queryClient,
+      requestLogin,
     ],
   );
 
