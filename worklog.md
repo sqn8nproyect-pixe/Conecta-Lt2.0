@@ -6999,3 +6999,21 @@ Stage Summary:
 - ✅ Verificación E2E en producción completa: presign MENU+PDF → R2 → registro PENDING → admin approve → APPROVED → menú público expone menuFiles → delete limpia DB+R2
 - ✅ Bug de inconsistencia de roles JWT-vs-DB fixeado (código + dato); el admin ya puede gestionar cualquier local
 - ✅ Producción limpia (0 archivos de prueba residuales)
+
+---
+Task ID: sincronizacion-origin-main-2026-09-10
+Agent: main (sesión restaurada)
+Task: Sincronizar workspace local con origin/main (última versión de producción) usando PAT read-only del usuario
+
+Work Log:
+- git fetch origin con PAT temporal (solo lectura) → remoto 48 commits adelante del tar
+- Commits nuevos (8-9 Sep): carta digital + 3 archivos menú, QR reservas /r/[code], polling 30s, notificaciones bidireccionales, hero slider 3 fotos, moderación fotos (max 10), categoría Licobar (7 locales), fix R2 proxy, fixes auth
+- 2 commits locales (auto-snapshots plataforma) evaluados: PROTOCOL.md local era plantilla vieja con $(date) sin expandir → descartada la local, se usa la remota (28-Ago, credenciales rotadas); eliminación accidental de presign/route.ts NO traída
+- git reset --hard origin/main → HEAD = d273e29, working tree limpio, idéntico a producción
+- bun install re-ejecutado tras sync
+
+Stage Summary:
+- Workspace = EXACTAMENTE lo desplegado en producción (Vercel + Neon), commit d273e29
+- Sin pendientes del chat roto: última sesión (9-Sep) verificó E2E el feature de archivos de menú y dejó producción limpia
+- Pendiente: credenciales Neon (DATABASE_URL/DIRECT_URL) para levantar dev con datos reales
+- Usuario debe revocar el PAT usado para fetch
