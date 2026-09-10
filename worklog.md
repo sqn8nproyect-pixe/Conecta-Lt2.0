@@ -664,3 +664,18 @@ Stage Summary:
 - Estructura de dueños restaurada al patrón de la plataforma
 - Commit post-78871fc
 - Nota: los 5 venues ahora gestionables desde el panel de dueño del admin; reclamos reales intactos
+
+---
+Task ID: pin-el-toro
+Agent: main
+Task: Aplicar pin exacto de Bodegón El Toro (usuario)
+
+Work Log:
+- maps.app.goo.gl/QPMuo1mtsYZ2T5uP7 resuelto: place "Bodegón el Toro", marcador !3d10.3310781!4d-67.0410681
+- Aplicado a bodegon-el-toro (reemplaza interpolación Km 26 que quedó 2km al NE)
+- Hallazgo geográfico: El Toro está al SUR del centro (10.331) → valida el nombre de zona "Panamericana Sur" (corredor sur, no este); rango de sanidad ajustado lat [10.32,10.38]
+- Implicación: la interpolación por km (Medusa Km 25, Ranch Grill Km 23) es sospechosa — pedir pin de Medusa (CC La Matica) y Ranch Grill (Los Cerritos)
+
+Stage Summary:
+- 2/33 pins exactos (Africa Burguers, El Toro); 31 aproximados
+- Commit post-de62766
