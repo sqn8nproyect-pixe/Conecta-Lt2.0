@@ -553,3 +553,17 @@ Stage Summary:
 - Horarios: usuario = datos reales de Maps; agente = ordenanza por categoría
 - Pendiente: coordenadas aproximadas por zona (verificar GPS), cover images de plantilla en renombrados, descripciones son borradores editoriales para revisión de dueños
 - Suplentes no usados documentados en real-venues-research.json (Dimartino, Las Dalias, Lama, Shiang Lon, Chila, Prestige, View, Club Campestre, Paracotos Lunch, etc.)
+
+---
+Task ID: venues-reales-cleanup-socials
+Agent: main
+Task: Limpiar socials de plantilla residuales en los 25 locales renombrados
+
+Work Log:
+- Detectado en verificación: renombrados arrastraban TikTok/Facebook/WhatsApp falsos de los slots de plantilla (ej: Donato mostraba @eclipselt)
+- Creado y ejecutado scripts/cleanup-renamed-socials.js: deleteMany socials en 25 renombrados + restaurar solo IG real del roster
+- Resultado: 76 socials falsos eliminados, 9 IG reales restaurados (Donato, Medusa, Emperador, Mercaplus, Naikel, Bravamar, Scandalo, Daws, Pasatiempos)
+- Keepers y creates intactos
+
+Stage Summary:
+- Socials 100% reales en el directorio; verificado Donato = solo @donato_disco
