@@ -870,3 +870,18 @@ Stage Summary:
 - Criterios done 7B cumplidos (verificados con agent-browser salvo auto-ejecución post-OAuth real, que sigue el patrón de hooks ya probados).
 - Commits: 3f6275e (6B+7A) → d73a722 (7B). Push a GitHub realizado por el dueño con PAT (Vercel despliega). Sitemap registrado en Search Console por el dueño.
 - Siguiente sprint del plan: 8 (editorial 'Qué hacer este fin de semana', requiere datos reales del dueño). Pendiente menor: 6A.1 cifra '28' en layout.tsx (hoy son 33).
+
+---
+Task ID: sprint-7b-push
+Agent: Z.ai (sesión continua)
+Task: Push del Sprint 7B a GitHub con PAT del dueño.
+
+Work Log:
+- Verificado: origin/main estaba en 48fc2ad; local tenía d73a722 (Sprint 7B) + c6ebd01 (plan/worklog) sin pushear.
+- Confirmado en worklog previo que 7B ya estaba validado (E2E agent-browser, build 63 páginas, eslint limpio).
+- Push ejecutado: 48fc2ad..c6ebd01 main -> main (repo sqn8nproyect-pixe/Conecta-Lt2.0). Vercel despliega automáticamente.
+
+Stage Summary:
+- Sprint 7B ya en GitHub → Vercel desplegará AgeGate cookie 30d + login contextual.
+- El dueño confirmó que aún NO revocó el PAT; recordarle revocarlo tras confirmar el deploy.
+- Siguiente sprint del plan: 8 (editorial semanal, requiere datos del dueño). Pendiente menor: 6A.1 cifra '28' en layout.tsx (hoy son 33).
