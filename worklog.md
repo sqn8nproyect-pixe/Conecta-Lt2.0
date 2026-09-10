@@ -648,3 +648,19 @@ Stage Summary:
 - Coordenadas 33/33 en rango; error sistemático del seed eliminado; 1 pin exacto (Africa Burguers)
 - Commit post-4ca966d
 - Pendiente: 32 coords son aproximaciones (±500m-1.5km) — recolectar pines de Google Maps del usuario venue a venue; zona "Panamericana Sur" podría renombrarse si el corredor es más este que sur (decisión del usuario)
+
+---
+Task ID: estructura-duenos
+Agent: main
+Task: Restaurar patrón "admin dueño por defecto" en locales sin dueño
+
+Work Log:
+- Usuario: "recuerda la estructura yo como administrador por defecto de cada local"
+- Auditoría: 26 locales owner=sqn8nproyect@gmail.com (ADMIN, patrón), 5 creates con ownerId=null (bug del script apply-real-venues.js), 2 reclamos legítimos (Licobar JJ → cerotraba 8-sep, San Pedro → ana.rodriguez 11-ago)
+- Creado y ejecutado scripts/fix-owner-structure.js: los 5 huérfanos → admin por defecto con ownerStatus APPROVED (claimedAt queda null: gestionados por plataforma, no reclamados)
+- Estructura final: 31 admin + 2 BUSINESS_OWNER reales = 33, 0 sin owner, 0 proposedOwner pendientes
+
+Stage Summary:
+- Estructura de dueños restaurada al patrón de la plataforma
+- Commit post-78871fc
+- Nota: los 5 venues ahora gestionables desde el panel de dueño del admin; reclamos reales intactos
