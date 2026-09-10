@@ -533,3 +533,23 @@ Stage Summary:
 - Cobertura para los 25 slots: discotecas 7/7 ✓, tascas 6/6 ✓, licorerías 6/6 ✓, licobares 4/6 ⚠️
 - Deficit licobar requiere decisión del usuario (26 locales reales o aporta 2 más)
 - Mapeo propuesto presentado al usuario antes de renombrar 25 registros (cambio de slugs = URLs nuevas)
+
+---
+Task ID: venues-reales-aplicacion
+Agent: main
+Task: Reemplazar los 25 locales de plantilla por venues reales del municipio Guaicaipuro
+
+Work Log:
+- Usuario aportó 14 venues verificados en Google Maps (13 bodegones/licorerías + Mercaplus La Fortaleza mixto + Tasca-Bodegón San Pedro) con teléfonos, IG y horarios reales
+- Agente web aportó 39 venues (68 queries): scripts/real-venues-research.json
+- Creado scripts/real-venues-roster.js: 25 renames + 5 creates; keepers protegidos (licobar-punto-de-encuentro, licoreria-don-sancho, tasca-el-patio) con guardas en el script
+- Fix pre-ejecución: Bicentenario iba sobre el slot de Don Sancho (keeper) → movido al slot licobar-la-terraza convertido a licorería; phone:'N/A' eliminados
+- Creado y ejecutado scripts/apply-real-venues.js: validación previa (keepes/slugs/categorías), rename conserva reviews/favoritos/ofertas, socials IG upsert, horas custom del usuario (Lun-Sáb, dom cerrado) u ordenanza por categoría para venues del agente
+- Resultado: 33 locales reales — discoteca 7, licobar 6, tasca 7, licorería 13; BusinessHours 231/231
+- Meta description actualizada: número fijo eliminado (28→sin cifra)
+
+Stage Summary:
+- Directorio 100% venues reales: 3 keepers + 14 del usuario (★) + 16 del agente + 5 nuevos
+- Horarios: usuario = datos reales de Maps; agente = ordenanza por categoría
+- Pendiente: coordenadas aproximadas por zona (verificar GPS), cover images de plantilla en renombrados, descripciones son borradores editoriales para revisión de dueños
+- Suplentes no usados documentados en real-venues-research.json (Dimartino, Las Dalias, Lama, Shiang Lon, Chila, Prestige, View, Club Campestre, Paracotos Lunch, etc.)
