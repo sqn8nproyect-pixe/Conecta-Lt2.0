@@ -785,3 +785,16 @@ Work Log:
 Stage Summary:
 - La Villa de San Pedro: nombre + pin + dirección + Instagram verificados.
 - Formato canónico de socials INSTAGRAM en DB: URL completa.
+
+---
+Task ID: auditoria-completitud
+Agent: Z.ai (sesión continua)
+Task: Informe de estado de datos (verificados vs no verificados) para el usuario.
+
+Work Log:
+- Creado scripts/audit-completeness.mjs: audita los 33 negocios (pin exacto, dirección real, teléfono, IG, cover, descripción).
+- Corregidos slugs en el mapa de verificación: pin exacto de Africa Burguers = slug tasca-el-patio; dirección real de Licobar JJ = slug licobar-punto-de-encuentro.
+
+Stage Summary:
+- Estado: 8/33 pins exactos; 4/33 direcciones reales; 14 IG; 8 teléfonos de directorio; 5 sin cover; 33/33 con descripción (redactada por agente, no verificada).
+- Suspiciosos detectados: IG @puntoencuentrolt en Licobar JJ (parece del nombre viejo); atribución de @elpatio a Africa Burguers sin confirmar; dirección "CC La Matica Km 25" de Medusa contradice su pin (centro).
