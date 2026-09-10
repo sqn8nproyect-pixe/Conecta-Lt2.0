@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // CONECTA-LT 3.0 — Server-side session helpers
-// Thin wrappers around getServerSession so API routes can:
+// Thin wrappers around auth() (Auth.js v5) so API routes can:
 //   - getCurrentUser()              → returns the user or null
 //   - requireUser()                 → throws 401 if no session
 //   - getCurrentUserWithRole()      → same as getCurrentUser but also
@@ -8,11 +8,14 @@
 //                                     (Etapa 7.B — RBAC)
 //   - requireRole(...allowedRoles)  → throws 401 if no session,
 //                                     403 if role not in allowlist
+//
+// Migrado de getServerSession(authOptions) (v4) → auth() (v5) el
+// 2026-09-10. Las firmas públicas NO cambiaron — las ~40 API routes
+// que usan estos helpers no requieren ningún cambio.
 // ─────────────────────────────────────────────────────────────
 
-import { getServerSession } from 'next-auth';
 import type { UserRole } from '@prisma/client';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { isAdminEmail } from '@/lib/admin-config';
 
 export type SessionUser = {
@@ -27,7 +30,7 @@ export type SessionUser = {
  * Use this in API routes where the user is optional.
  */
 export async function getCurrentUser(): Promise<SessionUser | null> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.id) return null;
   return {
     id: session.user.id,
@@ -86,7 +89,7 @@ export async function requireUser(): Promise<SessionUser> {
 export async function getCurrentUserWithRole(): Promise<
   (SessionUser & { role: UserRole }) | null
 > {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.id) return null;
   const role = session.user.role ?? 'USER';
   return {

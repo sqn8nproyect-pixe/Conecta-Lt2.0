@@ -1,7 +1,11 @@
-// Type augmentation for NextAuth.js v4 — exposes user.id + user.role on
+// Type augmentation for Auth.js v5 — exposes user.id + user.role on
 // the session. The `role` is added by the JWT callback (which reads it
 // from the DB on first sign-in) and then copied to the session by the
 // session callback.
+//
+// Nota migración v5 (2026-09-10): los module paths de augmentation son
+// idénticos en v5 ('next-auth' + 'next-auth/jwt') — solo cambió el
+// mecanismo de lectura server-side (getServerSession → auth()).
 //
 // Etapa 7.B: added `role` so the client (via useSession()) and the server
 // (via getServerSession) can both read the user's UserRole without an

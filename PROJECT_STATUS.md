@@ -232,18 +232,20 @@ Reemplazo del Matchmaker legacy. Flujo progresivo de 6 pasos que recomienda loca
 
 ## ⚠️ Gotchas importantes (LEER ANTES DE TOCAR AUTH)
 
-### 1. openid-client patch (CRÍTICO para Google OAuth)
-**Problema:** `openid-client` v5.4+ (usado por NextAuth v4) implementa RFC 9207 estrictamente. Google declara `authorization_response_iss_parameter_supported: true` en su discovery document PERO no envía `iss` en el authorization response. Esto causa `RPError: iss missing from the response` en cada login de Google.
+### 0. Stack actual: Auth.js v5 (migrado 2026-09-10)
+La app corre `next-auth@5.0.0-beta.32` (Auth.js v5, JWT strategy). `src/lib/auth.ts` exporta `{ handlers, auth, signIn, signOut }`; `src/server/auth.ts` expone `getCurrentUser/requireUser/requireRole` (los API routes NO llaman auth() directamente — usar los helpers). El cliente usa `next-auth/react` sin cambios. La lectura de sesión server-side es `auth()` (v5 devuelve `null` para anónimo, NO `{}` como v4).
 
-**Solución implementada:** `scripts/patch-openid-client.js` patchea `node_modules/openid-client/lib/client.js` en postinstall (configurado en `package.json`). El patch es idempotente y corre tanto local como en Vercel.
+### 1. ~~openid-client patch~~ — ELIMINADO por la migración v5
+El problema existía solo con NextAuth v4 (openid-client + RFC 9207 estricto). v5 usa `oauth4webapi` y no necesita patch. `scripts/patch-openid-client.js` fue borrado y el postinstall volvió a ser solo `prisma generate`. NO reinstalar el patch.
 
-**NO remover este patch script.** Si se migra a Auth.js v5, el patch deja de ser necesario (Auth.js v5 usa oauth4webapi en vez de openid-client).
+### 2. Cookies sin `__Host-` prefix (sigue vigente)
+`src/lib/auth.ts` configura cookies manualmente con nombres `authjs.*` SIN prefix (workaround para Vercel: el estado OAuth se perdía entre redirect y callback con los defaults prefixados). Sacrifica un poco de seguridad pero hace que OAuth funcione.
 
-### 2. Cookies sin `__Host-` prefix
-`src/lib/auth.ts` configura cookies manualmente sin el prefix `__Host-` (workaround para Vercel + NextAuth v4). Sacrifica un poco de seguridad pero hace que OAuth funcione.
+### 3. `trustHost: true` en el config
+Necesario para que Auth.js funcione detrás del Caddy gateway y en Vercel. Sin esto, no infiere el host correcto. (En v5 el tipo oficial acepta esta key — el error TS de la era v4 desapareció.)
 
-### 3. `trustHost: true` en authOptions
-Necesario para que NextAuth funcione detrás del Caddy gateway y en Vercel. Sin esto, NextAuth no infiere el host correcto.
+### 3.b. `secret` explícito con fallback (continuidad Vercel)
+El config usa `secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET` — en Vercel aún existe solo `NEXTAUTH_SECRET` de la era v4 y ese fallback garantiza que los JWT existentes sobrevivan el deploy (mismo secreto = cero re-logins). Cuando se normalicen las env vars de Vercel a naming v5 (AUTH_SECRET/AUTH_URL), este fallback es innecesario pero inofensivo.
 
 ### 4. Neon pooler vs direct URL
 - `DATABASE_URL` = Neon pooler (`-pooler` en el hostname) — para la app

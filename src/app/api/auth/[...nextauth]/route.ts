@@ -1,8 +1,7 @@
-// /api/auth/[...nextauth] — NextAuth.js v4 catch-all route.
+// /api/auth/[...nextauth] — Auth.js v5 catch-all route.
+// Migrado desde NextAuth v4 (NextAuth(authOptions)) el 2026-09-10:
+// v5 exporta `handlers` con GET/POST listos para el App Router.
 
-import NextAuth from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { handlers } from '@/lib/auth';
 
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
+export const { GET, POST } = handlers;

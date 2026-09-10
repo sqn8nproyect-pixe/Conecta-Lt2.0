@@ -5,15 +5,15 @@
 > chat nuevo perderá contexto jamás.
 
 **Fecha inicio sesión:** 2026-09-10
-**Última actividad:** 2026-09-10 13:55 UTC
-**Tareas en esta sesión:** 2 (restauración chat nuevo + reconexión Neon/E2E)
+**Última actividad:** 2026-09-10 14:35 UTC
+**Tareas en esta sesión:** 3 (restauración + reconexión Neon + migración Auth.js v5)
 **Chat:** segundo restore — sesión re-abierta tras muerte del chat anterior
 
-**Estado del workspace:** 🟢 estable — f0d69a1 = origin/main = producción. Local verificado E2E tras reconstruir .env (Neon OK: 28 negocios, 40 users, 115 reviews, smoke test HTTP 200 en /, /api/businesses, /api/categories)
+**Estado del workspace:** 🟢 estable — local verificado E2E tras reconstruir .env. Auth.js v5 (next-auth@5.0.0-beta.32) migrado y verificado E2E (9/9 checks: login demo→JWT→sesión con role→API protegida 200/401→signout) + build producción OK. PENDIENTE PUSH (sin PAT)
 
-**En vuelo ahora mismo:** nada — entorno local 100% operativo
+**En vuelo ahora mismo:** commit local de migración v5 esperando push cuando haya PAT nuevo
 
-**Siguiente paso acordado:** por decidir (candidatas: Sprint 6 Night Route multi-paradas, migración Auth.js v5)
+**Siguiente paso acordado:** Sprint 6 Night Route multi-paradas (FASE 15) — auth foundation ya estable
 
 **Pendientes del usuario:**
 - Revocar PAT usado para fetch (ghp_...ler)
@@ -21,6 +21,7 @@
 
 
 **Gotchas activos:**
-- `unset DATABASE_URL DIRECT_URL` antes de cualquier comando prisma CLI / node (el shell del sandbox pisa el .env con SQLite vieja)
-- El sandbox mata procesos background entre tool calls: para probar la app usar `bash scripts/smoke-test.sh` (levanta server + prueba + apaga en 1 llamada). Nunca asumir que un server sigue vivo de un tool call anterior
-- worklog.md: 12 entradas activas + worklog-archivo-2026-09.md (123 entradas)
+- `unset DATABASE_URL DIRECT_URL` antes de cualquier comando prisma CLI / node (el shell del sandbox pisa el .env con SQLite vieja). OJO: `unset X && cmd &` agrupa el unset en el subshell — usar `unset X; cmd &`
+- El sandbox mata procesos background entre tool calls: para probar la app usar `bash scripts/smoke-test.sh` y para auth `node scripts/auth-e2e-test.js` con server lanzado en la MISMA llamada
+- Auth.js v5: sesión anónima es `null` (v4 devolvía `{}`); server-side usar helpers de src/server/auth.ts, nunca auth() directo en routes
+- worklog.md: 14 entradas activas + worklog-archivo-2026-09.md (123 entradas)

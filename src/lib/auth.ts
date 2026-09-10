@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-// CONECTA-LT 3.0 — NextAuth.js v4 configuration
+// CONECTA-LT 3.0 — Auth.js v5 configuration (migrado desde
+// NextAuth v4 el 2026-09-10 — ver worklog: migracion-authjs-v5)
 // ─────────────────────────────────────────────────────────────
 // Providers:
 //   1. Google OAuth  →  when NEXT_PUBLIC_GOOGLE_CLIENT_ID/SECRET are set
@@ -11,51 +12,56 @@
 //
 // Adapter:  @auth/prisma-adapter  (Account, Session, VerificationToken)
 // Strategy: JWT (default) — we read session.user.id on the server
-//           via getServerSession(authOptions).
+//           via auth() (v5) from src/server/auth.ts helpers.
+//
+// MIGRACIÓN v4 → v5 (2026-09-10):
+//   - NextAuth(config) ahora devuelve { handlers, auth, signIn, signOut }.
+//   - getServerSession(authOptions) → auth() (en src/server/auth.ts).
+//   - secret explícito: prioriza AUTH_SECRET (naming v5) pero cae a
+//     NEXTAUTH_SECRET para que el deploy en Vercel NO requiera tocar
+//     env vars y las sesiones JWT existentes sobrevivan el deploy
+//     (mismo secreto = misma firma = cero re-logins forzados).
+//   - PATCH REMOVIDO: v5 usa oauth4webapi (no openid-client), por lo
+//     que el check estricto RFC 9207 de `iss` ya no existe y el
+//     scripts/patch-openid-client.js fue eliminado del postinstall.
+//   - trustHost: true ahora es tipo oficial (v4 daba error TS).
 // ─────────────────────────────────────────────────────────────
 
-import type { NextAuthOptions } from 'next-auth';
+import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
-import type { Adapter } from 'next-auth/adapters';
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import type { UserRole } from '@prisma/client';
 
 import { db } from '@/lib/db';
 import { isAdminEmail } from '@/lib/admin-config';
 
-// ─────────────────────────────────────────────────────────────
-// NOTE: openid-client's strict `iss` parameter check (RFC 9207)
-// is patched out via scripts/patch-openid-client.js (runs in
-// postinstall). Google's OIDC discovery document declares
-// `authorization_response_iss_parameter_supported: true` but
-// Google does NOT actually send `iss` in the authorization
-// response, which causes openid-client to throw
-// `RPError: iss missing from the response` on every Google login.
-// The patch comments out the check in node_modules/openid-client/
-// lib/client.js. See scripts/patch-openid-client.js for details.
-// ─────────────────────────────────────────────────────────────
-
 /**
- * Build the NextAuth options. We instantiate providers conditionally
- * so the app boots cleanly whether or not Google creds are present.
+ * Auth.js v5 instance. We instantiate providers conditionally so the
+ * app boots cleanly whether or not Google creds are present.
  */
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as Adapter,
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(db),
   session: { strategy: 'jwt' },
+  // Secret: v5 lee AUTH_SECRET por convención, pero pasar explícito con
+  // fallback a NEXTAUTH_SECRET garantiza continuidad en Vercel (donde
+  // hoy solo existe NEXTAUTH_SECRET de la era v4) y evita re-logins.
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   // Trust the Host header so the app works behind the Caddy gateway
-  // (the browser sees the gateway domain, not localhost:3000).
+  // (the browser sees the gateway domain, not localhost:3000) and on
+  // Vercel preview/production URLs.
   trustHost: true,
-  // WORKAROUND para NextAuth v4 + Next.js 16 + Vercel: las cookies con
-  // prefix __Host- que NextAuth setea por default pueden no preservarse
-  // correctamente en el flujo OAuth (state cookie se pierde entre el
-  // redirect a Google y el callback de vuelta → OAuthCallback error).
-  // Configuramos cookies manualmente sin el __Host- prefix para evitar
+  // WORKAROUND (portado de v4 — sigue siendo válido en v5): las cookies
+  // con prefix __Host-/__Secure- que Auth.js setea por default en
+  // contextos seguros pueden no preservarse correctamente en el flujo
+  // OAuth de Vercel (state cookie se pierde entre el redirect a Google
+  // y el callback de vuelta → OAuthCallback error). Configuramos
+  // cookies manualmente con nombres authjs.* SIN prefix para evitar
   // este issue. Sacrifica un poco de seguridad (sin prefix enforcement)
-  // pero hace que OAuth funcione.
+  // pero hace que OAuth funcione detrás de gateways/proxies.
   cookies: {
     sessionToken: {
-      name: 'next-auth.session-token',
+      name: 'authjs.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -64,7 +70,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
     callbackUrl: {
-      name: 'next-auth.callback-url',
+      name: 'authjs.callback-url',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -73,7 +79,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
     csrfToken: {
-      name: 'next-auth.csrf-token',
+      name: 'authjs.csrf-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -82,7 +88,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
     pkceCodeVerifier: {
-      name: 'next-auth.pkce.code_verifier',
+      name: 'authjs.pkce.code_verifier',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -91,7 +97,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
     state: {
-      name: 'next-auth.state',
+      name: 'authjs.state',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -100,7 +106,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
     nonce: {
-      name: 'next-auth.nonce',
+      name: 'authjs.nonce',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -111,7 +117,7 @@ export const authOptions: NextAuthOptions = {
   },
   debug: process.env.NODE_ENV !== 'production',
   logger: {
-    // Surface NextAuth errors with full context — by default they are
+    // Surface Auth.js errors with full context — by default they are
     // silenced in production which makes OAuth issues impossible to
     // diagnose. We always log errors regardless of NODE_ENV.
     error(...args: unknown[]) {
@@ -128,20 +134,20 @@ export const authOptions: NextAuthOptions = {
       } catch {
         message = String(error);
       }
-      console.error('[next-auth][error]', code, message);
+      console.error('[authjs][error]', code, message);
     },
     warn(code: string) {
-      console.warn('[next-auth][warn]', code);
+      console.warn('[authjs][warn]', code);
     },
     debug(message: string) {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[next-auth][debug]', message);
+        console.log('[authjs][debug]', message);
       }
     },
   },
   pages: {
     // We don't ship a custom sign-in page; the navbar triggers
-    // signIn('google') or signIn('credentials') directly.
+    // signIn('google') or signIn('demo') directly.
     signIn: '/',
   },
   providers: [
@@ -169,7 +175,9 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
-          const email = credentials?.email?.trim().toLowerCase();
+          // v5 tipa credentials como Partial<Record<..., unknown>> →
+          // cast explícito a string antes de trim().
+          const email = (credentials?.email as string | undefined)?.trim().toLowerCase();
           if (!email) {
             console.error('[auth.demo.authorize] no email provided');
             return null;
@@ -271,9 +279,4 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  events: {
-    // When a user signs in with Google for the first time, the Prisma
-    // adapter creates the User row automatically. Nothing to do here
-    // for the demo flow because authorize() already upserts.
-  },
-};
+});

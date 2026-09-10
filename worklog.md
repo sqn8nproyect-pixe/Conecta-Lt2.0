@@ -380,3 +380,25 @@ Stage Summary:
 - Entorno local 100% operativo: .env → Neon → Prisma → Next.js → API con datos reales
 - SESSION_HANDOFF.md actualizado (gotcha de procesos background documentado)
 - Pendiente sin cambios: revocar PAT, rotar contraseña Neon al terminar de iterar
+
+---
+Task ID: migracion-authjs-v5-2026-09-10
+Agent: main (mismo chat)
+Task: Migrar NextAuth v4 → Auth.js v5 y eliminar dependencia del patch openid-client
+
+Work Log:
+- Auditoría: superficie = 3 archivos server (lib/auth.ts, server/auth.ts, route.ts) + tipos; cliente next-auth/react 100% compatible (0 cambios en 13 archivos)
+- Instalado next-auth@5.0.0-beta.32 (peer deps soportan Next ^16 oficialmente); adapter @auth/prisma-adapter 2.11.3 compatible
+- src/lib/auth.ts reescrito a v5: NextAuth() → { handlers, auth, signIn, signOut }; secret explícito AUTH_SECRET ?? NEXTAUTH_SECRET (continuidad JWT en Vercel sin tocar env vars); cookies authjs.* sin __Host- prefix (workaround portado); trustHost ahora tipo oficial
+- src/server/auth.ts: getServerSession(authOptions) → auth() — firmas públicas intactas, ~40 API routes sin cambios
+- route.ts: export { GET, POST } = handlers
+- Eliminado scripts/patch-openid-client.js (git rm) y del postinstall (ahora solo prisma generate); v5 usa oauth4webapi
+- Fix 1 error nuevo: credentials?.email tipado unknown en v5 → cast a string
+- Error TS legacy 'trustHost does not exist in AuthOptions' DESAPARECIÓ
+- E2E 9/9 (scripts/auth-e2e-test.js): providers, sesión anónima null (contrato v5), csrf, login demo 302+JWT, sesión con id/role/name, RBAC, /api/favorites 200 con cookie y 401 sin, signout→null
+- Build producción OK (valida deploy Vercel); smoke test general 200 en /, /api/businesses, /api/categories
+
+Stage Summary:
+- Stack auth: next-auth@5.0.0-beta.32 + oauth4webapi — patch de node_modules eliminado, deuda crítica saldada
+- PROJECT_STATUS.md gotchas reescritos (patch marcado ELIMINADO, contrato v5 documentado)
+- Sin PAT: commit local pendiente de push; recuerda revocar PAT viejo y rotar Neon al cerrar
