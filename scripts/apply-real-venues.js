@@ -38,8 +38,10 @@ async function setInstagram(businessId, handle) {
     where: { businessId, type: 'INSTAGRAM' },
   });
   if (handle) {
+    // Formato URL completa: SocialContactPanel usa el valor crudo como href.
+    const clean = handle.replace(/^@/, '');
     await prisma.businessSocial.create({
-      data: { businessId, type: 'INSTAGRAM', value: `@${handle.replace(/^@/, '')}`, sortOrder: 0 },
+      data: { businessId, type: 'INSTAGRAM', value: `https://instagram.com/${clean}`, sortOrder: 0 },
     });
   }
 }
