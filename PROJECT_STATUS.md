@@ -3,9 +3,9 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-08-26
-**HEAD commit:** `2e6f134` (pushed a GitHub, desplegado en Vercel)
-**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo y funcionando junto a `conecta-lt2-0.vercel.app`. Políticas de Privacidad y Términos de Uso desplegados. ✅ Bloqueo de Google Safe Browsing LEVANTADO (24-Ago). ✅ Todos los PATs de GitHub revocados. ✅ Documento ejecutivo PDF descargable.
+**Última actualización:** 2026-09-10
+**HEAD commit:** `d273e29` (pushed a GitHub, desplegado en Vercel)
+**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo. ✅ **10-Sep: chat original murió ("¡Ups! Algo salió mal") — proyecto restaurado al 100% en sandbox nuevo siguiendo RECOVERY.md. Workspace sincronizado a d273e29 (= producción). Neon reconectado y verificado E2E (28 negocios, AgeGate, home, directorio — 0 errores).** ✅ worklog.md archivado (544KB → 40KB; historial en `worklog-archivo-2026-09.md`).
 
 ---
 
@@ -56,6 +56,16 @@ Si la tarea cambia el estado global (nuevo commit, nuevo despliegue, nuevo gotch
 
 ### Paso 6 — Push a GitHub (si aplica)
 Si la tarea generó commits que deben desplegarse a producción, el usuario provee un PAT temporal y el agente hace push. **Después el usuario revoca el PAT** en https://github.com/settings/tokens.
+
+### Paso 7 — Prevención (LEER ANTES DE CERRAR LA SESIÓN)
+Al terminar una sesión de trabajo, el agente y el usuario DEBEN:
+1. Hacer push a GitHub de los commits de la sesión (PAT temporal + revocar)
+2. Verificar que `worklog.md` siga ligero (si pasa de ~15 entradas, archivar con `bun run scripts/archive-worklog.ts 10`)
+3. Recordar al usuario guardar en su gestor de contraseñas cualquier secreto nuevo
+4. Considerar abrir un **chat nuevo** si esta sesión ya acumuló varias tareas largas — los chats desechables evitan la muerte por contexto saturado
+
+> 🛡️ **Si el chat se traba con "¡Ups! Algo salió mal"**: NO insistir más de 2-3 veces.
+> Ejecutar el plan de rescate documentado en **`RECOVERY.md`** (probado y verificado el 10-Sep).
 
 ---
 
