@@ -434,3 +434,20 @@ Stage Summary:
 - Anomalías detectadas: Licobar JJ Sáb:22:00-21:00(+1) inválido (23h); Africa Burguers usa slug tasca-el-patio (mismatch nombre/slug); Licobar La Terraza cierra 00:00 y lunes cerrado; El Botellón cruza medianoche 4 días
 - Schema BusinessHours soporta: dayOfWeek 0-6, openTime/closeTime HH:mm, isClosed, cruce de medianoche
 - Esperando datos oficiales del usuario para mapear por categoría + overrides por local
+
+---
+Task ID: horarios-alcaldia-aplicacion
+Agent: main
+Task: Aplicar horarios oficiales de la Alcaldía de Los Teques a los 28 locales
+
+Work Log:
+- Usuario pasó ordenanza: Bares/Tascas/Cantinas Lun-Dom 11:00-01:00; Discotecas Lun-Dom 19:00-03:00; Restaurantes 11:00-00:00 (no aplica, no hay restaurantes)
+- Decisión: licorerías NO cubiertas (expendio al detal, no consumo en sitio) → se conservan horarios actuales hasta que el usuario pase regla específica
+- Creado scripts/apply-alcaldia-hours.js: mapeo por categoría, transacción deleteMany+createMany por local, idempotente
+- Ejecutado: 21 locales actualizados (7 licobares + 7 tascas → 11:00-01:00(+1); 7 discotecas → 19:00-03:00(+1)), 7 licorerías omitidas
+- Verificado con audit-business-hours.js: 28/28 con horarios, 0 días cerrados, cruces de medianoche con convención closeTime<openTime
+
+Stage Summary:
+- Anomalías corregidas de paso: Licobar JJ Sáb 22:00-21:00 (inválido), Doña Rosa/El Tequeño/Tasca Los Amigos ahora abren domingo
+- Frontend ya soporta cruce de medianoche (PlannerSteps + business.service.ts) — solo fueron cambios de datos
+- Pendiente: regla específica para licorerías si la Alcaldía la tiene; Africa Burguers slug tasca-el-patio (se aborda en saneamiento de nombres)
