@@ -587,3 +587,23 @@ Stage Summary:
 - Directorio verificado y limpio tras el reemplazo de venues: datos de contacto 100% reales, zonas reales asignadas
 - Commit b3d2775
 - Pendiente conocido: 5 creates sin cover image (El Llanero, Chuky, La Llovizna, La Macarena, Panamericana); coordenadas lat/lng heredadas de slots/plantilla (aproximadas por zona, no verificadas venue a venue); 2 venues con dirección genérica
+
+---
+Task ID: correccion-direccion-guacara
+Agent: main
+Task: Corregir dirección falsa 'Sector Guacara' señalada por el usuario
+
+Work Log:
+- Usuario: "en los teques no existe ningun sector guacara" — la dirección de Licobar JJ venía del seed histórico scripts/add-licobars.ts (creaba 'Punto de Encuentro (Guacara)')
+- Búsquedas web (5 queries, crudos en scripts/research-raw/licobar-jj-*.json): Licobar JJ / puntoencuentrolt sin presencia indexada → sin dirección real disponible, se pide al usuario
+- Creado y ejecutado scripts/fix-addresses-feedback.js:
+  * Licobar JJ: address → 'Los Teques, municipio Guaicaipuro' (genérico honesto); la descripción ya decía 'en pleno centro' (editada por el dueño) → zona Centro ratificada
+  * La Estación de la Birra: dirección real hallada 'Av. Bertorelli Cisneros, sector El Cabotaje, al lado del Electroauto' (4 fuentes: IG bio, FB, TikTok bio, AlcaStars) + socials reales IG/TikTok @laestaciondelabirra + zona Centro → Panamericana Sur (misma avenida que Mercaplus)
+  * Jungla Bar: dirección real hallada 'Mercado Municipal de El Paso, zona licorera' (IG oficial de Jungla Bar) → zona Centro ratificada
+- Verificado: 0 negocios con 'Guacara' en dirección; 1 sola dirección genérica restante (Licobar JJ)
+- Africa Burguers: investigación ambigua (existen varios 'El Patio' en Los Teques: Urban Food, Gastronómico, Food Park; su IG/website apuntan a @elpatio / elpatioltt.com mientras TikTok muestra @africa.burguers.ve) → NO se toca, pendiente confirmación del usuario
+
+Stage Summary:
+- Dato falso del seed eliminado; 2 venues ganaron dirección y socials reales de paso
+- Commit post-b3d2775
+- Pendiente: dirección real de Licobar JJ (preguntar al usuario); confirmar si los socials @elpatio de Africa Burguers le pertenecen
