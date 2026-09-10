@@ -741,3 +741,18 @@ Work Log:
 Stage Summary:
 - Catálogo 33/33 con nombre real de la tasca de San Pedro.
 - Pendiente: pin de Google Maps de la tasca para corregir coords (~28 km off) y validar la dirección "Calle Principal del Pueblo".
+
+---
+Task ID: pin-villa-san-pedro
+Agent: Z.ai (sesión continua)
+Task: Aplicar pin de Google Maps de Tasca Restaurante La Villa de San Pedro (https://maps.app.goo.gl/iWifVVGP9cvYt7ew8)
+
+Work Log:
+- Short link resuelto: place "Tasca Restaurante La Villa De San Pedro" (confirma el rename anterior), pin !3d10.3648294!4d-67.0836514.
+- DB actualizada vía scripts/apply-pin-villa-san-pedro.mjs: corrección de 20.2 km. Queda a 5.0 km NW del centro de Los Teques (carretera/vestíbulo de la parroquia San Pedro).
+- Roster sincronizado (coords + comentario de pin real). Commit: ver git log.
+- NOTA: el pin NO cae en el casco del pueblo de San Pedro (~-67.13) sino 5 km NW del centro de Los Teques; la dirección "Calle Principal del Pueblo" es dudosa — pedir al usuario la dirección real o el texto exacto de Google Maps.
+
+Stage Summary:
+- 8/33 pines exactos verificados por el usuario: Africa Burguers, El Toro, Medusa, Ranch Grill, Mercaplus, La Estación, La Casita de Maikel, La Villa de San Pedro.
+- Pendiente: dirección real de La Villa de San Pedro; resto ~25 coords aproximadas.
