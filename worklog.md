@@ -1023,3 +1023,21 @@ Stage Summary:
 - Sprint 8.6 código COMPLETO y compilando; falta E2E con DB real (CRUD + visual con agent-browser) y push.
 - Bloqueos para el dueño: ① pegar DATABASE_URL (Neon pooled, sin channel_binding) + DIRECT_URL (sin -pooler) para reconstruir .env — se compartieron en un chat anterior o están en Neon console; ② PAT nuevo de GitHub para push.
 - Lección registrada: el restore de snapshot del sandbox borra archivos no trackeados (ya perdió .env una vez); RECOVERY.md paso 6 cubre la reconstrucción.
+
+---
+Task ID: hotfix-login-cierre
+Agent: main (Super Z)
+Task: Cierre del hotfix "error Configuration" en login Google de producción + push con PAT nuevo + verificación en conectalt.com.
+
+Work Log:
+- Causa raíz real identificada (no era el secret): el check de RFC 9207 (iss) de oauth4webapi en @auth/core 0.41.3 — Google devuelve iss sin coincidencia esperada → excepción → error=Configuration. Neutralizado vía customFetch en discovery (commit 0edb9ea).
+- Commits adicionales: f242901 (serializador maneja cause-objeto de AuthError v5), d5ddac3 (cast TS7053 en página de error), 64d6222 (docs/worklog del hotfix).
+- PAT nuevo del dueño configurado en remote → push exitoso: main == origin/main, working tree limpio (0/0 adelantados).
+- Verificación en producción (conectalt.com): /api/diagnose-auth/google-token → HTTP 200 con verdict "✅ SECRET VÁLIDO" (invalid_grant con código falso = Google autenticó el cliente OK; secret de 35 chars prefijo GOCSPX); /auth/error → 200 (página de error en español con marca); /editorial → 200.
+- Diagnóstico endpoint confirma: el secret NUNCA fue la causa; el fix iss resuelve el síntoma.
+
+Stage Summary:
+- Incidente de login RESUELTO y desplegado; dueño confirma "todo perfecto".
+- Higiene de repo completada en la sesión (PROJECT_STATUS.md sanitizado, presign restaurado, fileMode false, remote limpio).
+- Pendiente de seguridad: rotar NEXTAUTH_SECRET (arrastrado desde 18-Ago) y recordar rotación periódica del PAT si se pega en chats.
+- Pendiente de datos: IG Africa Burguers, IG Licobar JJ (@puntoencuentrolt), dirección real de Medusa.
