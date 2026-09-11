@@ -1,15 +1,23 @@
 // /auth/error — Página de error de autenticación (Auth.js v5 `pages.error`).
 //
-// Reemplaza la carta genérica en inglés de Auth.js ("Error del servidor /
-// Existe un problema con la configuración") por una experiencia en español
-// coherente con la marca Conecta-LT: explica qué pasó, evita culpar al
-// usuario y ofrece rutas de salida claras.
+// Reemplaza la carta genérica en inglés de Auth.js por una experiencia en
+// español coherente con la marca Conecta-LT: explica qué pasó, evita culpar
+// al usuario y ofrece rutas de salida claras.
+//
+// 2026-09-11 — AJUSTE post-autopsia: con AuthErrorLog + google-token
+// confirmamos que el servidor/credenciales están sanos y el fallo real
+// recurrente es "pkceCodeVerifier cookie was missing" (el navegador del
+// usuario descarta la cookie de seguridad durante el viaje a Google —
+// típico de navegadores integrados en apps o con cookies restringidas).
+// El texto de Configuration ya NO acusa al servidor: da pasos prácticos
+// y un botón de reintento directo (RetryGoogleButton).
 //
 // Los códigos llegan como querystring: /auth/error?error=Configuration
 // (y para CredentialsSignin además &code=...). El mapeo abajo cubre los
 // códigos que Auth.js puede enviar; cualquier otro cae en el fallback.
 
 import Link from 'next/link';
+import RetryGoogleButton from '@/components/conecta/RetryGoogleButton';
 
 type ErrorInfo = {
   titulo: string;
@@ -25,8 +33,8 @@ const ERRORES = {
   Configuration: {
     titulo: 'No pudimos iniciar tu sesión',
     detalle:
-      'El acceso con Google falló por un problema de configuración del servidor (credenciales OAuth). No es un error tuyo y tu cuenta está a salvo. Estamos trabajándolo — mientras tanto puedes seguir navegando por el directorio sin sesión.',
-    accion: { label: 'Volver al inicio', href: '/' },
+      'Tu navegador no devolvió la cookie de seguridad del acceso (suele pasar si abriste el sitio desde WhatsApp/Facebook o con cookies restringidas). La cuenta y el servidor están bien. Prueba así: 1) abre Chrome/Safari directamente y escribe conectalt.com, 2) toca Acceder de nuevo. Si persiste, borra los datos del sitio en los ajustes del navegador y reintenta.',
+    accion: null,
   },
   Callback: {
     titulo: 'Google no completó el acceso',
@@ -90,13 +98,15 @@ export default async function AuthErrorPage({
           {info.detalle}
         </p>
         <div className="flex flex-col items-center gap-3">
-          {info.accion && (
+          {info.accion ? (
             <Link
               href={info.accion.href}
               className="w-full rounded-full bg-gradient-to-r from-[#e8b64c] to-[#d4972e] px-6 py-3 text-sm font-semibold text-[#1a1408] transition hover:brightness-110 active:scale-[0.98]"
             >
               {info.accion.label}
             </Link>
+          ) : (
+            <RetryGoogleButton />
           )}
           <Link
             href="/local"
