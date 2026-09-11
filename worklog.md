@@ -2,6 +2,25 @@
 > `worklog-archivo-2026-09.md`. Leer la COLA de este archivo para contexto reciente.
 
 ---
+Task ID: 8.6-e2e-real
+Agent: Super Z (main agent)
+Task: Sprint 8.6 — reconstruir .env tras el restore del snapshot, pushear el código pendiente con el PAT nuevo, y validar el ABM de flyers/eventos E2E con DB real (API) y visual (panel admin).
+
+Work Log:
+- Reconstruido `.env` (RECOVERY.md paso 6): DATABASE_URL (Neon pooled SIN channel_binding — Prisma no lo soporta), DIRECT_URL (host sin -pooler, para migraciones), AUTH_SECRET/NEXTAUTH_SECRET nuevos (sesiones JWT previas invalidadas, esperado), AUTH_URL=http://localhost:3100 para E2E. Google OAuth queda SOLO como env var de Vercel (local el provider se desactiva y el LoginPromptModal muestra "Acceso demo").
+- Preflight `bun scripts/preflight-admin-events.ts` ✅: admin sqn8nproyect@gmail.com con role=ADMIN (allowlist ADMIN_EMAILS en src/lib/admin-config.ts), 12 eventos BusinessEvent en DB, conexión Neon operativa.
+- Push con el PAT nuevo: `948e50a..ca63cd6` (ca63cd6 = código 8.6, bd72e28 = handoff). main == origin/main. Remote con PAT embebido en .git/config (no trackeado).
+- E2E CRUD real `scripts/e2e-events-db.ts` (standalone :3100 + Neon productivo): **13/13 ✅** — csrf → POST /api/auth/callback/demo (email admin) → sesión role=ADMIN → GET anónimo 401 → GET 12 eventos → filtro ?status=DRAFT → POST válido 201 (weekOf 2026-09-19, theme violet, DRAFT) → POST theme inválido 400 → POST sin title 400 → PATCH título+status PUBLISHED+promoNote 200 → filtro ?weekOf encuentra el test → DELETE 200 → PATCH posterior 404.
+- E2E visual `scripts/e2e-events-visual.sh` (agent-browser contra standalone; 6 iteraciones hasta verde): AgeGate → "Acceder" → "Acceso demo" → email admin → "Entrar" → nav "Admin" → tab "Eventos" → "Nuevo evento" → Local=Africa Burguers (Radix Select) → título/frase → fecha 2026-09-19 + hora 21:00 → Estado=Borrador → "Crear evento" → toast 'creado' + fila con etiquetas auto "Africa Burguers · SÁBADO 19 SEP · 9:00 PM" (horario Caracas correcto) → toggle Publicar (toast 'publicado') → Editar título (toast 'actualizado') → Eliminar con AlertDialog (toast 'Evento eliminado', contador 13→12) → vista móvil 390px → consola sin errores JS. Capturas en `e2e-shots/` (14 PNG).
+- Limpieza `scripts/cleanup-e2e-event.ts` → "sin leftovers — DB limpia" (el flujo UI borró su propio evento test; nunca quedó PUBLISHED en producción más allá de segundos durante el propio test).
+- Docs: PLAN 8.6 marcado done en PROGRESO y criterios; SESSION_HANDOFF reescrito.
+
+Stage Summary:
+- ✅ Sprint 8.6 CERRADO: el dueño crea/edita/publica/borra flyers de la semana desde Admin → Eventos sin tocar código (validado API 13/13 + visual ABM completo + móvil).
+- 🔧 Gotchas nuevos de browser E2E (aplican a futuras validaciones): ① `find text` de agent-browser falla en esta app — usar `find role … --name` (substring, case-insensitive); ② refs de snapshot inestables entre estados — evitarlos en scripts; ③ el fill de Playwright NO persiste en input[type=date/time] de este Chromium — usar setter nativo `Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set` + dispatch input/change; ④ Escape cierra el Radix Dialog COMPLETO (no usarlo para "cerrar residuos" de selects); ⑤ triggers de select bajo el scroll del dialog necesitan scrollIntoView antes del click; ⑥ select "Estado" default = PUBLISHED — en tests setear Borrador explícitamente para no destellar eventos test en la portada pública.
+- Scripts reutilizables: `scripts/e2e-events-db.ts` (13 checks API), `scripts/e2e-events-visual.sh` (flujo visual completo), `scripts/cleanup-e2e-event.ts` (limpieza de eventos test).
+
+---
 Task ID: 5-profile-qr-reservations
 Agent: conecta-frontend (Z.ai Code)
 Task: Añadir QR real a cada reserva en la sección "Mis Reservas" del ProfilePage (cliente) para que pueda mostrarlo en la entrada del local en cualquier momento, no solo tras reservar.
