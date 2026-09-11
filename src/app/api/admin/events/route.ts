@@ -31,7 +31,13 @@ export async function GET(request: Request) {
     const weekOf = searchParams.get('weekOf');
 
     const where: Prisma.BusinessEventWhereInput = {};
-    if (status === 'DRAFT' || status === 'PUBLISHED') {
+    if (
+      status === 'DRAFT' ||
+      status === 'PUBLISHED' ||
+      // Sprint 8.9 — flujo dueño→admin
+      status === 'PENDING_REVIEW' ||
+      status === 'REJECTED'
+    ) {
       where.status = status;
     }
     if (weekOf && /^\d{4}-\d{2}-\d{2}$/.test(weekOf)) {

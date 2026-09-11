@@ -614,7 +614,9 @@ model EditorialPost {
 
 enum BusinessEventStatus {
   DRAFT
+  PENDING_REVIEW
   PUBLISHED
+  REJECTED
 }
 
 model BusinessEvent {
@@ -638,6 +640,11 @@ model BusinessEvent {
   weekOf      DateTime            @db.Date // sábado de la semana cubierta
   sortOrder   Int                 @default(0)
   status      BusinessEventStatus @default(PUBLISHED)
+
+  // Sprint 8.9 — flujo dueño→admin. Los eventos creados desde el
+  // panel del dueño nacen PENDING_REVIEW; el admin los aprueba
+  // (PUBLISHED/DRAFT) o los rechaza (REJECTED) dejando una nota.
+  reviewNote  String? // motivo del rechazo — visible para el dueño
 
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt

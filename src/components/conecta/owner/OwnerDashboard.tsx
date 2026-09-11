@@ -86,6 +86,7 @@ import type {
   ReservationStatus,
 } from '@/lib/types';
 import { MenuTab } from '@/components/conecta/owner/MenuTab';
+import { EventsOwnerTab } from '@/components/conecta/owner/EventsOwnerTab';
 import { formatRelativeTime } from '@/lib/utils';
 import {
   Tabs,
@@ -2742,6 +2743,12 @@ export function OwnerDashboard() {
                 >
                   Promociones
                 </TabsTrigger>
+                <TabsTrigger
+                  value="eventos"
+                  className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/70 hover:text-white"
+                >
+                  Eventos
+                </TabsTrigger>
                 {!isAdmin && (
                   <TabsTrigger
                     value="propuestas"
@@ -2771,6 +2778,13 @@ export function OwnerDashboard() {
               </TabsContent>
               <TabsContent value="promociones" className="mt-6">
                 <PromotionsTab key={selectedSlug} slug={selectedSlug!} isAdmin={isAdmin} />
+              </TabsContent>
+              <TabsContent value="eventos" className="mt-6">
+                <EventsOwnerTab
+                  key={selectedSlug}
+                  slug={selectedSlug!}
+                  businessName={selectedBusiness?.name}
+                />
               </TabsContent>
               {!isAdmin && (
                 <TabsContent value="propuestas" className="mt-6">

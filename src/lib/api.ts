@@ -18,6 +18,7 @@ import type {
   CouponRedemption,
   Establishment,
   OwnerBusiness,
+  OwnerEventInput,
   OwnerPromotion,
   OwnerReservation,
   PersistentNotification,
@@ -645,6 +646,59 @@ export async function deleteAdminEvent(
     method: 'DELETE',
   });
   if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+// ─── Sprint 8.9 — Owner: propuestas de flyers/eventos ────────
+//
+// El dueño propone flyers para su local: nacen PENDING_REVIEW y
+// solo el admin los publica (portada /editorial) o los rechaza
+// (con nota). El wrapper devuelve AdminEvent porque la API
+// serializa con la misma forma (incluye business + reviewNote).
+
+export async function fetchOwnerEvents(
+  slug: string,
+): Promise<AdminEvent[]> {
+  const res = await fetch(`/api/owner/businesses/${slug}/events`);
+  if (!res.ok) await throwOwnerError(res);
+  return res.json();
+}
+
+export async function createOwnerEvent(
+  slug: string,
+  input: OwnerEventInput,
+): Promise<AdminEvent> {
+  const res = await fetch(`/api/owner/businesses/${slug}/events`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwOwnerError(res);
+  return res.json();
+}
+
+export async function updateOwnerEvent(
+  slug: string,
+  id: string,
+  input: Partial<OwnerEventInput>,
+): Promise<AdminEvent> {
+  const res = await fetch(`/api/owner/businesses/${slug}/events/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwOwnerError(res);
+  return res.json();
+}
+
+export async function deleteOwnerEvent(
+  slug: string,
+  id: string,
+): Promise<{ id: string }> {
+  const res = await fetch(`/api/owner/businesses/${slug}/events/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await throwOwnerError(res);
   return res.json();
 }
 

@@ -27,7 +27,11 @@ const LIMITS = {
   timeLabel: 40,
   priceNote: 80,
   promoNote: 140,
+  reviewNote: 280,
 } as const;
+
+/** Estados válidos del ciclo completo (admin puede mover entre todos). */
+const ALL_STATUSES = ['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'REJECTED'] as const;
 
 export type ParsedEvent =
   | { ok: true; data: Record<string, unknown> }
@@ -162,15 +166,66 @@ export function parseEventPayload(
   }
 
   // ── status ────────────────────────────────────────────────────
+  // Sprint 8.9: el admin puede mover un evento a cualquiera de los
+  // 4 estados (aprobar/rechazar propuestas). El flujo del DUEÑO se
+  // valida en su propio parser (parseOwnerEventPayload) — aquí solo
+  // se llega vía /api/admin/events.
   const status = asTrimmed(b.status);
   if (status !== undefined) {
-    if (status !== 'DRAFT' && status !== 'PUBLISHED') {
-      return { ok: false, error: 'El estado debe ser DRAFT o PUBLISHED.' };
+    if (!(ALL_STATUSES as readonly string[]).includes(status)) {
+      return { ok: false, error: 'El estado del evento es inválido.' };
     }
     data.status = status;
   }
 
+  // ── reviewNote (nota del admin, Sprint 8.9) ────────────────────
+  const reviewNote = asTrimmed(b.reviewNote);
+  if (reviewNote !== undefined) {
+    if (reviewNote.length > LIMITS.reviewNote) {
+      return {
+        ok: false,
+        error: `La nota de revisión no puede superar ${LIMITS.reviewNote} caracteres.`,
+      };
+    }
+    data.reviewNote = reviewNote.length === 0 ? null : reviewNote;
+  }
+
   return { ok: true, data };
+}
+
+/**
+ * Validación para el flujo del DUEÑO (Sprint 8.9): el dueño propone
+ * un flyer para su local — nunca puede tocar businessId, status ni
+ * sortOrder (esos los decide el server/admin). El alta nace
+ * PENDING_REVIEW; la edición reenvía a revisión.
+ *
+ * @param businessId id VERIFICADO por assertBusinessOwnership — se
+ *   inyecta aquí para reutilizar las reglas del parser admin.
+ */
+export function parseOwnerEventPayload(
+  body: unknown,
+  partial: boolean,
+  businessId: string,
+): ParsedEvent {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return { ok: false, error: 'Cuerpo de la petición inválido.' };
+  }
+  const b = body as Record<string, unknown>;
+
+  // Defense in depth: el dueño no define campos reservados al admin.
+  for (const forbidden of ['status', 'sortOrder', 'businessId', 'reviewNote']) {
+    if (b[forbidden] !== undefined) {
+      return {
+        ok: false,
+        error: `El campo ${forbidden} no se puede definir desde el panel del dueño.`,
+      };
+    }
+  }
+
+  // Mismas reglas de forma/límites que el admin (strings, startsAt,
+  // weekOf, theme, emoji, notas) con el local inyectado por la ruta.
+  const clone: Record<string, unknown> = { ...b, businessId };
+  return parseEventPayload(clone, partial);
 }
 
 export type EventWithBusiness = Prisma.BusinessEventGetPayload<{
@@ -201,6 +256,7 @@ export function serializeEvent(ev: EventWithBusiness): AdminEvent {
     weekOf: ev.weekOf.toISOString().slice(0, 10),
     sortOrder: ev.sortOrder,
     status: ev.status,
+    reviewNote: ev.reviewNote,
     createdAt: ev.createdAt.toISOString(),
   };
 }

@@ -25,6 +25,9 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
+  Check,
+  X,
+  Clock3,
   Plus,
   Pencil,
   Trash2,
@@ -42,11 +45,18 @@ import {
   deleteAdminEvent,
 } from '@/lib/api';
 import { EVENT_THEMES, EVENT_THEME_HEX } from '@/lib/event-themes';
+import {
+  caracasParts,
+  deriveFrom,
+  toTimeLabel,
+  weekHeader,
+} from '@/lib/event-labels';
 import type {
   AdminEvent,
   AdminEventInput,
   BusinessEventStatus,
 } from '@/lib/types';
+import { Textarea } from '@/components/ui/textarea';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,64 +93,8 @@ import {
 export const QK_EVENTS = ['admin', 'events'] as const;
 
 // ── Timezone helpers — America/Caracas (UTC-4 fijo) ────────────
-
-const MONTHS_ES = [
-  'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
-  'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC',
-] as const;
-
-// indexado por getUTCDay() (0 = domingo)
-const DAYS_ES = [
-  'DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO',
-] as const;
-
-/** ISO instant → wall clock Caracas { date: 'YYYY-MM-DD', time: 'HH:MM' }. */
-function caracasParts(iso: string): { date: string; time: string } {
-  const d = new Date(iso);
-  const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
-  const y = shifted.getUTCFullYear();
-  const m = String(shifted.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(shifted.getUTCDate()).padStart(2, '0');
-  const hh = String(shifted.getUTCHours()).padStart(2, '0');
-  const mm = String(shifted.getUTCMinutes()).padStart(2, '0');
-  return { date: `${y}-${m}-${day}`, time: `${hh}:${mm}` };
-}
-
-type Derived = { dayLabel: string; dateLabel: string; weekOf: string };
-
-/** 'YYYY-MM-DD' → labels en español + weekOf (sábado de la semana ISO). */
-function deriveFrom(dateStr: string): Derived | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
-  const utcMs = Date.UTC(y, m - 1, d);
-  const weekday = new Date(utcMs).getUTCDay(); // 0=domingo … 6=sábado
-  const isoWeekday = weekday === 0 ? 7 : weekday; // 1=lunes … 7=domingo
-  const sat = new Date(utcMs + (6 - isoWeekday) * 86_400_000);
-  const satStr = `${sat.getUTCFullYear()}-${String(
-    sat.getUTCMonth() + 1,
-  ).padStart(2, '0')}-${String(sat.getUTCDate()).padStart(2, '0')}`;
-  return {
-    dayLabel: DAYS_ES[weekday],
-    dateLabel: `${d} ${MONTHS_ES[m - 1]}`,
-    weekOf: satStr,
-  };
-}
-
-/** 'HH:MM' 24h → '10:00 PM' (formato usado por los flyers). */
-function toTimeLabel(time: string): string {
-  const [hh, mm] = time.split(':').map(Number);
-  if (Number.isNaN(hh) || Number.isNaN(mm)) return time;
-  const period = hh >= 12 ? 'PM' : 'AM';
-  const h12 = hh % 12 === 0 ? 12 : hh % 12;
-  return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
-}
-
-/** 'YYYY-MM-DD' (weekOf) → '12 SEP 2026' para los headers de semana. */
-function weekHeader(weekOf: string): string {
-  const [y, m, d] = weekOf.split('-').map(Number);
-  return `${d} ${MONTHS_ES[m - 1]} ${y}`;
-}
+// Única fuente de verdad: src/lib/event-labels.ts (compartida con
+// el panel del dueño — EventsOwnerTab — desde el Sprint 8.9).
 
 // ── Form state ─────────────────────────────────────────────────
 
@@ -227,6 +181,9 @@ export function EventsTab() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<AdminEvent | null>(null);
+  // Sprint 8.9 — rechazo de propuestas con nota para el dueño.
+  const [toReject, setToReject] = useState<AdminEvent | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
 
   const invalidate = () =>
     void qc.invalidateQueries({ queryKey: QK_EVENTS });
@@ -276,16 +233,59 @@ export function EventsTab() {
     },
   });
 
+  // ── Sprint 8.9 — aprobar / rechazar propuestas del dueño ──────
+  const approveMutation = useMutation({
+    mutationFn: (ev: AdminEvent) =>
+      updateAdminEvent(ev.id, { status: 'PUBLISHED', reviewNote: null }),
+    onSuccess: (updated) => {
+      invalidate();
+      addNotification(
+        `Flyer "${updated.title}" aprobado y publicado en la portada.`,
+        'success',
+      );
+    },
+    onError: (e: Error) => addNotification(e.message, 'info'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ ev, note }: { ev: AdminEvent; note: string }) =>
+      updateAdminEvent(ev.id, { status: 'REJECTED', reviewNote: note || null }),
+    onSuccess: (updated) => {
+      invalidate();
+      setToReject(null);
+      setRejectNote('');
+      addNotification(
+        `Propuesta "${updated.title}" rechazada — el dueño verá tu nota.`,
+        'info',
+      );
+    },
+    onError: (e: Error) => addNotification(e.message, 'info'),
+  });
+
   // Agrupar por semana (la API ya viene ordenada por weekOf desc).
+  // Las propuestas PENDING_REVIEW se muestran aparte, arriba — no en
+  // las semanas (así la bandeja de revisión nunca se mezcla con el
+  // calendario editorial).
   const weeks = useMemo(() => {
     const map = new Map<string, AdminEvent[]>();
     for (const ev of eventsQ.data ?? []) {
+      if (ev.status === 'PENDING_REVIEW') continue;
       const arr = map.get(ev.weekOf) ?? [];
       arr.push(ev);
       map.set(ev.weekOf, arr);
     }
     return [...map.entries()];
   }, [eventsQ.data]);
+
+  // Bandeja de propuestas del dueño esperando revisión.
+  const pending = useMemo(
+    () =>
+      (eventsQ.data ?? [])
+        .filter((e) => e.status === 'PENDING_REVIEW')
+        // Las más recientes primero (el dueño suele proponer por orden).
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [eventsQ.data],
+  );
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -439,6 +439,42 @@ export function EventsTab() {
             Crear el primer evento
           </Button>
         </div>
+      )}
+
+      {/* ── Sprint 8.9: bandeja de propuestas pendientes ──────── */}
+      {pending.length > 0 && (
+        <section
+          aria-label="Propuestas pendientes de aprobación"
+          className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.05] overflow-hidden mb-6"
+        >
+          <header className="flex items-center gap-2 px-4 py-3 border-b border-amber-500/20 bg-amber-500/[0.06]">
+            <Clock3 size={14} className="text-amber-300" />
+            <h4 className="text-sm font-semibold text-amber-200">
+              Pendientes de aprobación
+            </h4>
+            <Badge className="bg-amber-500/15 text-amber-200 border border-amber-500/30 hover:bg-amber-500/15">
+              {pending.length}
+            </Badge>
+            <span className="text-[11px] text-amber-200/50 ml-auto hidden sm:block">
+              propuestas de los dueños — aprueba para publicar en la portada
+            </span>
+          </header>
+          <ul>
+            {pending.map((ev) => (
+              <PendingEventRow
+                key={ev.id}
+                ev={ev}
+                busy={approveMutation.isPending || rejectMutation.isPending}
+                onApprove={() => approveMutation.mutate(ev)}
+                onReject={() => {
+                  setRejectNote('');
+                  setToReject(ev);
+                }}
+                onEdit={() => openEdit(ev)}
+              />
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* Semanas */}
@@ -618,6 +654,8 @@ export function EventsTab() {
                 <SelectContent className="bg-[#0d1120] border-white/15">
                   <SelectItem value="PUBLISHED">Publicado</SelectItem>
                   <SelectItem value="DRAFT">Borrador</SelectItem>
+                  <SelectItem value="PENDING_REVIEW">En revisión (propuesta)</SelectItem>
+                  <SelectItem value="REJECTED">Rechazada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -756,6 +794,51 @@ export function EventsTab() {
         </DialogContent>
       </Dialog>
 
+      {/* ── AlertDialog: rechazar propuesta con nota ─────────── */}
+      <AlertDialog
+        open={toReject !== null}
+        onOpenChange={(v) => !v && setToReject(null)}
+      >
+        <AlertDialogContent className="bg-[#0d1120] border-white/15">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              ¿Rechazar la propuesta?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{toReject?.title}&quot; de {toReject?.business.name} no se
+              publicará. Puedes explicarle el motivo al dueño — verá tu nota en
+              su panel y podrá corregir y reenviar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            placeholder="Ej: la fecha ya pasó / falta el horario de cierre / la promo no está autorizada…"
+            maxLength={280}
+            rows={3}
+            className="bg-white/5 border-white/15 text-white text-sm"
+          />
+          <p className="text-[11px] text-white/40 text-right">
+            {rejectNote.length}/280
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                toReject &&
+                rejectMutation.mutate({ ev: toReject, note: rejectNote.trim() })
+              }
+              className="bg-red-600 text-white hover:bg-red-600/90"
+              disabled={rejectMutation.isPending}
+            >
+              {rejectMutation.isPending ? 'Rechazando…' : 'Rechazar propuesta'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ── AlertDialog: confirmar borrado ─────────────────────── */}
       <AlertDialog
         open={toDelete !== null}
@@ -790,24 +873,23 @@ export function EventsTab() {
   );
 }
 
-// ── Fila de evento ─────────────────────────────────────────────
+// ── Fila de propuesta pendiente (bandeja Sprint 8.9) ──────────
 
-function EventRow({
+function PendingEventRow({
   ev,
-  onEdit,
-  onToggle,
-  onDelete,
   busy,
+  onApprove,
+  onReject,
+  onEdit,
 }: {
   ev: AdminEvent;
-  onEdit: () => void;
-  onToggle: () => void;
-  onDelete: () => void;
   busy: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  onEdit: () => void;
 }) {
-  const published = ev.status === 'PUBLISHED';
   return (
-    <li className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition">
+    <li className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-amber-500/10 last:border-b-0 hover:bg-amber-500/[0.03] transition">
       <span
         aria-hidden
         className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
@@ -820,14 +902,8 @@ function EventRow({
           <span className="text-sm font-semibold text-white">
             {ev.title}
           </span>
-          <Badge
-            className={
-              published
-                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15'
-                : 'bg-white/10 text-white/60 border border-white/15 hover:bg-white/10'
-            }
-          >
-            {published ? 'Publicado' : 'Borrador'}
+          <Badge className="bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/15">
+            propuesta
           </Badge>
         </div>
         <p className="text-xs text-white/50 mt-0.5 truncate">
@@ -857,17 +933,145 @@ function EventRow({
         )}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Button
+          size="sm"
+          onClick={onApprove}
+          disabled={busy}
+          className="h-8 bg-emerald-600 text-white hover:bg-emerald-600/90 text-xs"
+        >
+          <Check size={13} className="mr-1" />
+          Aprobar
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onReject}
+          disabled={busy}
+          className="h-8 border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs"
+        >
+          <X size={13} className="mr-1" />
+          Rechazar
+        </Button>
         <Button
           variant="ghost"
           size="sm"
-          onClick={onToggle}
-          disabled={busy}
-          title={published ? 'Pasar a borrador' : 'Publicar'}
+          onClick={onEdit}
+          title="Editar antes de aprobar"
           className="h-8 w-8 p-0 text-white/60 hover:text-gold hover:bg-gold/10"
         >
-          {published ? <EyeOff size={15} /> : <Eye size={15} />}
+          <Pencil size={14} />
         </Button>
+      </div>
+    </li>
+  );
+}
+
+// ── Fila de evento ─────────────────────────────────────────────
+
+function EventRow({
+  ev,
+  onEdit,
+  onToggle,
+  onDelete,
+  busy,
+}: {
+  ev: AdminEvent;
+  onEdit: () => void;
+  onToggle: () => void;
+  onDelete: () => void;
+  busy: boolean;
+}) {
+  // Sprint 8.9 — 4 estados del ciclo editorial.
+  const statusMeta: Record<
+    BusinessEventStatus,
+    { label: string; cls: string }
+  > = {
+    PUBLISHED: {
+      label: 'Publicado',
+      cls: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15',
+    },
+    DRAFT: {
+      label: 'Borrador',
+      cls: 'bg-white/10 text-white/60 border border-white/15 hover:bg-white/10',
+    },
+    PENDING_REVIEW: {
+      label: 'En revisión',
+      cls: 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/15',
+    },
+    REJECTED: {
+      label: 'Rechazada',
+      cls: 'bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/15',
+    },
+  };
+  const meta = statusMeta[ev.status];
+  const published = ev.status === 'PUBLISHED';
+  return (
+    <li className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition">
+      <span
+        aria-hidden
+        className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
+      >
+        {ev.emoji}
+      </span>
+
+      <div className="flex-1 min-w-[180px]">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-white">
+            {ev.title}
+          </span>
+          {meta && (
+            <Badge className={meta.cls}>{meta.label}</Badge>
+          )}
+        </div>
+        <p className="text-xs text-white/50 mt-0.5 truncate">
+          {ev.tagline}
+        </p>
+        {ev.status === 'REJECTED' && ev.reviewNote && (
+          <p className="text-[11px] text-red-300/80 mt-1">
+            Motivo del rechazo: {ev.reviewNote}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[11px]">
+          <span className="text-gold/80 font-mono">
+            {ev.business.name}
+          </span>
+          <span className="text-white/25">·</span>
+          <span className="text-white/60 font-mono uppercase">
+            {ev.dayLabel} {ev.dateLabel} · {ev.timeLabel}
+          </span>
+          <span
+            aria-hidden
+            className="inline-block w-2 h-2 rounded-full"
+            style={{ backgroundColor: EVENT_THEME_HEX[ev.theme] ?? '#d4af37' }}
+          />
+        </div>
+        {(ev.priceNote || ev.promoNote) && (
+          <p className="text-[11px] text-white/45 mt-1">
+            {ev.priceNote && <span>{ev.priceNote} </span>}
+            {ev.promoNote && (
+              <span className="text-gold/70">· {ev.promoNote}</span>
+            )}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Publicar/despublicar solo aplica a DRAFT ⇄ PUBLISHED; las
+            propuestas en revisión se aprueban desde la bandeja y las
+            rechazadas se re-procesan desde su formulario. */}
+        {(ev.status === 'PUBLISHED' || ev.status === 'DRAFT') && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggle}
+            disabled={busy}
+            title={published ? 'Pasar a borrador' : 'Publicar'}
+            className="h-8 w-8 p-0 text-white/60 hover:text-gold hover:bg-gold/10"
+          >
+            {published ? <EyeOff size={15} /> : <Eye size={15} />}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"

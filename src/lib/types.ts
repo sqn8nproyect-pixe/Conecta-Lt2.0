@@ -375,7 +375,11 @@ export interface AdminUser {
 // Los labels (dayLabel/dateLabel/timeLabel) son strings
 // pre-renderizados en español (wall clock America/Caracas) — la
 // portada los muestra tal cual, sin Intl en runtime.
-export type BusinessEventStatus = 'DRAFT' | 'PUBLISHED';
+export type BusinessEventStatus =
+  | 'DRAFT'
+  | 'PENDING_REVIEW' // Sprint 8.9: propuesta de dueño esperando aprobación
+  | 'PUBLISHED'
+  | 'REJECTED'; // Sprint 8.9: propuesta rechazada por el admin
 
 export interface AdminEvent {
   id: string;
@@ -396,6 +400,8 @@ export interface AdminEvent {
   weekOf: string;
   sortOrder: number;
   status: BusinessEventStatus;
+  /** Motivo del rechazo (Sprint 8.9) — visible para el dueño. */
+  reviewNote: string | null;
   createdAt: string;
 }
 
@@ -417,7 +423,17 @@ export interface AdminEventInput {
   weekOf: string;
   sortOrder?: number;
   status?: BusinessEventStatus;
+  /** Nota del admin al rechazar (Sprint 8.9, solo vía admin). */
+  reviewNote?: string | null;
 }
+
+/** Cuerpo de POST/PATCH de las rutas owner (Sprint 8.9): el dueño no
+ *  toca businessId (viene del slug), status (server lo fuerza) ni
+ *  sortOrder (lo fija el admin). */
+export type OwnerEventInput = Omit<
+  AdminEventInput,
+  'businessId' | 'status' | 'sortOrder' | 'reviewNote'
+>;
 
 // ─── Etapa 8.A — Admin Metrics types ────────────────────────────
 //
