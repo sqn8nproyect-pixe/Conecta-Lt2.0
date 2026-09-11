@@ -1041,3 +1041,17 @@ Stage Summary:
 - Higiene de repo completada en la sesión (PROJECT_STATUS.md sanitizado, presign restaurado, fileMode false, remote limpio).
 - Pendiente de seguridad: rotar NEXTAUTH_SECRET (arrastrado desde 18-Ago) y recordar rotación periódica del PAT si se pega en chats.
 - Pendiente de datos: IG Africa Burguers, IG Licobar JJ (@puntoencuentrolt), dirección real de Medusa.
+
+---
+Task ID: ui-editorial-sin-acceder
+Agent: main (Super Z)
+Task: Petición del dueño — eliminar el botón "Acceder" de la sección "Qué hacer este fin de semana en Los Teques" (/editorial).
+
+Work Log:
+- Localizado: <AccessButton standalone /> en el breadcrumb del encabezado de src/app/editorial/page.tsx (línea 182), junto al import en línea 18.
+- Eliminados botón + import; breadcrumb convertido en <nav> independiente con mb-5 (misma apariencia, sin flex sobrante).
+- ESLint limpio; bun run build OK. Commit dd1085c pusheado a origin/main → auto-deploy Vercel.
+
+Stage Summary:
+- Botón "Acceder" fuera de la guía de fin de semana; el botón global del Navbar (esquina superior derecha) permanece para visitantes.
+- Pendientes del dueño sin cambios: rotar NEXTAUTH_SECRET; IG Africa Burguers, IG Licobar JJ, dirección Medusa.
