@@ -1055,3 +1055,18 @@ Work Log:
 Stage Summary:
 - Botón "Acceder" fuera de la guía de fin de semana; el botón global del Navbar (esquina superior derecha) permanece para visitantes.
 - Pendientes del dueño sin cambios: rotar NEXTAUTH_SECRET; IG Africa Burguers, IG Licobar JJ, dirección Medusa.
+
+---
+Task ID: hotfix-tablet-pkce-cookie
+Agent: main (Super Z)
+Task: Tablet del dueño falla login con error=Configuration (captura WhatsApp 17:42 VET). Diagnóstico real vía AuthErrorLog y mitigación.
+
+Work Log:
+- AuthErrorLog en producción reveló la secuencia: 20:48-20:52 iss missing (bug viejo, ya fijado) → 20:58 invalid_grant Malformed auth code (reintento con código gastado) → ~21:00 login OK en PC ("todo perfecto") → 21:19 y 21:42 pkceCodeVerifier cookie was missing (tablet).
+- Causa raíz del caso tablet: el navegador descarta la cookie authjs.pkce.code_verifier durante el viaje a Google y vuelta. Servidor verificado INNOCUO: simulación curl con UA de tablet confirma Set-Cookie pkce correcto (Max-Age=900, Secure, HttpOnly, SameSite=Lax), 302 a Google con code_challenge, redirect_uri apex registrado; http→308 https y www→307 apex limpios.
+- Cambios (commit 6832874): ① /auth/error Configuration ya no acusa credenciales del servidor — texto con pasos prácticos (abrir Chrome/Safari directo, limpiar datos del sitio) + RetryGoogleButton (client component con signIn('google')); ② nuevo /api/diagnose-auth/cookie-probe — contador de visitas con cookie cl_probe: si sube entre recargas, el navegador conserva cookies; si no, las bloquea/borra (prueba definitiva en 20 s desde la tablet).
+- Build OK, push dd1085c..6832874, deploy automático.
+
+Stage Summary:
+- Pendiente del dueño: en la tablet abrir conectalt.com en Chrome directamente (NO desde WhatsApp), reintentar login; opcional visitar /api/diagnose-auth/cookie-probe dos veces y reportar el número. Tras su reintento, revisar last-auth-error para confirmar.
+- Si el probe muestra cookies OK y el login sigue fallando en la tablet → siguiente sospecha: WebView/embebido o anti-logging agresivo; considerar checks state en vez de pkce NO resuelve (mismo requisito de cookie).
