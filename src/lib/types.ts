@@ -369,6 +369,56 @@ export interface AdminUser {
   createdAt: string;
 }
 
+// ─── Sprint 8.6 — Admin Events (flyers del fin de semana) ───────
+//
+// `AdminEvent` es el payload de GET/POST/PATCH /api/admin/events.
+// Los labels (dayLabel/dateLabel/timeLabel) son strings
+// pre-renderizados en español (wall clock America/Caracas) — la
+// portada los muestra tal cual, sin Intl en runtime.
+export type BusinessEventStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface AdminEvent {
+  id: string;
+  businessId: string;
+  business: { id: string; name: string; slug: string };
+  title: string;
+  tagline: string;
+  emoji: string;
+  theme: string;
+  dayLabel: string; // "VIERNES" | "SÁBADO" | …
+  dateLabel: string; // "11 SEP"
+  timeLabel: string; // "10:00 PM"
+  /** ISO instant (orden interno de la portada). */
+  startsAt: string;
+  priceNote: string | null; // "Cover: $5"
+  promoNote: string | null; // "2x1 en nacionales · código BOTELLON24"
+  /** "YYYY-MM-DD" — sábado de la semana cubierta (agrupa la portada). */
+  weekOf: string;
+  sortOrder: number;
+  status: BusinessEventStatus;
+  createdAt: string;
+}
+
+/** Cuerpo de POST (completo) / PATCH (parcial) de /api/admin/events. */
+export interface AdminEventInput {
+  businessId: string;
+  title: string;
+  tagline: string;
+  emoji?: string;
+  theme?: string;
+  dayLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  /** ISO instant — el cliente lo construye con offset -04:00 (Caracas). */
+  startsAt: string;
+  priceNote?: string | null;
+  promoNote?: string | null;
+  /** "YYYY-MM-DD" — sábado de la semana cubierta. */
+  weekOf: string;
+  sortOrder?: number;
+  status?: BusinessEventStatus;
+}
+
 // ─── Etapa 8.A — Admin Metrics types ────────────────────────────
 //
 // `AdminAnalyticsOverview` is the payload of

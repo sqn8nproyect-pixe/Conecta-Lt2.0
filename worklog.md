@@ -961,3 +961,24 @@ Stage Summary:
 - Sprint 8.8 en producción vía Vercel (auto-deploy de 638a8a3): botón "Acceder" animado para visitantes + login contextual 7B, misma vía (LoginPromptModal único).
 - Pendiente para el dueño: revocar PAT expuesto ghp_IpjZ... (prioritario), verificar en Vercel NEXT_PUBLIC_GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET (si falta, Redeploy), decidir cadencia editorial semanal.
 - Próximos sprints: 8.6 admin ABM de posts/eventos; datos pendientes de dueños (IG Africa Burguers, IG Licobar JJ @puntoencuentrolt, dirección real Medusa).
+
+---
+Task ID: 8.6
+Agent: main (Super Z)
+Task: Sprint 8.6 — panel admin para gestionar flyers/eventos (BusinessEvent) sin tocar código (petición del dueño: "vamos a panel admin para gestionar flyers/eventos sin tocar código").
+
+Work Log:
+- Contexto: SESSION_HANDOFF + worklog + PLAN leídos. Descubrimiento crítico: el workspace fue restaurado de un snapshot viejo y `.env` perdió la cadena de Neon (quedó solo la línea SQLite del gotcha). Sin Postgres/docker local → E2E completo con DB bloqueado hasta que el dueño pegue la cadena (RECOVERY.md paso 6).
+- Nuevo `src/lib/event-themes.ts`: fuente de verdad de las 12 claves de tema (validación server + selector admin) + hex para puntos de color inline (evita clases Tailwind dinámicas).
+- Nuevo `src/server/services/event.service.ts`: parseEventPayload (valida POST completo/PATCH parcial, longitudes, tema, fechas, status) + serializeEvent (fechas ISO / weekOf YYYY-MM-DD).
+- Nueva API `src/app/api/admin/events/route.ts` (GET lista con local, filtros status/weekOf; POST ADMIN con check de local) y `[id]/route.ts` (PATCH parcial, DELETE, 404 claros). Patrón Next 16: `params: Promise<{id}>`.
+- `src/lib/api.ts`: fetchAdminEvents/createAdminEvent/updateAdminEvent/deleteAdminEvent (mismo patrón throwAdminError).
+- Tipos: AdminEvent/AdminEventInput/BusinessEventStatus en types.ts.
+- Nuevo `src/components/conecta/admin/EventsTab.tsx` (tab "Eventos" en AdminDashboard): lista agrupada por semana con badges (N flyers, borradores/Publicada), filas con emoji+título+frase+local+chips+tema+notas; acciones ojo (publicar/despublicar), lápiz (editar), papelera (AlertDialog de confirmación). Dialog de formulario: local, título, frase, fecha+hora, tema con punto de color, emoji, estado, notas de precio/promo, orden. dayLabel/dateLabel/timeLabel y weekOf SE DERIVAN SOLOS de fecha+hora en wall clock Caracas (UTC-4 fijo; caracasParts() para re-editar; startsAt construido con offset -04:00), con checkbox "Personalizar etiquetas" para override. Vista previa de etiquetas antes de guardar. Hints: portada muestra la semana más reciente, cambios visibles vía ISR 3600.
+- Validación: eslint limpio; `bun run build` OK (rutas nuevas en output); E2E sin DB `scripts/e2e-events-nodb.sh` 7/7 (4 rutas → 401 sin sesión ANTES de tocar DB, /api/admin/businesses intacto 401, /editorial 200, chunk del bundle contiene EventsTab).
+- Commit local pendiente de push (PAT revocado; pedir nuevo al dueño).
+
+Stage Summary:
+- Sprint 8.6 código COMPLETO y compilando; falta E2E con DB real (CRUD + visual con agent-browser) y push.
+- Bloqueos para el dueño: ① pegar DATABASE_URL (Neon pooled, sin channel_binding) + DIRECT_URL (sin -pooler) para reconstruir .env — se compartieron en un chat anterior o están en Neon console; ② PAT nuevo de GitHub para push.
+- Lección registrada: el restore de snapshot del sandbox borra archivos no trackeados (ya perdió .env una vez); RECOVERY.md paso 6 cubre la reconstrucción.

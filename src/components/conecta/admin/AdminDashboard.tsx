@@ -61,6 +61,7 @@ import {
   Clock,
   LogOut,
   Camera,
+  CalendarDays,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -133,6 +134,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { AdminMetricsTab } from '@/components/conecta/admin/AdminMetricsTab';
+import { EventsTab } from '@/components/conecta/admin/EventsTab';
 import {
   PendingPhotosTab,
   QK_PENDING_IMAGES,
@@ -2093,6 +2095,14 @@ export function AdminDashboard() {
             <FileText size={14} className="mr-1.5" />
             Propuestas
           </TabsTrigger>
+          {/* Sprint 8.6 — ABM de flyers/eventos sin tocar código */}
+          <TabsTrigger
+            value="eventos"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
+          >
+            <CalendarDays size={14} className="mr-1.5" />
+            Eventos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen" className="mt-6">
@@ -2115,6 +2125,9 @@ export function AdminDashboard() {
         </TabsContent>
         <TabsContent value="proposals" className="mt-6">
           <PropuestasTab />
+        </TabsContent>
+        <TabsContent value="eventos" className="mt-6">
+          <EventsTab />
         </TabsContent>
       </Tabs>
     </motion.div>

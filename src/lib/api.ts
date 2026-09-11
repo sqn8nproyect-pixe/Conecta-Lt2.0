@@ -6,6 +6,8 @@
 import type {
   AdminAnalyticsOverview,
   AdminBusiness,
+  AdminEvent,
+  AdminEventInput,
   AdminReview,
   AdminStats,
   AdminUser,
@@ -598,6 +600,49 @@ export async function updateBusinessStatus(
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ status }),
+  });
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+// ─── Sprint 8.6 — Admin: flyers/eventos (BusinessEvent) ────────
+
+export async function fetchAdminEvents(): Promise<AdminEvent[]> {
+  const res = await fetch(`/api/admin/events`);
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function createAdminEvent(
+  input: AdminEventInput,
+): Promise<AdminEvent> {
+  const res = await fetch(`/api/admin/events`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function updateAdminEvent(
+  id: string,
+  input: Partial<AdminEventInput>,
+): Promise<AdminEvent> {
+  const res = await fetch(`/api/admin/events/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+export async function deleteAdminEvent(
+  id: string,
+): Promise<{ id: string }> {
+  const res = await fetch(`/api/admin/events/${id}`, {
+    method: 'DELETE',
   });
   if (!res.ok) await throwAdminError(res);
   return res.json();
