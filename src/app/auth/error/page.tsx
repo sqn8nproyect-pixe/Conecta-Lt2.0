@@ -57,8 +57,11 @@ const ERRORES: Record<string, ErrorInfo> = {
 };
 
 function normalizar(error: string | undefined): ErrorInfo {
-  if (error && ERRORES[error]) return ERRORES[error];
-  if (error && error.startsWith('CredentialsSignin')) return ERRORES.CredentialsSignin;
+  if (error) {
+    const directo = ERRORES[error];
+    if (directo) return directo;
+    if (error.startsWith('CredentialsSignin')) return ERRORES.CredentialsSignin;
+  }
   return ERRORES.Default;
 }
 

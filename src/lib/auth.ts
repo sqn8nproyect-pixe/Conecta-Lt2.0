@@ -151,7 +151,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Fire-and-forget: nunca propagar fallos de la captura.
       void db.authErrorLog
-        .create({ data: { code: logCode ?? name || null, message, stack } })
+        .create({ data: { code: (logCode ?? name) || null, message, stack } })
         .then(() =>
           db.authErrorLog.deleteMany({
             where: { createdAt: { lt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
