@@ -1070,3 +1070,27 @@ Work Log:
 Stage Summary:
 - Pendiente del dueño: en la tablet abrir conectalt.com en Chrome directamente (NO desde WhatsApp), reintentar login; opcional visitar /api/diagnose-auth/cookie-probe dos veces y reportar el número. Tras su reintento, revisar last-auth-error para confirmar.
 - Si el probe muestra cookies OK y el login sigue fallando en la tablet → siguiente sospecha: WebView/embebido o anti-logging agresivo; considerar checks state en vez de pkce NO resuelve (mismo requisito de cookie).
+
+---
+Task ID: sprint-8.9-flyers-aprobacion
+Agent: main (Super Z)
+Task: Dueños de negocios proponen flyers para "Qué hacer este fin de semana en Los Teques" con aprobación previa del administrador (petición del dueño: "ya tenemos algo similar implementado" = flujo fotos PendingPhotosTab + API owner existente).
+
+Work Log:
+- Reutilizado el ecosistema existente: User.role BUSINESS_OWNER, Business.ownerId, assertBusinessOwnership (con override ADMIN por email), patrón de rutas /api/owner/businesses/[slug]/*, OwnerDashboard con tabs, admin EventsTab (Sprint 8.6).
+- Schema: enum BusinessEventStatus += PENDING_REVIEW/REJECTED; BusinessEvent += reviewNote String?. Migración SQL idempotente en prisma/migrations/20260912000000_event_submission/.
+- BLOQUEO RESUELTO: sin acceso a Neon localmente (.env con línea SQLite del snapshot). Solución: auto-DDL al arranque via src/instrumentation.ts (register) + src/server/db-bootstrap.ts — statements idempotentes (ADD VALUE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS), 1 ejecución memoizada por proceso, tolera carreras entre lambdas, no tumbla el server si falla, no-op con SQLite local.
+- event.service.ts: ALL_STATUSES (4 estados) en parseEventPayload + reviewNote (280 max) + serializeEvent incluye reviewNote + parseOwnerEventPayload(body, partial, businessId) que rechaza status/sortOrder/businessId/reviewNote del cliente dueño e inyecta el local verificado.
+- API owner nueva: GET+POST /api/owner/businesses/[slug]/events (POST fuerza PENDING_REVIEW/sortOrder 0/reviewNote null) y [id]/route.ts PATCH+DELETE (solo PENDING_REVIEW/REJECTED, 409 si ya procesada; PATCH re-envía a revisión).
+- GET admin events: ?status= acepta los 4 valores.
+- lib/event-labels.ts: helpers Caracas extraídos de EventsTab (caracasParts/deriveFrom/toTimeLabel/weekHeader) — fuente única para admin+owner.
+- Admin EventsTab: bandeja ámbar "Pendientes de aprobación" (Aprobar→PUBLISHED limpia nota; Rechazar→AlertDialog con nota 280c), EventRow con badges de 4 estados + motivo de rechazo visible, eye-toggle solo DRAFT/PUBLISHED, form Select con 4 estados.
+- EventsOwnerTab (nuevo): proponer flyer (mismo formulario sin estado/orden/local), badges de estado, motivo del rechazo citado, editar/cancelar solo pendiente/rechazada, agrupación por semana, empty states.
+- api.ts: fetchOwnerEvents/createOwnerEvent/updateOwnerEvent/deleteOwnerEvent (throwOwnerError). types.ts: BusinessEventStatus 4 valores, AdminEvent.reviewNote, OwnerEventInput.
+- Diag: /api/diagnose-auth/db-schema (enum values + existencia reviewNote, sin datos sensibles) para confirmar el auto-DDL post-deploy.
+- ESLint limpio ×13 archivos, prisma generate OK, bun run build OK ×2. Commit bac3020 pusheado → deploy Vercel aplica el DDL solo.
+
+Stage Summary:
+- Flujo completo: dueño propone → en revisión → admin aprueba (sale en /editorial por ISR) o rechaza con motivo → dueño corrige y reenvía.
+- Pendiente de verificación post-deploy: GET /api/diagnose-auth/db-schema debe decir "APLICADA"; luego prueba E2E con login del dueño (proponer) + admin (aprobar).
+- Nota: portada refresca vía ISR 3600; aprobaciones visibles en <1h o al redeploys.
