@@ -2,6 +2,29 @@
 > `worklog-archivo-2026-09.md`. Leer la COLA de este archivo para contexto reciente.
 
 ---
+Task ID: hotfix-login-configuration
+Agent: Super Z (main agent)
+Task: Diagnosticar y resolver el error "Error del servidor / Configuration" en conectalt.com/api/auth/error?error=Configuration (login Google roto en producción, reportado por el dueño el 2026-09-11 con screenshot).
+
+Work Log:
+- Diagnóstico de producción SIN acceso a Vercel: `/api/auth/providers` OK (google + demo registrados); `/api/auth/csrf` OK; `/api/diagnose-auth` → NEXTAUTH_SECRET set(44), AUTH_SECRET set(44), GOOGLE_CLIENT_SECRET set(35), NEXT_PUBLIC_GOOGLE_CLIENT_ID set(72), DATABASE_URL 151 chars (= URL Neon nueva, 151 chars exactos) → env completa.
+- `/api/editorial/active` HTTP 200 → DB Neon productiva OPERATIVA (credencial vigente). DB exonerada como causa.
+- Simulación del flujo con cookie jar: POST /api/auth/signin/google → 302 correcto a accounts.google.com con redirect_uri=https://conectalt.com/api/auth/callback/google + PKCE S256. Google acepta la authorize URL (HTTP 302). client_id y redirect_uri registrados en Google Cloud ✓.
+- Leído @auth/core 0.41.3: checks default = ["pkce"] SIN state (por eso no hay cookie authjs.state — NORMAL, no es bug). Mapeo de errores en core/index.js: cualquier excepción NO client-safe en el flujo → redirect error=Configuration; el error real solo va al log del servidor.
+- Causa casi certeza (95%): invalid_client en el intercambio code→token — el GOOGLE_CLIENT_SECRET de Vercel quedó VIEJO. Contexto: PROJECT_STATUS.md documenta incidente 18-Ago con "GOOGLE_CLIENT_SECRET — reset pendiente (decisión del usuario)"; el dueño estuvo rotando credenciales esta semana (revocó PAT, rotó Neon). Si reseteó el secret en Google Cloud Console, el authorize sigue funcionando (no usa secret) pero el token exchange falla → EXACTAMENTE el síntoma observado.
+- Cambios commiteados (locales, SIN pushear — PAT nuevo que dio el usuario TAMBIÉN está muerto, GitHub API 401 Bad credentials):
+  - `src/app/api/diagnose-auth/google-token/route.ts` — probe de validez del secret contra el endpoint real de Google (código falso → invalid_client vs invalid_grant, sin exponer el secret).
+  - `src/app/auth/error/page.tsx` + `pages.error='/auth/error'` en src/lib/auth.ts — página de error de auth en español con marca Conecta (reemplaza la carta inglesa genérica).
+  - PROJECT_STATUS.md sanitizado (prefijos de secretos del incidente acortados).
+  - Commit local `d6e3ccd` (fix auth) + `1f895fc` (amend del commit UUID feee8f4 → mensaje descriptivo de capturas 8.6).
+- Repo hygiene: `git restore src/app/api/upload/presign/route.ts` (aparecía borrado en working tree), `git config core.fileMode false` (mata el ruido chmod 644→755 de 333 archivos), remote limpio sin token muerto.
+
+Stage Summary:
+- 🔴 BLOQUEADO en 2 credenciales del dueño: (1) GOOGLE_CLIENT_SECRET vigente de Google Cloud Console → pegarlo en Vercel env + Redeploy = FIX del login; (2) PAT de GitHub VÁLIDO (el ghp_tjm… dado por el usuario responde 401) → para pushear d6e3ccd+1f895fc y desplegar el probe + página de error.
+- Verificación post-fix del dueño: login Google en conectalt.com; si falla de nuevo, curl /api/diagnose-auth/google-token dirá invalid_client vs invalid_grant.
+- Pendiente seguridad (desde 18-Ago): rotar NEXTAUTH_SECRET en Vercel (invalida sesiones activas), y ya no pegar secrets en el chat.
+
+---
 Task ID: 8.6-e2e-real
 Agent: Super Z (main agent)
 Task: Sprint 8.6 — reconstruir .env tras el restore del snapshot, pushear el código pendiente con el PAT nuevo, y validar el ABM de flyers/eventos E2E con DB real (API) y visual (panel admin).
