@@ -1094,3 +1094,24 @@ Stage Summary:
 - Flujo completo: dueño propone → en revisión → admin aprueba (sale en /editorial por ISR) o rechaza con motivo → dueño corrige y reenvía.
 - Pendiente de verificación post-deploy: GET /api/diagnose-auth/db-schema debe decir "APLICADA"; luego prueba E2E con login del dueño (proponer) + admin (aprobar).
 - Nota: portada refresca vía ISR 3600; aprobaciones visibles en <1h o al redeploys.
+
+---
+Task ID: sprint-8.10-flyer-imagen
+Agent: main (Super Z)
+Task: El dueño reportó "no veo como subir la imagen de un flayer personalizado" — el formulario 8.9 era solo texto. Agregar subida de imagen de flyer (R2) al flujo dueño→admin.
+
+Work Log:
+- Diagnóstico: BusinessEvent NO tenía campo de imagen (flyers 100% CSS). Además el commit local 5af7cac (snapshot, sin pushear) había borrado src/app/api/upload/presign/route.ts — restaurado con git checkout origin/main.
+- Schema: BusinessEvent += imageUrl/imageKey TEXT (prisma/schema.prisma + migración 20260912120000_event_image + auto-DDL en db-bootstrap.ts — idempotente, aplica solo en Vercel al arrancar).
+- presign: imageType 'EVENT' → key events/<slug>/<uuid>.<ext>; api.ts presignUpload acepta EVENT.
+- event.service: imageUrl validada como ruta interna /api/images/ (rechaza URLs externas); parseOwnerEventPayload recibe businessSlug y exige prefijo /api/images/events/<slug>/ (un dueño no puede adjuntar la carpeta de otro). serializeEvent incluye ambos.
+- EventsOwnerTab: FlyerImageField (dropzone drag&drop/clic, JPG/PNG/WebP ≤5MB, preview local, Cambiar/Quitar); submit envía imageUrl/imageKey; fila muestra miniatura 3:4 si hay imagen; texto de empty state actualizado.
+- Admin EventsTab: miniatura del arte en filas (el admin revisa antes de aprobar).
+- Portada /editorial + WeekendFlyersGrid: FlyerEvent.imageUrl; si hay imagen el arte llena el flyer (object-cover + velo inferior para local/hora/pill), modal muestra el arte completo (object-contain); sin imagen todo como antes (tema+emoji).
+- Diag db-schema ahora reporta eventImageColumns + migracionImagen.
+- ESLint limpio (0 errores; quitadas 5 directivas no-img-element sobrantes), bun run build OK. Commit 0ae04c6 pusheado → deploy Vercel.
+
+Stage Summary:
+- Flujo completo: dueño adjunta arte (opcional) → PENDING_REVIEW → admin ve la miniatura y aprueba → el flyer sale en /editorial con la imagen real del dueño.
+- Compatibilidad total: eventos sin imagen siguen renderizando con tema+emoji.
+- Pendiente post-deploy: GET /api/diagnose-auth/db-schema debe decir migracionImagen "✅ APLICADA"; E2E con sesión del dueño (subir imagen) y admin (aprobar) pendiente de prueba del dueño.
