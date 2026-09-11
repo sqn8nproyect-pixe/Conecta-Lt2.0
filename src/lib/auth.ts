@@ -135,7 +135,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       let stack: string | undefined;
       if (err instanceof Error) {
         name = err.name;
-        message = `${err.name}: ${err.message}`;
+        // En producción Next minifica: name puede ser "m". La cadena de
+        // `.cause` es donde Auth.js guarda el error subyacente REAL
+        // (ej: CallbackRouteError ⤶ error de oauth4webapi/Google) —
+        // serializarla completa es lo que da el diagnóstico útil.
+        const chain: string[] = [];
+        let cur: unknown = err;
+        let depth = 0;
+        while (cur instanceof Error && depth < 4) {
+          const cls: string = cur.name || cur.constructor?.name || '?';
+          chain.push(`${cls}: ${cur.message}`);
+          cur = (cur as { cause?: unknown }).cause;
+          depth++;
+        }
+        message = chain.join('  ⤶  ').slice(0, 4000);
         stack = err.stack?.slice(0, 2500);
       } else if (typeof err === 'string') {
         message = err;
