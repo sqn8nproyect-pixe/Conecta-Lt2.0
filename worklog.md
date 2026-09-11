@@ -944,3 +944,20 @@ Stage Summary:
 - Login por 2 vías: botón "Acceder" siempre visible (navbar SPA + páginas editoriales) Y modal contextual en acciones — ambos abren el mismo flujo.
 - PENDIENTE DEL DUEÑO: definir NEXT_PUBLIC_GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET en Vercel y redeploy para que el botón diga "Continuar con Google" (sin la var muestra "Acceso demo").
 - Pendientes previos intactos: 6A.1 cifra '28', 8.6 ABM admin, revocar PAT tras confirmar deploy.
+
+---
+Task ID: cierre-2026-09-11
+Agent: main (Super Z)
+Task: Protocolo de cierre del día — reconciliar repo, documentar Sprint 8.8 en PLAN, verificar estado final.
+
+Work Log:
+- Detectada divergencia git: local d052286 (duplicado del 8.8 con ruido de chmod en 300+ archivos y borrado accidental de src/app/api/upload/presign/route.ts) vs origin/main 638a8a3 (Sprint 8.8 real, limpio, ya validado E2E en sesión anterior).
+- Resolución: git reset --hard origin/main → local == origin == 638a8a3; presign restaurado (6519 bytes). El 8.8 NO se re-implementó: ya estaba en origin con worklog incluido.
+- Verificado que el item pendiente 6A.1 (cifra '28'→'33' en layout) ya no aplica: rg no encuentra ninguna cifra hardcodeada de locales en src/ (resuelto en sprint anterior).
+- PLAN-MEJORAS-ESTRUCTURALES.md: añadida entrada 8.8 (tabla Sprint 8, criterios done, línea PROGRESO) y 6A.1 marcado resuelto.
+
+Stage Summary:
+- Estado final del repo: main == origin/main == 638a8a3, working tree limpio.
+- Sprint 8.8 en producción vía Vercel (auto-deploy de 638a8a3): botón "Acceder" animado para visitantes + login contextual 7B, misma vía (LoginPromptModal único).
+- Pendiente para el dueño: revocar PAT expuesto ghp_IpjZ... (prioritario), verificar en Vercel NEXT_PUBLIC_GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET (si falta, Redeploy), decidir cadencia editorial semanal.
+- Próximos sprints: 8.6 admin ABM de posts/eventos; datos pendientes de dueños (IG Africa Burguers, IG Licobar JJ @puntoencuentrolt, dirección real Medusa).

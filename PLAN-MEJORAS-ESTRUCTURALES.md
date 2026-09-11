@@ -4,7 +4,7 @@
 > **Base:** HEAD `31c40f0` (Auth.js v5 migrado) · Neon verificado E2E (28 negocios)
 > **Actualizar tras cada sprint cerrado** — lo lee el boot de sesión vía worklog.
 >
-> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico, robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). ✅ **Sprint 8 implementado 2026-09-11** (modelo EditorialPost, `/editorial` + `/editorial/[slug]` SSG+ISR con JSON-LD Article, sitemap 37 URLs, widget "Este fin de semana" en home; post v1 seedeado con datos verificados). ✅ **8.7 portada de flyers implementada 2026-09-11** (modelo BusinessEvent, 12 eventos del 11-13 sep en `/editorial` como muro visual con modal; guía escrita queda como segunda página; widget home apunta a la portada). Pendiente: 6A.1 cifra en layout (revisar), 8.6 admin ABM de posts/eventos, cadencia semanal con el dueño.
+> **PROGRESO:** ✅ 6A parcial (descripciones/horarios saneados) · ✅ **6B + 7A implementados 2026-09-11** — rutas `/local` + `/local/[slug]` (SSG+ISR, 33 fichas), sitemap.xml dinámico, robots.txt, JSON-LD LocalBusiness/AggregateRating/BreadcrumbList, URL sync de la SPA. Sitemap registrado en Search Console 2026-09-11. ✅ 7B implementado 2026-09-11 (AgeGate cookie 30d + login contextual + retorno post-login). ✅ **Sprint 8 implementado 2026-09-11** (modelo EditorialPost, `/editorial` + `/editorial/[slug]` SSG+ISR con JSON-LD Article, sitemap 37 URLs, widget "Este fin de semana" en home; post v1 seedeado con datos verificados). ✅ **8.7 portada de flyers implementada 2026-09-11** (modelo BusinessEvent, 12 eventos del 11-13 sep en `/editorial` como muro visual con modal; guía escrita queda como segunda página; widget home apunta a la portada). ✅ **8.8 botón "Acceder" implementado 2026-09-11** (CTA global con glow animado + login contextual 7B conviven: ambos abren el MISMO LoginPromptModal; AccessButton standalone en `/editorial`). Pendiente: 8.6 admin ABM de posts/eventos, cadencia semanal con el dueño. (6A.1 cifra en layout: verificado 2026-09-11 — ya no existe ninguna cifra hardcodeada de locales, resuelto).
 
 ---
 
@@ -144,12 +144,14 @@
 | 8.5 Widget home | `HomePage.tsx` | Card "Este fin de semana" enlazando al post activo (frescura + internal linking desde la home) |
 | 8.6 (futuro) Admin | AdminDashboard | ABM de posts — defer a sprint posterior |
 | 8.7 ✅ Portada de flyers | `BusinessEvent` + `WeekendFlyersGrid` | 12 eventos de los dueños como flyers (grid 2/3/4 cols, 12 themes de color, modal con promo/WhatsApp/ficha). 7 de 12 anclados a promos vigentes reales (códigos en DB). `prisma/seed-weekend-events.ts` idempotente |
+| 8.8 ✅ CTA global "Acceder" | `AccessButton.tsx` + `Navbar.tsx` | Botón dorado siempre visible para visitantes (glow pulsante respeta reduced-motion + shine al hover) que abre el MISMO LoginPromptModal del login contextual 7B (`store.requestLogin`). Prop `standalone` para `/editorial` (páginas server sin SPA). Petición del dueño: "podemos usar las 2 maneras" |
 
 **Criterios de done:**
 - [x] Post v1 publicado en `/editorial/[slug]`, indexable, con 3+ links a /local/[slug] — **15 links internos** (body markdown + sección "Locales mencionados")
 - [x] Sitemap incluye el post (37 URLs: 3 estáticas + 33 fichas + 1 post)
 - [x] JSON-LD Article válido (validado E2E: scripts/validate-editorial.mjs 25/25)
 - [x] 8.7: portada `/editorial` = 12 flyers con modal (validate-weekend-flyers.mjs 27/27; E2E visual desktop/móvil; widget home → `/editorial`)
+- [x] 8.8: doble vía de login verificada E2E — navbar muestra "Acceder" a visitantes; click abre 1 solo dialog (sin duplicar el modal global); móvil 390px sin solapamientos; consola sin errores
 - [ ] Cadencia semanal definida con el dueño (quién escribe, cuándo) — **pendiente decisión del dueño**; mientras tanto, `prisma/seed-editorial.ts` es la plantilla: se cambia el contenido y `weekOf`, se re-ejecuta (`bun run db:seed-editorial`)
 
 **Notas de implementación (2026-09-11):**
