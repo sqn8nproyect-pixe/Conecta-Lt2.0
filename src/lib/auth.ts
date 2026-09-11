@@ -149,6 +149,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // We don't ship a custom sign-in page; the navbar triggers
     // signIn('google') or signIn('demo') directly.
     signIn: '/',
+    // Custom Spanish error page (brand-consistent) instead of the raw
+    // English Auth.js error card. All auth failures redirect here:
+    //   /auth/error?error=Configuration|Callback|AccessDenied|...
+    error: '/auth/error',
   },
   providers: [
     // Google OAuth (real). Only registered when creds are present.

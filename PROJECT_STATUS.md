@@ -138,11 +138,11 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 
 **Qué pasó:** En commits del 10-Ago se filtraron en `worklog.md` (repo público) los siguientes secretos reales:
 - Neon DATABASE_URL (con password `[REDACTED-NEON-PWD-ROTATED]`)
-- NEXTAUTH_SECRET (`Uoj1bf69E+BRo5Q...`)
-- GOOGLE_CLIENT_SECRET (`GOCSPX-BQ9GVBvh2l10...`)
-- NEXT_PUBLIC_GOOGLE_CLIENT_ID (`673840348282-...`)
-- Vercel API token (`vcp_7tRx...`, truncado)
-- GitHub PAT prefix (`ghp_uhK...`, truncado)
+- NEXTAUTH_SECRET (`Uoj1bf…`)
+- GOOGLE_CLIENT_SECRET (`GOCSPX-…`)
+- NEXT_PUBLIC_GOOGLE_CLIENT_ID (`673840348282-…`, público por diseño)
+- Vercel API token (`vcp_…`, truncado)
+- GitHub PAT prefix (`ghp_…`, truncado)
 
 **Resolución aplicada:**
 1. ✅ Neon DB password rotado por el usuario (Vercel redeployado, app funcional)
@@ -155,7 +155,7 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 **Rotaciones PENDIENTES (a verificar con el usuario):**
 - ⏳ `NEXTAUTH_SECRET` — generar nuevo (`openssl rand -base64 32`), actualizar en Vercel + redeploy
 - ⏳ `GOOGLE_CLIENT_SECRET` — Reset en Google Cloud Console (opcional, decisión del usuario)
-- ⏳ GitHub PAT `ghp_uhK...` — verificar si sigue activo y revocarlo
+- ⏳ GitHub PAT `ghp_uhK…` — verificar si sigue activo y revocarlo
 - ✅ GitHub PAT `[REDACTED-GITHUB-PAT-DEL-CHAT-REVOCAR]` (18-Ago) — REVOCADO por el usuario
 - ✅ Vercel token `vcp_7tRx...` — REVOCADO por el usuario
 - ✅ Vercel token `vcp_7yJf...` (22-Ago, usado para configurar dominio) — REVOCADO por el usuario
