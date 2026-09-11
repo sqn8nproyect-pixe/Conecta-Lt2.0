@@ -38,6 +38,60 @@ import { db } from '@/lib/db';
 import { isAdminEmail } from '@/lib/admin-config';
 
 /**
+ * Serializa la cadena completa de causas de un error para diagnóstico.
+ *
+ * Particularidad de @auth/core v5: la `cause` de un AuthError NO es un
+ * Error sino un objeto `{ err: ErrorOriginal, ...contexto }` (ver
+ * errors.js — `super(undefined, { cause: { err: message, ... } })`).
+ * Además en producción Next minifica los nombres (AuthError → "m").
+ * Este helper recorre: Error → causa-objeto (extrae err + contexto
+ * plano) → Error interno → objetos crudos (respuestas oauth4webapi).
+ */
+function serializeErrorChain(err: unknown, maxDepth = 4): string {
+  const parts: string[] = [];
+  let cur: unknown = err;
+  let depth = 0;
+  while (depth < maxDepth) {
+    if (cur instanceof Error) {
+      const cls = cur.name || cur.constructor?.name || '?';
+      parts.push(`${cls}: ${cur.message}`.slice(0, 600));
+      const cause = (cur as { cause?: unknown }).cause;
+      if (cause instanceof Error) {
+        cur = cause;
+        depth++;
+        continue;
+      }
+      if (cause && typeof cause === 'object') {
+        const c = cause as Record<string, unknown>;
+        // Contexto plano útil (provider, providerAccountId, status…)
+        const ctx = Object.entries(c)
+          .filter(([k, v]) => k !== 'err' && v !== undefined && typeof v !== 'object')
+          .map(([k, v]) => `${k}=${String(v).slice(0, 80)}`)
+          .join(', ');
+        if (ctx) parts.push(`contexto: {${ctx}}`.slice(0, 400));
+        cur = c.err;
+        depth++;
+        continue;
+      }
+      break;
+    }
+    if (cur !== null && cur !== undefined) {
+      if (typeof cur === 'object') {
+        try {
+          parts.push(`objeto: ${JSON.stringify(cur)}`.slice(0, 800));
+        } catch {
+          parts.push(`objeto no serializable: ${String(cur)}`.slice(0, 300));
+        }
+      } else {
+        parts.push(String(cur).slice(0, 300));
+      }
+    }
+    break;
+  }
+  return parts.join('  ⤶  ').slice(0, 4000) || 'sin mensaje';
+}
+
+/**
  * Auth.js v5 instance. We instantiate providers conditionally so the
  * app boots cleanly whether or not Google creds are present.
  */
@@ -135,20 +189,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       let stack: string | undefined;
       if (err instanceof Error) {
         name = err.name;
-        // En producción Next minifica: name puede ser "m". La cadena de
-        // `.cause` es donde Auth.js guarda el error subyacente REAL
-        // (ej: CallbackRouteError ⤶ error de oauth4webapi/Google) —
-        // serializarla completa es lo que da el diagnóstico útil.
-        const chain: string[] = [];
-        let cur: unknown = err;
-        let depth = 0;
-        while (cur instanceof Error && depth < 4) {
-          const cls: string = cur.name || cur.constructor?.name || '?';
-          chain.push(`${cls}: ${cur.message}`);
-          cur = (cur as { cause?: unknown }).cause;
-          depth++;
-        }
-        message = chain.join('  ⤶  ').slice(0, 4000);
+        message = serializeErrorChain(err);
         stack = err.stack?.slice(0, 2500);
       } else if (typeof err === 'string') {
         message = err;
