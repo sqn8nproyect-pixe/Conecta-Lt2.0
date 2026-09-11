@@ -47,6 +47,7 @@ async function getWeekendData() {
       timeLabel: true,
       priceNote: true,
       promoNote: true,
+      imageUrl: true,
       business: {
         select: {
           name: true,
@@ -70,6 +71,7 @@ async function getWeekendData() {
     timeLabel: row.timeLabel,
     priceNote: row.priceNote,
     promoNote: row.promoNote,
+    imageUrl: row.imageUrl,
     business: {
       name: row.business.name,
       slug: row.business.slug,

@@ -73,7 +73,14 @@ export async function POST(
     const biz = await assertBusinessOwnership(user.id, slug);
 
     const body = await request.json().catch(() => null);
-    const parsed = parseOwnerEventPayload(body, /* partial */ false, biz.id);
+    const parsed = parseOwnerEventPayload(
+      body,
+      /* partial */ false,
+      biz.id,
+      // Sprint 8.10: valida que la imagen adjunta venga de la carpeta
+      // R2 del propio local (events/<slug>/).
+      biz.slug,
+    );
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }

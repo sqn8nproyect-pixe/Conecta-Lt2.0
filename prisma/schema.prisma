@@ -646,6 +646,14 @@ model BusinessEvent {
   // (PUBLISHED/DRAFT) o los rechaza (REJECTED) dejando una nota.
   reviewNote  String? // motivo del rechazo — visible para el dueño
 
+  // Sprint 8.10 — flyer personalizado (imagen opcional). El dueño
+  // sube el arte del flyer (JPG/PNG/WebP) a R2 vía presign; si
+  // falta, la portada dibuja el flyer con tema de color + emoji.
+  // imageUrl es siempre una ruta interna del proxy /api/images/…
+  // (nunca una URL externa) y apunta a events/<slug>/ del local.
+  imageUrl    String?
+  imageKey    String? // clave R2 para eliminación futura del objeto
+
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 

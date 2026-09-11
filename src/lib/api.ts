@@ -1096,7 +1096,7 @@ export async function updateOwnerPromotion(
 export async function presignUpload(
   businessSlug: string,
   fileType: string,
-  imageType: 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU',
+  imageType: 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU' | 'EVENT',
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const res = await fetch('/api/upload/presign', {
     method: 'POST',

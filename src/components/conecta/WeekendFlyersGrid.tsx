@@ -31,6 +31,9 @@ export type FlyerEvent = {
   timeLabel: string;
   priceNote: string | null;
   promoNote: string | null;
+  /** Sprint 8.10 — arte del flyer subido por el dueño (opcional).
+   *  Ruta interna del proxy /api/images/… si existe. */
+  imageUrl: string | null;
   business: {
     name: string;
     slug: string;
@@ -190,20 +193,44 @@ export default function WeekendFlyersGrid({ events }: { events: FlyerEvent[] }) 
                   setSelected(ev);
                 }}
                 aria-label={`${ev.title} en ${ev.business.name}, ${ev.dayLabel} ${ev.dateLabel} ${ev.timeLabel}`}
-                className={`group relative block aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b ${t.bg} transition-all duration-200 hover:-translate-y-1 hover:border-white/25 hover:shadow-xl hover:shadow-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}
+                className={`group relative block aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 ${
+                  ev.imageUrl
+                    ? 'bg-black'
+                    : `bg-gradient-to-b ${t.bg}`
+                } transition-all duration-200 hover:-translate-y-1 hover:border-white/25 hover:shadow-xl hover:shadow-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}
               >
-                {/* Blob decorativo */}
-                <span
-                  aria-hidden
-                  className={`absolute -top-10 -right-10 h-28 w-28 rounded-full blur-3xl opacity-30 ${t.glow}`}
-                />
-                {/* Número del día translúcido */}
-                <span
-                  aria-hidden
-                  className="absolute -bottom-5 -left-2 font-serif text-[6.5rem] leading-none text-white/[0.05] select-none"
-                >
-                  {dayNumber(ev.dateLabel)}
-                </span>
+                {ev.imageUrl ? (
+                  // ── Flyer personalizado (Sprint 8.10): el arte del
+                  // dueño llena el flyer; abajo un velo garantiza la
+                  // legibilidad del local y la hora.
+                  <>
+                    <img
+                      src={ev.imageUrl}
+                      alt={`Flyer de ${ev.title} en ${ev.business.name}`}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/45 to-transparent"
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Blob decorativo */}
+                    <span
+                      aria-hidden
+                      className={`absolute -top-10 -right-10 h-28 w-28 rounded-full blur-3xl opacity-30 ${t.glow}`}
+                    />
+                    {/* Número del día translúcido */}
+                    <span
+                      aria-hidden
+                      className="absolute -bottom-5 -left-2 font-serif text-[6.5rem] leading-none text-white/[0.05] select-none"
+                    >
+                      {dayNumber(ev.dateLabel)}
+                    </span>
+                  </>
+                )}
 
                 {/* Pill día */}
                 <span
@@ -214,15 +241,19 @@ export default function WeekendFlyersGrid({ events }: { events: FlyerEvent[] }) 
 
                 {/* Cuerpo */}
                 <span className="absolute inset-0 flex flex-col p-3 sm:p-4">
-                  <span aria-hidden className="block mt-6 sm:mt-8 text-center text-4xl sm:text-5xl drop-shadow-lg group-hover:scale-110 transition-transform duration-200">
-                    {ev.emoji}
-                  </span>
-                  <span className="mt-3 font-serif text-base sm:text-lg leading-tight text-white text-center line-clamp-2">
-                    {ev.title}
-                  </span>
-                  <span className="mt-1.5 text-[11px] sm:text-xs leading-snug text-white/55 text-center line-clamp-2">
-                    {ev.tagline}
-                  </span>
+                  {!ev.imageUrl && (
+                    <>
+                      <span aria-hidden className="block mt-6 sm:mt-8 text-center text-4xl sm:text-5xl drop-shadow-lg group-hover:scale-110 transition-transform duration-200">
+                        {ev.emoji}
+                      </span>
+                      <span className="mt-3 font-serif text-base sm:text-lg leading-tight text-white text-center line-clamp-2">
+                        {ev.title}
+                      </span>
+                      <span className="mt-1.5 text-[11px] sm:text-xs leading-snug text-white/55 text-center line-clamp-2">
+                        {ev.tagline}
+                      </span>
+                    </>
+                  )}
 
                   <span className="mt-auto block">
                     {ev.promoNote && (
@@ -303,9 +334,20 @@ function EventModalCard({ event, onClose }: { event: FlyerEvent; onClose: () => 
         </span>
       </div>
 
-      <p aria-hidden className="text-6xl text-center my-4 drop-shadow-xl">
-        {event.emoji}
-      </p>
+      {event.imageUrl ? (
+        // Sprint 8.10 — el arte completo del flyer en el detalle.
+        <div className="relative mb-4 w-full aspect-[3/4] max-h-[48vh] overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+          <img
+            src={event.imageUrl}
+            alt={`Flyer de ${event.title} en ${event.business.name}`}
+            className="h-full w-full object-contain"
+          />
+        </div>
+      ) : (
+        <p aria-hidden className="text-6xl text-center my-4 drop-shadow-xl">
+          {event.emoji}
+        </p>
+      )}
 
       <h3 className="font-serif text-2xl text-white text-center leading-tight">
         {event.title}

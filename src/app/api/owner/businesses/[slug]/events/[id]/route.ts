@@ -32,7 +32,8 @@ async function loadOwnedEvent(
   slug: string,
   id: string,
 ): Promise<
-  { ok: true; businessId: string } | { ok: false; response: NextResponse }
+  | { ok: true; businessId: string; slug: string }
+  | { ok: false; response: NextResponse }
 > {
   const biz = await assertBusinessOwnership(userId, slug);
 
@@ -61,7 +62,7 @@ async function loadOwnedEvent(
       ),
     };
   }
-  return { ok: true, businessId: biz.id };
+  return { ok: true, businessId: biz.id, slug: biz.slug };
 }
 
 export async function PATCH(
@@ -83,6 +84,9 @@ export async function PATCH(
       body,
       /* partial */ true,
       owned.businessId,
+      // Sprint 8.10: valida que la imagen adjunta venga de la carpeta
+      // R2 del propio local (events/<slug>/).
+      owned.slug,
     );
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });

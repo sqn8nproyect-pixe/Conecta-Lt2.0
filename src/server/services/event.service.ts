@@ -28,6 +28,8 @@ const LIMITS = {
   priceNote: 80,
   promoNote: 140,
   reviewNote: 280,
+  imageUrl: 500,
+  imageKey: 300,
 } as const;
 
 /** Estados válidos del ciclo completo (admin puede mover entre todos). */
@@ -190,6 +192,37 @@ export function parseEventPayload(
     data.reviewNote = reviewNote.length === 0 ? null : reviewNote;
   }
 
+  // ── flyer personalizado (Sprint 8.10) ────────────────────────
+  // imageUrl SIEMPRE es una ruta interna del proxy de imágenes
+  // (/api/images/… — el archivo vive en R2, subido vía presign).
+  // Se rechaza cualquier URL externa arbitraria (contenido malicioso
+  // / hotlinking). imageKey va de la mano para la eliminación futura.
+  const imageUrl = asTrimmed(b.imageUrl);
+  if (imageUrl !== undefined) {
+    if (imageUrl.length > LIMITS.imageUrl) {
+      return { ok: false, error: 'La URL de la imagen es demasiado larga.' };
+    }
+    if (imageUrl.length > 0 && !imageUrl.startsWith('/api/images/')) {
+      return {
+        ok: false,
+        error:
+          'La imagen del flyer debe subirse desde el panel (JPG, PNG o WebP).',
+      };
+    }
+    data.imageUrl = imageUrl.length === 0 ? null : imageUrl;
+  } else if (!partial) {
+    data.imageUrl = null;
+  }
+  const imageKey = asTrimmed(b.imageKey);
+  if (imageKey !== undefined) {
+    if (imageKey.length > LIMITS.imageKey) {
+      return { ok: false, error: 'La clave de la imagen es demasiado larga.' };
+    }
+    data.imageKey = imageKey.length === 0 ? null : imageKey;
+  } else if (!partial) {
+    data.imageKey = null;
+  }
+
   return { ok: true, data };
 }
 
@@ -199,13 +232,20 @@ export function parseEventPayload(
  * sortOrder (esos los decide el server/admin). El alta nace
  * PENDING_REVIEW; la edición reenvía a revisión.
  *
+ * Sprint 8.10: si adjunta imagen de flyer, verificamos que la ruta
+ * apunte a la carpeta R2 del PROPIO local (events/<slug>/) — un
+ * dueño jamás puede referenciar la carpeta de otro.
+ *
  * @param businessId id VERIFICADO por assertBusinessOwnership — se
  *   inyecta aquí para reutilizar las reglas del parser admin.
+ * @param businessSlug slug VERIFICADO del mismo local (opcional;
+ *   presente en las rutas owner reales).
  */
 export function parseOwnerEventPayload(
   body: unknown,
   partial: boolean,
   businessId: string,
+  businessSlug?: string,
 ): ParsedEvent {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return { ok: false, error: 'Cuerpo de la petición inválido.' };
@@ -223,9 +263,27 @@ export function parseOwnerEventPayload(
   }
 
   // Mismas reglas de forma/límites que el admin (strings, startsAt,
-  // weekOf, theme, emoji, notas) con el local inyectado por la ruta.
+  // weekOf, theme, emoji, notas, imagen) con el local inyectado.
   const clone: Record<string, unknown> = { ...b, businessId };
-  return parseEventPayload(clone, partial);
+  const result = parseEventPayload(clone, partial);
+  if (!result.ok) return result;
+
+  // Verificación fina de la imagen adjunta: solo la carpeta R2 del
+  // propio local (events/<slug>/) es válida para el dueño.
+  const imageUrl = result.data.imageUrl;
+  if (
+    businessSlug &&
+    typeof imageUrl === 'string' &&
+    imageUrl.length > 0 &&
+    !imageUrl.startsWith(`/api/images/events/${businessSlug}/`)
+  ) {
+    return {
+      ok: false,
+      error: 'La imagen adjunta no pertenece a este local.',
+    };
+  }
+
+  return result;
 }
 
 export type EventWithBusiness = Prisma.BusinessEventGetPayload<{
@@ -257,6 +315,8 @@ export function serializeEvent(ev: EventWithBusiness): AdminEvent {
     sortOrder: ev.sortOrder,
     status: ev.status,
     reviewNote: ev.reviewNote,
+    imageUrl: ev.imageUrl,
+    imageKey: ev.imageKey,
     createdAt: ev.createdAt.toISOString(),
   };
 }

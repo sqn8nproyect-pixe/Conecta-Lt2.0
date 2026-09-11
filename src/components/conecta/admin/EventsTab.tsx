@@ -1008,12 +1008,24 @@ function EventRow({
   const published = ev.status === 'PUBLISHED';
   return (
     <li className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition">
-      <span
-        aria-hidden
-        className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
-      >
-        {ev.emoji}
-      </span>
+      {ev.imageUrl ? (
+        // Sprint 8.10 — miniatura del flyer personalizado que el dueño
+        // subió: el admin revisa el arte antes de aprobar.
+        <span className="relative w-12 aspect-[3/4] shrink-0 rounded-lg overflow-hidden border border-white/10 bg-white/5">
+          <img
+            src={ev.imageUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </span>
+      ) : (
+        <span
+          aria-hidden
+          className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
+        >
+          {ev.emoji}
+        </span>
+      )}
 
       <div className="flex-1 min-w-[180px]">
         <div className="flex flex-wrap items-center gap-2">

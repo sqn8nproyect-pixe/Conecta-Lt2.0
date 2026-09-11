@@ -33,6 +33,14 @@ const MIGRATIONS: BootstrapMigration[] = [
       'ALTER TABLE "BusinessEvent" ADD COLUMN IF NOT EXISTS "reviewNote" TEXT',
     ],
   },
+  {
+    // Sprint 8.10 — flyer personalizado (imagen opcional del evento).
+    id: '20260912120000_event_image',
+    statements: [
+      'ALTER TABLE "BusinessEvent" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT',
+      'ALTER TABLE "BusinessEvent" ADD COLUMN IF NOT EXISTS "imageKey" TEXT',
+    ],
+  },
 ];
 
 let ran: Promise<void> | null = null;

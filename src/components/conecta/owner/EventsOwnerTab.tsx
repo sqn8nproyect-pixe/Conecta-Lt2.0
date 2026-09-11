@@ -21,7 +21,7 @@
 // la editorial del admin: ver solo.
 // ─────────────────────────────────────────────────────────────
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
@@ -33,12 +33,17 @@ import {
   AlertCircle,
   PartyPopper,
   Send,
+  Upload,
+  ImagePlus,
+  Loader2,
+  X,
 } from 'lucide-react';
 import {
   fetchOwnerEvents,
   createOwnerEvent,
   updateOwnerEvent,
   deleteOwnerEvent,
+  presignUpload,
 } from '@/lib/api';
 import { EVENT_THEMES, EVENT_THEME_HEX } from '@/lib/event-themes';
 import {
@@ -87,6 +92,207 @@ import {
 
 const QK_OWNER_EVENTS = (slug: string) => ['owner', 'events', slug] as const;
 
+// ── Subida del flyer personalizado (Sprint 8.10) ───────────────
+
+const FLYER_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const FLYER_MAX = 5 * 1024 * 1024; // 5 MB (mismo límite que R2)
+
+/**
+ * Campo de imagen del flyer: dropzone + preview + quitar.
+ * El archivo va DIRECTO a R2 vía presign (no registra BusinessImage);
+ * la URL queda en el formulario y se adjunta al guardar la propuesta.
+ */
+function FlyerImageField({
+  slug,
+  imageUrl,
+  onChange,
+}: {
+  slug: string;
+  imageUrl: string | null;
+  onChange: (url: string | null, key: string | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setLocalError(null);
+      if (!FLYER_TYPES.includes(file.type)) {
+        setLocalError('Formato no soportado. Usa JPG, PNG o WebP.');
+        return;
+      }
+      if (file.size > FLYER_MAX) {
+        setLocalError('La imagen excede el límite de 5 MB.');
+        return;
+      }
+      const objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
+      setUploading(true);
+      try {
+        // 1) presign → 2) PUT directo a R2. La URL pública es una
+        // ruta relativa del proxy /api/images/… que el server valida.
+        const presign = await presignUpload(slug, file.type, 'EVENT');
+        const put = await fetch(presign.uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type },
+        });
+        if (!put.ok) {
+          setLocalError('No se pudo subir la imagen. Intenta de nuevo.');
+          return;
+        }
+        onChange(presign.publicUrl, presign.key);
+      } catch (err) {
+        setLocalError(
+          err instanceof Error
+            ? err.message
+            : 'No se pudo subir la imagen. Intenta de nuevo.',
+        );
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+        setPreview(null);
+        setUploading(false);
+      }
+    },
+    [slug, onChange],
+  );
+
+  const displayUrl = preview ?? imageUrl;
+
+  return (
+    <div className="grid gap-1.5">
+      <Label className="text-white/80 text-xs">
+        Flyer personalizado (opcional)
+      </Label>
+
+      {displayUrl ? (
+        // Imagen ya subida (o subiendo): miniatura + acciones.
+        <div className="flex items-start gap-3">
+          <div className="relative w-24 aspect-[3/4] shrink-0 rounded-xl overflow-hidden border border-white/15 bg-white/5">
+            <img
+              src={displayUrl}
+              alt="Flyer personalizado"
+              className="h-full w-full object-cover"
+            />
+            {uploading && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <Loader2 size={20} className="animate-spin text-gold" />
+              </div>
+            )}
+          </div>
+          <div className="grid gap-1.5 text-xs">
+            <p className="text-white/50">
+              La portada mostrará tu arte tal cual. Igual pasa por revisión
+              del administrador.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => inputRef.current?.click()}
+                disabled={uploading}
+                className="h-7 border-white/20 text-white hover:bg-white/10 text-xs"
+              >
+                <Upload size={12} className="mr-1" />
+                Cambiar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onChange(null, null)}
+                disabled={uploading}
+                className="h-7 border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs"
+              >
+                <X size={12} className="mr-1" />
+                Quitar
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Sin imagen: dropzone (clic o arrastrar).
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Subir imagen del flyer"
+          onClick={() => !uploading && inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const file = e.dataTransfer.files[0];
+            if (file) void handleFile(file);
+          }}
+          className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors select-none
+            ${dragOver ? 'border-gold/60 bg-gold/10' : 'border-white/15 bg-white/[0.03] hover:border-white/30 hover:bg-white/[0.06]'}
+            ${uploading ? 'pointer-events-none opacity-70' : 'cursor-pointer'}`}
+        >
+          {uploading ? (
+            <Loader2 size={22} className="animate-spin text-gold" />
+          ) : (
+            <ImagePlus size={22} className="text-white/40" />
+          )}
+          <p className="text-xs text-white/60">
+            {uploading
+              ? 'Subiendo imagen…'
+              : 'Arrastra tu flyer aquí o haz clic para elegirlo'}
+          </p>
+          {!uploading && (
+            <p className="text-[11px] text-white/35">
+              JPG, PNG o WebP · máx. 5 MB · ideal vertical (ej. 1080×1440)
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Sin imagen la portada dibuja el flyer con tema + emoji. */}
+      {!displayUrl && (
+        <p className="text-[11px] text-white/35 flex items-center gap-1">
+          <Sparkles size={11} className="text-gold/50" />
+          Si no subes imagen, el flyer se genera solo con tu tema de color y
+          emoji.
+        </p>
+      )}
+
+      {localError && (
+        <p className="text-[11px] text-red-300 flex items-center gap-1">
+          <AlertCircle size={11} className="shrink-0" />
+          {localError}
+        </p>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+          e.target.value = ''; // permite re-seleccionar el mismo archivo
+        }}
+      />
+    </div>
+  );}
+
 // ── Form state (mismo espíritu que EventsTab admin) ────────────
 
 type FormState = {
@@ -103,6 +309,9 @@ type FormState = {
   labelsUnlocked: boolean;
   priceNote: string;
   promoNote: string;
+  // Sprint 8.10 — flyer personalizado (imagen opcional en R2).
+  imageUrl: string | null;
+  imageKey: string | null;
 };
 
 function emptyForm(): FormState {
@@ -120,6 +329,8 @@ function emptyForm(): FormState {
     labelsUnlocked: false,
     priceNote: '',
     promoNote: '',
+    imageUrl: null,
+    imageKey: null,
   };
 }
 
@@ -139,6 +350,8 @@ function formFromEvent(ev: AdminEvent): FormState {
     labelsUnlocked: false,
     priceNote: ev.priceNote ?? '',
     promoNote: ev.promoNote ?? '',
+    imageUrl: ev.imageUrl ?? null,
+    imageKey: ev.imageKey ?? null,
   };
 }
 
@@ -294,6 +507,10 @@ export function EventsOwnerTab({
       priceNote: form.priceNote.trim() || null,
       promoNote: form.promoNote.trim() || null,
       weekOf: derived.weekOf,
+      // Flyer personalizado (Sprint 8.10) — el server valida que la
+      // ruta pertenezca a la carpeta R2 de este local.
+      imageUrl: form.imageUrl,
+      imageKey: form.imageKey,
     };
     saveMutation.mutate(input);
   };
@@ -361,9 +578,10 @@ export function EventsOwnerTab({
             Todavía no has propuesto ningún flyer.
           </p>
           <p className="text-xs text-white/40 max-w-sm">
-            Crea tu primera propuesta: título, frase corta, fecha y hora — el
-            flyer se genera solo y el administrador lo publica en la portada
-            de la semana.
+            Crea tu primera propuesta: título, frase corta, fecha y hora. Puedes
+            adjuntar el arte de tu flyer (imagen) o dejar que se genere solo
+            con tema de color y emoji — el administrador lo publica en la
+            portada de la semana.
           </p>
           <Button
             onClick={openCreate}
@@ -454,6 +672,13 @@ export function EventsOwnerTab({
                 className="bg-white/5 border-white/15 text-white"
               />
             </div>
+
+            {/* Flyer personalizado (Sprint 8.10) — opcional. */}
+            <FlyerImageField
+              slug={slug}
+              imageUrl={form.imageUrl}
+              onChange={(url, key) => setField({ imageUrl: url, imageKey: key })}
+            />
 
             {/* Fecha + hora */}
             <div className="grid grid-cols-2 gap-3">
@@ -682,12 +907,23 @@ function OwnerEventRow({
   const meta = STATUS_META[ev.status];
   return (
     <li className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition">
-      <span
-        aria-hidden
-        className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
-      >
-        {ev.emoji}
-      </span>
+      {ev.imageUrl ? (
+        // Miniatura del flyer personalizado (3:4, como en la portada).
+        <span className="relative w-12 aspect-[3/4] shrink-0 rounded-lg overflow-hidden border border-white/10 bg-white/5">
+          <img
+            src={ev.imageUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </span>
+      ) : (
+        <span
+          aria-hidden
+          className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
+        >
+          {ev.emoji}
+        </span>
+      )}
 
       <div className="flex-1 min-w-[180px]">
         <div className="flex flex-wrap items-center gap-2">

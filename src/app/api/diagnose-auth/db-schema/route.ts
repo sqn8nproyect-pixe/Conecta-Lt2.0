@@ -23,6 +23,13 @@ export async function GET() {
          WHERE table_name = 'BusinessEvent' AND column_name = 'reviewNote'
        )::bool AS exists`,
     );
+    // Sprint 8.10 — columnas del flyer personalizado.
+    const imageRows = await db.$queryRawUnsafe<{ column_name: string }[]>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'BusinessEvent'
+         AND column_name IN ('imageUrl', 'imageKey')`,
+    );
+    const imageCols = imageRows.map((r) => r.column_name);
 
     const valores = enumRows.map((r) => r.val);
     return NextResponse.json(
@@ -30,11 +37,17 @@ export async function GET() {
         timestamp: new Date().toISOString(),
         businessEventStatus: valores,
         reviewNoteColumn: colRows[0]?.exists ?? false,
-        migracion: valores.includes('PENDING_REVIEW') &&
+        eventImageColumns: imageCols,
+        migracion:
+          valores.includes('PENDING_REVIEW') &&
           valores.includes('REJECTED') &&
           (colRows[0]?.exists ?? false)
-          ? '✅ 20260912000000_event_submission APLICADA'
-          : '⏳ aún no aplicada (el bootstrap corre al arrancar el server)',
+            ? '✅ 20260912000000_event_submission APLICADA'
+            : '⏳ aún no aplicada (el bootstrap corre al arrancar el server)',
+        migracionImagen:
+          imageCols.includes('imageUrl') && imageCols.includes('imageKey')
+            ? '✅ 20260912120000_event_image APLICADA'
+            : '⏳ aún no aplicada (el bootstrap corre al arrancar el server)',
       },
       { status: 200 },
     );

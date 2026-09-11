@@ -402,6 +402,11 @@ export interface AdminEvent {
   status: BusinessEventStatus;
   /** Motivo del rechazo (Sprint 8.9) — visible para el dueño. */
   reviewNote: string | null;
+  /** Flyer personalizado (Sprint 8.10): ruta interna del proxy
+   *  /api/images/events/<slug>/… — null si usa tema + emoji. */
+  imageUrl: string | null;
+  /** Clave R2 del objeto subido (eliminación futura). */
+  imageKey: string | null;
   createdAt: string;
 }
 
@@ -425,6 +430,10 @@ export interface AdminEventInput {
   status?: BusinessEventStatus;
   /** Nota del admin al rechazar (Sprint 8.9, solo vía admin). */
   reviewNote?: string | null;
+  /** Flyer personalizado (Sprint 8.10): ruta /api/images/events/<slug>/…
+   *  obtenida del presign; string vacío/null = sin imagen. */
+  imageUrl?: string | null;
+  imageKey?: string | null;
 }
 
 /** Cuerpo de POST/PATCH de las rutas owner (Sprint 8.9): el dueño no
