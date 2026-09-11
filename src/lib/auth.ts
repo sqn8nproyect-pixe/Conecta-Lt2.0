@@ -32,10 +32,56 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { after } from 'next/server';
+import { customFetch } from '@auth/core';
 import type { UserRole } from '@prisma/client';
 
 import { db } from '@/lib/db';
 import { isAdminEmail } from '@/lib/admin-config';
+
+/**
+ * FIX login Google en producción (2026-09-11 — "error=Configuration"):
+ *
+ * Google agregó `authorization_response_iss_parameter_supported: true` a su
+ * discovery document. oauth4webapi (usado por Auth.js v5) interpreta eso
+ * como: "si el flag está, el callback DEBE traer `iss`", y lanza
+ * `response parameter "iss" (issuer) missing` cuando el redirect de Google
+ * llega sin él → CallbackRouteError → redirect a /auth/error?error=Configuration.
+ *
+ * En la era v4 este check se neutralizaba con un monkey-patch
+ * (scripts/patch-openid-client.js, eliminado en la migración a v5 porque se
+ * asumió que el check ya no existía — volvió por esta vía).
+ *
+ * FIX: interceptar SOLO el discovery y quitar la marca del metadata. Esto
+ * desactiva el requisito; si `iss` viene presente en el callback, oauth4webapi
+ * sigue validándolo contra as.issuer (la línea `iss !== as.issuer` permanece).
+ * Token/userinfo pasan sin modificar.
+ */
+const googleCustomFetch: typeof fetch = async (url, init) => {
+  const res = await fetch(url, init);
+  const href =
+    typeof url === 'string'
+      ? url
+      : url instanceof URL
+        ? url.href
+        : url instanceof Request
+          ? url.url
+          : String(url);
+  if (href.includes('/.well-known/openid-configuration')) {
+    try {
+      const json = (await res.json()) as Record<string, unknown>;
+      delete json.authorization_response_iss_parameter_supported;
+      return new Response(JSON.stringify(json), {
+        status: res.status,
+        statusText: res.statusText,
+        headers: { 'content-type': 'application/json' },
+      });
+    } catch {
+      // Si no se pudo parsear, devolver la respuesta original intacta.
+      return res;
+    }
+  }
+  return res;
+};
 
 /**
  * Serializa la cadena completa de causas de un error para diagnóstico.
@@ -252,6 +298,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           GoogleProvider({
             clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Ver comentario de googleCustomFetch: neutraliza el check
+            // RFC 9207 de oauth4webapi que rompe el login cuando el
+            // redirect de Google llega sin `iss`.
+            [customFetch]: googleCustomFetch,
           }),
         ]
       : []),

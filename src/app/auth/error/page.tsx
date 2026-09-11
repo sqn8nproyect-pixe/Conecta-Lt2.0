@@ -17,7 +17,11 @@ type ErrorInfo = {
   accion: { label: string; href: string } | null;
 };
 
-const ERRORES: Record<string, ErrorInfo> = {
+// `satisfies` en vez de anotación Record: con noUncheckedIndexedAccess, un
+// Record<string, T> hace que hasta las accesiones por literal (ERRORES.X)
+// devuelvan T | undefined. Con el objeto literal + satisfies, las claves
+// conocidas devuelven ErrorInfo y solo el índice dinámico es opcional.
+const ERRORES = {
   Configuration: {
     titulo: 'No pudimos iniciar tu sesión',
     detalle:
@@ -54,7 +58,7 @@ const ERRORES: Record<string, ErrorInfo> = {
       'Ocurrió un error inesperado durante el acceso. Puedes reintentar en unos momentos; si el problema continúa, navega libremente — el directorio funciona sin sesión.',
     accion: { label: 'Volver al inicio', href: '/' },
   },
-};
+} satisfies Record<string, ErrorInfo>;
 
 function normalizar(error: string | undefined): ErrorInfo {
   if (error) {
