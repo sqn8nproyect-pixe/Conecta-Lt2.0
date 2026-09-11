@@ -62,7 +62,7 @@ const ERRORES = {
 
 function normalizar(error: string | undefined): ErrorInfo {
   if (error) {
-    const directo = ERRORES[error];
+    const directo = (ERRORES as Record<string, ErrorInfo | undefined>)[error];
     if (directo) return directo;
     if (error.startsWith('CredentialsSignin')) return ERRORES.CredentialsSignin;
   }
