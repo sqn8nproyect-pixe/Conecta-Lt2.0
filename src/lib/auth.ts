@@ -31,6 +31,7 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
+import { after } from 'next/server';
 import type { UserRole } from '@prisma/client';
 
 import { db } from '@/lib/db';
@@ -149,15 +150,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       console.error('[authjs][error]', logCode ?? name, message);
 
-      // Fire-and-forget: nunca propagar fallos de la captura.
-      void db.authErrorLog
-        .create({ data: { code: (logCode ?? name) || null, message, stack } })
-        .then(() =>
-          db.authErrorLog.deleteMany({
-            where: { createdAt: { lt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
-          }),
-        )
-        .catch((e) => console.error('[authjs][error-capture] fallo al persistir:', e));
+      // Persistir el error en Neon (AuthErrorLog) para diagnosticarlo vía
+      // /api/diagnose-auth/last-auth-error. En serverless un `void promise`
+      // muere cuando la función se congela al responder (probado: la fila
+      // nunca llegó) — `after()` de Next mantiene el runtime vivo hasta
+      // completar. Fuera de contexto de request, fallback a fire-and-forget.
+      const persistir = () =>
+        db.authErrorLog
+          .create({ data: { code: (logCode ?? name) || null, message, stack } })
+          .then(() =>
+            db.authErrorLog.deleteMany({
+              where: { createdAt: { lt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+            }),
+          )
+          .catch((e) => console.error('[authjs][error-capture] fallo al persistir:', e));
+      try {
+        after(persistir);
+      } catch {
+        void persistir();
+      }
     },
     warn(code: string) {
       console.warn('[authjs][warn]', code);
