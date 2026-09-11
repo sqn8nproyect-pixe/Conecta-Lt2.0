@@ -147,6 +147,21 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ── DIAGNÓSTICO AUTH ────────────────────────────────────────
+// Captura de errores de Auth.js v5 (desde logger.error en src/lib/auth.ts).
+// El error real de los fallos OAuth solo va al log del servidor (inaccesible
+// desde el sandbox) — persistirlo en Neon permite diagnosticarlo vía
+// /api/diagnose-auth/last-auth-error. Se auto-poda a 7 días.
+model AuthErrorLog {
+  id        Int      @id @default(autoincrement())
+  code      String? // tipo del error (OAuthCallbackError, InvalidCheck, …)
+  message   String
+  stack     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // ── CATEGORÍAS ──────────────────────────────────────────────
 
 model Category {

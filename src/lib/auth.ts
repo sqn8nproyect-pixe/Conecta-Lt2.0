@@ -119,22 +119,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   logger: {
     // Surface Auth.js errors with full context — by default they are
     // silenced in production which makes OAuth issues impossible to
-    // diagnose. We always log errors regardless of NODE_ENV.
+    // diagnose. We always log errors regardless of NODE_ENV, AND we
+    // persist them to the DB (AuthErrorLog) so they can be read via
+    // /api/diagnose-auth/last-auth-error — Vercel function logs are
+    // not accessible from the dev sandbox.
     error(...args: unknown[]) {
-      const [code, error] = args;
-      let message: string;
-      try {
-        if (error instanceof Error) {
-          message = `${error.name}: ${error.message}`;
-        } else if (typeof error === 'string') {
-          message = error;
-        } else {
-          message = JSON.stringify(error);
+      // v5 llama logger.error(error) con UN argumento casi siempre
+      // (a veces [code, error]). Manejar ambas aridades.
+      const err: unknown = args.length >= 2 ? args[1] : args[0];
+      const logCode = args.length >= 2 ? String(args[0]) : undefined;
+
+      let name = '';
+      let message = '';
+      let stack: string | undefined;
+      if (err instanceof Error) {
+        name = err.name;
+        message = `${err.name}: ${err.message}`;
+        stack = err.stack?.slice(0, 2500);
+      } else if (typeof err === 'string') {
+        message = err;
+      } else {
+        try {
+          message = JSON.stringify(err) ?? String(err);
+        } catch {
+          message = String(err);
         }
-      } catch {
-        message = String(error);
       }
-      console.error('[authjs][error]', code, message);
+      message = message.slice(0, 4000);
+
+      console.error('[authjs][error]', logCode ?? name, message);
+
+      // Fire-and-forget: nunca propagar fallos de la captura.
+      void db.authErrorLog
+        .create({ data: { code: logCode ?? name || null, message, stack } })
+        .then(() =>
+          db.authErrorLog.deleteMany({
+            where: { createdAt: { lt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+          }),
+        )
+        .catch((e) => console.error('[authjs][error-capture] fallo al persistir:', e));
     },
     warn(code: string) {
       console.warn('[authjs][warn]', code);
