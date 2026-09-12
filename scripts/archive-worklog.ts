@@ -33,26 +33,30 @@ if (cut > 0 && lines[cut - 1].trim() === '') cut--;
 const archiveLines = lines.slice(0, cut);
 const activeLines = lines.slice(cut);
 
-// No pisar un archivo existente sin confirmación
-if (existsSync(ARCHIVE)) {
-  console.error(`ERROR: ${ARCHIVE} ya existe. Revisar antes de re-archivar.`);
-  process.exit(1);
-}
-
 const archivedCount = entryIdx.length - KEEP;
+
+// Si el archivo de archivo YA existe, AÑADIR al final (append), no pisarlo.
+const prevArchive = existsSync(ARCHIVE) ? readFileSync(ARCHIVE, 'utf-8') : '';
+const today = new Date().toISOString().slice(0, 10);
 const header = [
   '# 📦 ARCHIVO DE WORKLOG — Conecta-LT',
-  `# Entradas 1-${archivedCount} (hasta 2026-09-09), archivadas el 2026-09-10`,
-  '# Motivo: worklog.md llegó a 544KB/133 entradas y saturaba el contexto de los agentes.',
+  `# Entradas 1-${archivedCount}, archivadas el ${today}.`,
+  '# Motivo: worklog.md crece y satura el contexto de los agentes.',
   '# El historial completo vive en git. Las entradas recientes están en worklog.md.',
   '',
 ];
+const finalArchive = existsSync(ARCHIVE)
+  ? prevArchive.replace(/\n*$/, '\n')
+    + `\n# ═══ Re-archivado el ${today}: ${archivedCount} entradas movidas de worklog.md ═══\n\n`
+    + archiveLines.join('\n')
+  : header.join('\n') + archiveLines.join('\n');
 
-writeFileSync(ARCHIVE, header.join('\n') + archiveLines.join('\n'));
+writeFileSync(ARCHIVE, finalArchive);
 
 const activeHeader = [
-  '> ℹ️ El historial antiguo (' + archivedCount + ' entradas hasta el 2026-09-09) está en',
-  '> `worklog-archivo-2026-09.md`. Leer la COLA de este archivo para contexto reciente.',
+  '> ℹ️ El historial antiguo está en `worklog-archivo-2026-09.md`',
+  `> (último re-archivado: ${today} — ${archivedCount} entradas movidas).`,
+  '> Leer la COLA de ese archivo para contexto antiguo; la COLA de worklog.md para lo reciente.',
   '',
 ];
 

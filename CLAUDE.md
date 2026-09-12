@@ -14,6 +14,8 @@ bash scripts/session-boot.sh
 Usa SU OUTPUT como contexto completo (incluye handoff, estado git, health de app,
 y la última entrada del worklog). **NUNCA leas worklog.md completo** — está
 podado a propósito; el historial viejo está en `worklog-archivo-*.md`.
+El protocolo maestro (jerarquía de verdad, reglas anti-alucinación, ficha técnica
+verificada, DoD) vive en **`PROTOCOL.md`** — leerlo al menos una vez por sesión.
 Confirma al usuario en 1 mensaje: versión, estado y tarea en vuelo.
 
 ### Tras CERRAR cada tarea:
@@ -32,20 +34,20 @@ Confirma al usuario en 1 mensaje: versión, estado y tarea en vuelo.
 
 - **NO uses server actions** — toda la lógica backend va en `src/app/api/` como API routes
 - **NO uses SQLite** — el proyecto está en PostgreSQL (Neon). El schema `provider="postgresql"`
-- **NO remuevas `scripts/patch-openid-client.js`** — es crítico para Google OAuth
-- **NO uses `bun run build`** — el dev server con `bun run dev` (puerto 3000) es suficiente
+- **NO reintroducas `scripts/patch-openid-client.js`** — fue ELIMINADO en la migración a Auth.js v5; el fix vigente del check `iss` de Google es el `customFetch` en `src/lib/auth.ts` (commit 0edb9ea)
+- **No confíes en `bun run build` como validación local** — en el sandbox puede fallar si `.env` no tiene la cadena Neon (no bloquea: Vercel construye con sus env vars). Valida con lint/tsc sobre los archivos tocados
 - **NO uses z-ai-web-dev-sdk en client side** — solo backend
 - **NO uses colores indigo o blue** salvo que el usuario los pida explícitamente
 - **NO escribas tests** salvo que el usuario los pida
 - **NO crees archivos de documentación** (*.md) salvo que el usuario los pida o sean necesarios para el contexto
-- **NO alucines features o estado** — verifica con `worklog.md`, `PROJECT_STATUS.md`, o `git log`
+- **NO alucines features o estado** — verifica con la jerarquía de verdad de `PROTOCOL.md` §1: git → código → worklog → handoff → curl producción. Jamás el resumen del chat
 
 ## ✅ Lo que SÍ debes hacer
 
 - **Usa shadcn/ui** de `src/components/ui/` (ya están todos los componentes instalados)
 - **Usa API routes** para backend (`src/app/api/...`)
 - **Usa `import { db } from '@/lib/db'`** para Prisma client
-- **Usa `getServerSession(authOptions)`** o los wrappers en `src/server/auth.ts`
+- **Usa `auth()` desde `@/lib/auth`** (Auth.js v5) o los wrappers en `src/server/auth.ts`
 - **Usa `'use client'` y `'use server'`** explícitos
 - **Usa Bun** como runtime (`bun run dev`, `bun install`)
 - **Footer sticky al bottom** (`min-h-screen flex flex-col` + `mt-auto`)
@@ -79,19 +81,19 @@ Usa `append` mode (NO sobrescribir el archivo).
 
 - **Next.js 16 App Router** con `src/app/`
 - **PostgreSQL en Neon** vía Prisma 6
-- **NextAuth v4** con Prisma Adapter (JWT strategy)
+- **Auth.js v5** (`next-auth@5.0.0-beta`) con Prisma Adapter — export `{ handlers, auth, signIn, signOut }` en `src/lib/auth.ts`
 - **Providers:** Google OAuth + Credentials (demo fallback)
 - **RBAC:** USER / BUSINESS_OWNER / ADMIN (leído del JWT, seteado en sign-in)
 - **Deploy:** Vercel (región iad1), auto-redeploy en push a `main`
 
 ## ⚠️ Gotchas críticos
 
-1. **openid-client patch** (`scripts/patch-openid-client.js`): arregla Google OAuth en Vercel. Corre en postinstall. NO remover.
-2. **Cookies sin `__Host-` prefix** en `authOptions`: workaround para Vercel + NextAuth v4.
+1. **Check `iss` de Google (RFC 9207)**: neutralizado vía `customFetch` en el discovery (`src/lib/auth.ts`, commit 0edb9ea). El antiguo patch-openid-client.js fue eliminado — postinstall actual: solo `prisma generate`. NO re-agregarlo.
+2. **Cookies de auth sin `__Host-` prefix**: workaround de la era v4 — re-verificar contra `src/lib/auth.ts` antes de tocar cookies en v5.
 3. **`trustHost: true`** en `authOptions`: necesario para Caddy gateway + Vercel.
 4. **Neon pooler vs direct URL**: `DATABASE_URL` = pooler (app), `DIRECT_URL` = direct (migraciones).
 5. **`start-dev.sh`** hace `unset DATABASE_URL` para limpiar override de SQLite del shell del sandbox.
-6. **Error TS pre-existente** `trustHost does not exist in type AuthOptions` — no rompe runtime, es de NextAuth v4 types incompletos.
+6. **`trustHost: true`** en `src/lib/auth.ts` — en Auth.js v5 es tipo oficial (el error TS de la era v4 quedó obsoleto).
 
 ## 🎨 Stack de UI
 
@@ -115,7 +117,7 @@ tail -50 dev.log         # Logs del dev server
 
 - **Push a `main`** → Vercel auto-redeploy
 - **Build command:** `prisma generate && next build` (ver `vercel.json`)
-- **Postinstall:** `node scripts/patch-openid-client.js && prisma generate`
+- **Postinstall:** `prisma generate`
 - **Región:** iad1
 
 ## 🔍 Verificación post-cambios
@@ -124,9 +126,9 @@ Después de cualquier cambio en auth/api/db:
 
 1. `bun run lint` — debe pasar limpio
 2. Verificar dev server: `tail -20 dev.log` — no debe tener errores
-3. Si se pusheó a main, esperar ~60s y verificar producción:
+3. Si se pusheó a main, esperar ~2 min y verificar producción:
    ```bash
-   curl -sS -o /dev/null -w "%{http_code}" https://conecta-lt2-0.vercel.app/api/auth/providers
+   curl -sS -o /dev/null -w "%{http_code}" https://conectalt.com/api/auth/providers
    ```
 4. Usar **Agent Browser** para verificar interactividad end-to-end (especialmente para auth flows)
 

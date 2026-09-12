@@ -1,234 +1,201 @@
-# CONECTA-LT 3.0 — PROTOCOLO DE VERIFICACIÓN COMPLETO
-# Última actualización: 2026-08-28 (credenciales rotadas)
+# PROTOCOLO CONECTA-LT v2 — Anti-pérdida de contexto y anti-alucinación
 
-## 1. IDENTIDAD DEL PROYECTO
+> **Para TODO agente** (Super Z, Claude, subagentes) que trabaje en este repo.
+> **Leer al inicio de CADA sesión.** El arranque normal es `bash scripts/session-boot.sh`
+> (imprime handoff + git + última entrada del worklog); este documento es la Constitución
+> que le da prioridad a cada fuente y define lo que NO se puede hacer de memoria.
+>
+> Última actualización: **2026-09-12** (v2 — reemplaza la "ficha de verificación" del
+> 28-Ago, que estaba desactualizada y contenía secrets en texto plano).
 
-- **Nombre**: CONECTA-LT 3.0 (Conecta Los Teques)
-- **Tipo**: Directorio de vida nocturna de Los Teques, Venezuela
-- **Stack**: Next.js 16 (App Router) + TypeScript + Tailwind 4 + shadcn/ui + Framer Motion + Zustand
-- **Arquitectura**: SPA con ruta única `/` — vistas controladas por estado global (Zustand)
-- **Repositorio GitHub**: https://github.com/sqn8nproyect-pixe/Conecta-Lt2.0.git (branch: main)
-- **Proyecto Vercel**: conecta-lt2-0 (ID: prj_yZ81u5SXdIvXpsngw0cEHrVMxclH)
-- **URL producción**: conecta-lt2-0-sqn8nproyect-1584s-projects.vercel.app (SSO habilitado)
+---
 
-## 2. BASE DE DATOS (Neon PostgreSQL)
+## 0. Por qué existe este protocolo (evidencia real, no teoría)
 
-- **Proveedor**: Neon (serverless PostgreSQL)
-- **Pooler URL**: ep-lingering-hill-ay3mv4lk-pooler.c-5.us-east-2.aws.neon.tech
-- **Schema**: 16 modelos (prisma/schema.prisma, provider=postgresql)
-- **Modelos**: Country, State, City, Zone, User, Account, Session, VerificationToken, Category, Business, BusinessHours, BusinessSocial, BusinessImage, Promotion, CouponRedemption, Review, Favorite, Reservation, AnalyticsEvent, Notification, BusinessProposal
+El **2026-09-12**, al retomar una sesión compactada, se encontraron 4 fuentes desincronizadas entre sí:
 
-### Datos en producción:
-| Tabla | Registros |
-|-------|----------|
-| Businesses | 21 |
-| Promotions | 42 |
-| Reviews | 93 |
-| Users | 38 |
-| CouponRedemptions | 5 |
-| Reservations | 9 |
-| BusinessImages | 231 (seeded, no R2 yet) |
-| AnalyticsEvents | 6,520 |
-| Notifications | 31 |
-| BusinessProposals | 0 |
-| Categorías | 3 (discoteca×7, licorería×7, tasca×7) |
+| Fuente | Decía | Realidad (verificada con git/curl ese día) |
+|---|---|---|
+| Resumen del chat | Sprint 8.11b "aún no implementado" | **Ya desplegado**: commit `444a715`; `DELETE /api/admin/events` → 401 |
+| SESSION_HANDOFF.md | Última tarea = 8.6 | Se iba por 8.11b |
+| PROTOCOL.md v1 | next-auth v4, "sin dominio propio" | `next-auth@5.0.0-beta.32`; conectalt.com activo (200) |
+| CLAUDE.md | `getServerSession` + patch-openid-client.js "crítico" | Export `auth()` (v5); el patch fue eliminado |
 
-### Asignaciones de dueños:
-- **20 de 21 negocios** owned por sqn8nproyect@gmail.com (role: BUSINESS_OWNER)
-- **1 negocio** (Tasca Los Amigos) owned por ana.rodriguez@gmail.com (role: BUSINESS_OWNER)
-- **tasca-el-patio** (Africa Burguers) tiene AMBOS ownerId y proposedOwnerId = sqn8nproyect
+**Moraleja: la memoria y los resúmenes NO son fuente de verdad.** La verdad se verifica
+con herramientas, en el momento, en esta sesión.
 
-## 3. AUTENTICACIÓN Y ROLES
+---
 
-### Proveedor:
-- Google OAuth (cuando NEXT_PUBLIC_GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET están configurados)
-- Credentials demo (Ana Rodríguez) como fallback
-- Adapter: @auth/prisma-adapter (Account, Session, VerificationToken)
-- Estrategia: JWT
+## 1. Jerarquía de verdad (si fuentes discrepan, gana la #1)
 
-### RBAC:
-- **ADMIN_EMAILS** (admin-config.ts): ['sqn8nproyect@gmail.com']
-- El JWT callback OVERRIDEA el rol de la BD si el email está en ADMIN_EMAILS → ADMIN
-- Emails NO en ADMIN_EMAILS con rol ADMIN/MODERATOR en BD → degradados a USER
-- **requireRole(...roles)** en server/auth.ts: 401 sin sesión, 403 sin permiso
-- Defense in depth: re-verifica ADMIN_EMAILS en cada request del servidor
+1. **Git**: `git log --oneline -15`, `git status -s`, `git rev-parse HEAD origin/main`
+2. **El código mismo**: Read/Grep del archivo real (schema.prisma es la fuente de los datos)
+3. **worklog.md** — solo la COLA; historial viejo en `worklog-archivo-*.md`
+4. **SESSION_HANDOFF.md** — estado volátil de la sesión
+5. **Producción**: `curl https://conectalt.com/...` citando código HTTP + cuerpo
+6. ✗ **PROHIBIDO como fuente**: resúmenes de chat, recuerdos de sesiones anteriores,
+   documentos sin fecha de actualización.
 
-### Usuario admin:
-- **sqn8nproyect@gmail.com** → ADMIN (por allowlist), BUSINESS_OWNER (en BD)
-- **ID**: cmsnq9x850000kv04jj4wpxbe
-- Nombre: Sqn8nproyect Beta
+---
 
-## 4. ALMACENAMIENTO DE IMÁGENES (R2)
+## 2. Ritual de INICIO de sesión (obligatorio)
 
-### Infraestructura Cloudflare R2:
-- **Bucket**: conectalt
-- **Account ID**: c0052c1eca67cae29715fad932ee5f91
-- **S3 Endpoint**: https://c0052c1eca67cae29715fad932ee5f91.r2.cloudflarestorage.com
-- **Public URL**: https://pub-conectalt.c0052c1eca67cae29715fad932ee5f91.r2.dev
-- **CORS**: Configurado (PUT, GET, HEAD, DELETE desde cualquier origen)
-- **Public Access**: Activado
-
-### Código R2:
-- **src/lib/r2.ts**: Cliente S3 singleton, generatePresignedUploadUrl(), deleteObject(), isR2Configured()
-- **src/app/api/upload/presign/route.ts**: POST → genera presigned PUT (auth: BUSINESS_OWNER/ADMIN + verificación propiedad)
-- **src/app/api/owner/businesses/[slug]/images/route.ts**: GET/POST/DELETE imágenes en BD + R2
-- **src/components/ui/image-upload-zone.tsx**: Componente drag & drop reutilizable con preview, progreso, errores
-
-### Flujo de subida:
-1. Frontend → POST /api/upload/presign → obtiene uploadUrl + publicUrl + key
-2. Frontend → PUT directo a uploadUrl (R2, bypass Vercel 4.5MB limit)
-3. Frontend → POST /api/owner/businesses/[slug]/images → registra en BD
-
-## 5. VARIABLES DE ENTORNO
-
-### .env local:
-```
-DATABASE_URL=postgresql://neondb_owner:npg_Giq7C6LlYdkz@ep-lingering-hill-ay3mv4lk-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require
-DIRECT_URL=(mismo pooler URL)
-NEXTAUTH_SECRET=dev-secret-key-for-local-conecta-lt-32bytes!!
-NEXTAUTH_URL=http://localhost:3000
-AUTH_SECRET=(mismo)
-AUTH_URL=http://localhost:3000
-R2_ACCOUNT_ID=c0052c1eca67cae29715fad932ee5f91
-R2_ACCESS_KEY_ID=d403bbcb052b6e78af74ee5a5ee2e3e7
-R2_SECRET_ACCESS_KEY=44e45ceaa33a4971329cc88dd2396acf72250a22f7657fc5a120a3182baba17b
-R2_BUCKET_NAME=conectalt
-R2_PUBLIC_URL=https://pub-conectalt.c0052c1eca67cae29715fad932ee5f91.r2.dev
+```bash
+bash scripts/session-boot.sh
+git log --oneline -15 && git status -s && git rev-parse HEAD origin/main
 ```
 
-### Vercel env vars (configuradas vía API):
-- DATABASE_URL ✅ (production+preview+development)
-- DIRECT_URL ✅
-- NEXTAUTH_SECRET ✅ (preview+production)
-- AUTH_SECRET ✅ (preview+production)
-- NEXTAUTH_URL_VERCEL ✅ (preview+production)
-- GOOGLE_CLIENT_SECRET ✅
-- NEXT_PUBLIC_GOOGLE_CLIENT_ID ✅
-- R2_ACCOUNT_ID ✅ (production+preview+development)
-- R2_ACCESS_KEY_ID ✅
-- R2_SECRET_ACCESS_KEY ✅
-- R2_BUCKET_NAME ✅
-- R2_PUBLIC_URL ✅
+Después:
+- Confirmar al dueño en **1 mensaje**: versión/estado git/tarea en vuelo.
+- **Antes de tocar un archivo, LÉELO completo.** Nunca editar a ciegas.
+- Si el dueño, el handoff o un resumen contradicen a git → **gana git** y se corrige el doc (§3.7).
 
-## 6. RUTAS API (38 endpoints)
+---
 
-### Auth:
-- /api/auth/[...nextauth] — NextAuth
+## 3. Reglas anti-alucinación (duras, sin excepciones)
 
-### Público:
-- GET/POST /api/businesses, GET /api/businesses/[slug]
-- GET/POST /api/reviews, GET /api/favorites, GET/POST /api/reservations
-- POST /api/reservations/[id]/cancel
-- GET/POST /api/promotions/[id]/redeem, GET /api/promotions/check, GET /api/promotions/redeemed
-- GET/POST /api/notifications, POST /api/notifications/[id]/read
-- POST /api/analytics/track, GET /api/analytics/popular
-- GET /api/categories, POST /api/businesses/[slug]/views
-- POST /api/businesses/[slug]/capacity, POST /api/businesses/[slug]/claim
-- GET /api/planner/recommend
+1. **Nada se afirma sin evidencia de ESTA sesión.** Antes de decir "X existe / funciona":
+   un Read, Grep, git o curl que lo demuestre.
+2. **Etiqueta siempre**: `VERIFICADO (comando → resultado)` vs `SUPOUESTO (por confirmar)`.
+   Los supuestos se declaran explícitamente y nunca se usan para editar código.
+3. **Nunca inventar**: rutas de archivos, endpoints, campos de Prisma, nombres de
+   componentes, resultados de comandos que no se corrieron, fechas ni cifras.
+4. **Producción se verifica, no se asume**: tras cada push, curl de las rutas afectadas
+   citando el código HTTP (ej.: `GET /editorial → 200`).
+5. **"No lo encontré" es una respuesta válida** — siempre preferible a inventar.
+6. **Secrets JAMÁS** en el chat ni en docs del repo (sus lugares: `.env` y Vercel).
+   El PROTOCOL.md v1 tuvo credenciales en texto plano — no repetir ese error.
+7. **Si un doc contradice la realidad → corregir el doc EN la misma tarea.** Así muere el drift.
+8. **Conversación compactada/resumida → re-verificar todo lo que se vaya a usar del resumen**
+   antes de actuar sobre él (regla 0 nació de esto).
 
-### Owner (BUSINESS_OWNER + ADMIN):
-- GET/PUT /api/owner/businesses/[slug]
-- PUT /api/owner/businesses/[slug]/hours
-- PUT /api/owner/businesses/[slug]/socials
-- GET/POST /api/owner/businesses/[slug]/promotions
-- PUT/DELETE /api/owner/businesses/[slug]/promotions/[id]
-- GET/POST /api/owner/businesses/[slug]/reservations
-- PUT /api/owner/businesses/[slug]/reservations/[id]/status
-- GET/POST/DELETE /api/owner/businesses/[slug]/images
-- GET/POST /api/owner/businesses/[slug]/proposals
-- GET/PUT /api/owner/businesses/proposals/[id]
+---
 
-### Admin (ADMIN only):
-- GET /api/admin/stats, GET /api/admin/analytics/overview
-- GET/PUT /api/admin/businesses, PUT /api/admin/businesses/[slug]/status
-- POST /api/admin/businesses/[slug]/assign-owner
-- POST /api/admin/businesses/[slug]/approve-owner
-- POST /api/admin/businesses/[slug]/reject-owner
-- GET /api/admin/businesses/[slug]/proposals
-- POST /api/admin/businesses/[slug]/proposals/[id]/review
-- POST /api/admin/businesses/migrate-ownership
-- GET/PUT /api/admin/reviews, PUT /api/admin/reviews/[id]/status
-- GET /api/admin/users, PUT /api/admin/users/[id]/role
+## 4. Ritual de CIERRE (por tarea y por sesión)
 
-### Upload (BUSINESS_OWNER + ADMIN):
-- POST /api/upload/presign
+**Por tarea, en este orden:**
+1. Append al `worklog.md` (formato definido en CLAUDE.md — append-only, nunca sobrescribir)
+2. Actualizar `SESSION_HANDOFF.md` (≤ 40 líneas)
+3. `bash scripts/session-task.sh` (contador + health check 🟢🟡🔴)
+4. Si hubo código: lint/tsc de los archivos tocados → commit `sprint-X.Y-descripción` → push → curl de verificación
 
-## 7. COMPONENTES PRINCIPALES (SPA Views)
+**Por sesión:** push ritual (PAT temporal → push → el dueño lo revoca) y avisar
+"abrir chat nuevo y decir *boot*". Si el chat se traba: plan de rescate en `RECOVERY.md`
+(probado el 10-Sep: recuperación completa en ~30 min).
 
-| Vista | Componente | Store View |
-|-------|-----------|------------|
-| Home | HomePage.tsx | 'home' |
-| Mapa | MapPage.tsx + LeafletMap.tsx | 'map' |
-| Detalle | EstablishmentPage.tsx | 'detail' |
-| Perfil | ProfilePage.tsx | 'profile' |
-| Admin | AdminDashboard.tsx | 'admin' |
-| Owner | OwnerDashboard.tsx | 'owner' |
-| Legal | LegalPage.tsx | 'privacy'/'terms' |
-| About | AboutPage.tsx | 'about' |
-| Planificador | NightPlanner.tsx (integrado en Home) | — |
-| Matchmaker | Matchmaker.tsx (incompleto) | — |
+---
 
-### Componentes de soporte:
-- Navbar.tsx (auth, nav, notificaciones, hidratación del store)
-- Footer.tsx
-- AgeGate.tsx
-- Notifications.tsx (dropdown del navbar)
-- image-upload-zone.tsx (drag & drop para R2)
-- PhotoGallery.tsx, CapacityBadge.tsx, ActivePromotionsBadge.tsx
-- SocialContactPanel.tsx, ValuePropositionBanner.tsx
+## 5. Definición de TERMINADO (DoD de toda tarea con código)
 
-### Estado global (Zustand store.ts):
-- view, selectedEstablishmentSlug, selectedMapEstablishment
-- user (hydrated desde NextAuth session)
-- favorites[], redeemedPromotionIds[], reservations[]
-- notifications[] (ephemeral, 4s auto-dismiss)
-- persistentNotifications[] (DB-backed inbox)
+Una tarea está cerrada SOLO cuando:
+- [ ] Archivos leídos antes de editar (sin excepciones)
+- [ ] Lint/tsc limpio en los archivos tocados
+- [ ] Commit descriptivo + push a `main`
+- [ ] **Verificación en producción con curl citando evidencia** (~2 min tras push)
+- [ ] worklog + SESSION_HANDOFF + `session-task.sh`
+- [ ] Aviso final al dueño en **español llano** (no técnico)
 
-## 8. SERVICIOS BACKEND (Server-side)
+**Ruido pre-existente que NO bloquea:** 19 errores de lint en `scripts/*.js`; el build
+local puede fallar si el `.env` del sandbox no tiene la cadena Neon (Vercel sí construye
+con sus env vars). Validar con tsc sobre los archivos tocados.
 
-- src/server/repositories/: business, favorite, promotion, reservation, review, analytics, notification
-- src/server/services/: business, favorite, promotion, reservation, review, analytics, notification
-- src/server/planner/: availability, distance, reasons, repository, schema, scoring, service
-- src/server/auth.ts: getCurrentUser(), requireUser(), getCurrentUserWithRole(), requireRole()
+---
 
-## 9. ERRORES TYPESCRIPT PRE-EXISTENTES (no bloquean el build)
+## 6. Ficha técnica VERIFICADA (2026-09-12 — si pasan >2 semanas, re-verificar antes de confiar)
 
-Estos errores existen pero NO causan fallo en `next build` (Next.js no incluye estos archivos en el build graph):
-1. Matchmaker.tsx — missing exports calculateMatch, getRecommendedDrink, MatchAnswers
-2. Navbar.tsx:427 — string|undefined no asignable a string
-3. AdminMetricsTab.tsx — Object possibly undefined (×2), Date no asignable a string
-4. auth.ts:54 — trustHost no existe en tipo AuthOptions (NEXT_AUTH v4 type definition issue)
+### Identidad
+- **Producto**: Conecta Los Teques — directorio de vida nocturna de Los Teques, Venezuela
+- **Dominio producción**: `https://conectalt.com` (200; `/api/auth/providers` responde google + demo — verificado hoy)
+- **Repo**: github.com/sqn8nproyect-pixe/Conecta-Lt2.0 (branch `main`)
+- **Deploy**: Vercel (proyecto conecta-lt2-0, región iad1) — auto-deploy ~2 min tras push a main; build `prisma generate && next build`; postinstall solo `prisma generate`
 
-## 10. DEPENDENCIAS CLAVE
+### Stack real (leído de package.json hoy)
+- `next@^16.1.1` (App Router, `src/app/`) · `next-auth@^5.0.0-beta.32` (**Auth.js v5**)
+- `@auth/prisma-adapter@^2.11.3` · `prisma@^6.11.1` + PostgreSQL **Neon**
+- `tailwindcss@4` + shadcn/ui (New York) + Framer Motion + Zustand + Leaflet · runtime **bun**
+- Auth export en `src/lib/auth.ts`: `{ handlers, auth, signIn, signOut }`; fix del check
+  RFC 9207 (`iss`) de Google vía `customFetch` que borra
+  `authorization_response_iss_parameter_supported` del discovery (líneas 35–72);
+  `trustHost: true` (tipo oficial en v5)
 
-- next@^16.1.1, react@^19, next-auth@^4.24.11
-- @prisma/client@^6.11.1, prisma@^6.11.1
-- @aws-sdk/client-s3@^3.1119.0, @aws-sdk/s3-request-presigner@^3.1119.0
-- framer-motion@^12.23.2, zustand@^5.0.6, @tanstack/react-query@^5.82.0
-- leaflet@^1.9.4, react-leaflet@^5.0.0
-- recharts@^2.15.4 (admin metrics), sharp@^0.34.3 (image processing)
-- z-ai-web-dev-sdk@^0.0.18 (AI skills)
+### Auth y RBAC
+- Google OAuth + Credentials demo (fallback)
+- Roles USER / BUSINESS_OWNER / ADMIN; allowlist `ADMIN_EMAILS` en `src/lib/admin-config.ts`
+  (override en JWT + re-verificación en cada request); `requireRole()` en `src/server/auth.ts`
+- **Nunca pegar emails/secrets de cuentas en docs** — referenciar el archivo
 
-## 11. TAREAS PENDIENTES
+### Flujo de flyers (BusinessEvent) — ciclo completo en producción
+1. Dueño propone: `POST /api/owner/businesses/[slug]/events` (estado `PENDING_REVIEW`),
+   imagen opcional vía presign EVENT → R2 `events/<slug>/<uuid>.<ext>`,
+   `imageUrl=/api/images/events/<slug>/<uuid>` (validado server-side por slug)
+2. Admin revisa: tab Eventos de `AdminDashboard` → miniatura → `FlyerReviewDialog`
+   (arte en grande + Aprobar y publicar / Rechazar con nota)
+3. Publicado: aparece en portada `/editorial` y en guía `/editorial/[slug]`
+   (sección "Los flyers de este fin de semana") — **al instante**, porque cada
+   POST/PATCH/DELETE admin llama `revalidateWeekendPages()` =
+   `revalidatePath('/editorial')` + `revalidatePath('/editorial/[slug]', 'page')` (desde 8.11b)
+4. Limpieza: botón **"Limpiar semana"** (solo semanas vencidas, guard server-side en
+   wall clock Caracas) → `DELETE /api/admin/events?weekOf=YYYY-MM-DD` → borra DB +
+   purga arte R2 (`purgeEventImage`) + revalida
+- Estados: `DRAFT | PUBLISHED | PENDING_REVIEW | REJECTED` (enum `BusinessEventStatus`)
+- ISR base de las páginas editoriales: 3600 (la revalidación explícita es lo que da la instantaneidad)
+- Proxy de imágenes `GET /api/images/[...key]`: `ALLOWED_PREFIXES = ['businesses/','promotions/','events/']`
+  (fix `d42f88e` — sin `events/` el dueño "no podía subir la imagen")
 
-### Seguridad (el usuario debe hacer):
-1. ⚠️ **Rotar contraseña de Neon** — la URL de BD quedó expuesta en este chat
-2. ⚠️ **Revocar PAT de GitHub** (ghp_o0z2H5CEc...) en github.com/settings/tokens
-3. ✅ Token de Vercel ya revocado
+### Archivos clave (existencia verificada hoy en el árbol)
+- `src/components/conecta/admin/EventsTab.tsx` — panel admin de eventos (bandejas por semana, revisión, limpiar semana)
+- `src/components/conecta/owner/EventsOwnerTab.tsx` — formulario del dueño (presign → R2)
+- `src/components/conecta/WeekendFlyersGrid.tsx` — grid público (exporta `FlyerEvent`)
+- `src/app/editorial/page.tsx` (portada) · `src/app/editorial/[slug]/page.tsx` (guía)
+- `src/app/api/admin/events/route.ts` (GET/POST/DELETE?weekOf) · `[id]/route.ts` (PATCH/DELETE)
+- `src/app/api/owner/businesses/[slug]/events/…` · `src/server/services/event.service.ts`
+- `src/app/api/upload/presign/route.ts` · `src/app/api/images/[...key]/route.ts`
+- `src/lib/event-labels.ts` (wall clock Caracas: caracasParts/deriveFrom/weekHeader)
+- `src/lib/auth.ts` · `src/server/auth.ts` · `src/lib/admin-config.ts` · `prisma/schema.prisma`
 
-### Funcionales:
-4. Ejecutar "Migrar Dueños" en producción (POST /api/admin/businesses/migrate-ownership) — OPCIONAL, ya se asignaron dueños directamente
-5. Limpiar proposedOwnerId de tasca-el-patio (tiene ambos ownerId y proposedOwnerId)
-6. Probar la subida de imágenes R2 end-to-end en producción
-7. Considerar cambiar NEXTAUTH_SECRET y AUTH_SECRET para producción (los actuales son dev secrets)
+### Gotchas activos (lista completa operativa en SESSION_HANDOFF.md)
+- `unset DATABASE_URL DIRECT_URL` antes de prisma CLI (el shell pisa `.env` con SQLite)
+- Sandbox mata procesos background entre tool calls (server + test en la MISMA llamada bash)
+- `bun -e` falla con Prisma → usar archivos (`bun scripts/x.ts`)
+- AgeGate (cookie 30d) bloquea browser headless: aceptarlo antes de probar
+- `NEXT_PUBLIC_*` se hornean en build → cambiarlas en Vercel exige Redeploy
+- Restore de snapshot borra archivos NO trackeados (`.env` perdido ×2 → RECOVERY.md paso 6)
+- No usar server actions (backend = API routes en `src/app/api/`); no usar SQLite
 
-### Bugs conocidos:
-8. Matchmaker.tsx — componente incompleto, imports rotos (no se usa en la UI)
-9. auth.ts:54 `trustHost` — TypeScript error pero funciona en runtime (NextAuth v4 lo acepta)
+---
 
-## 12. ARQUITECTURA DE DESPLIEGUE
+## 7. Índice de sprints recientes (fuente: worklog; verificado hasta 8.11b)
 
-- **Git push** a GitHub (main) → **Vercel auto-deploy**
-- Build command: `prisma generate && next build`
-- No hay mini-services activos actualmente
-- No hay custom domain configurado (usa Vercel subdomain con SSO)
+| Sprint | Qué | Commit |
+|---|---|---|
+| 8.6 | Panel admin ABM de eventos/flyers | (ver worklog) |
+| 8.7–8.8 | Muro editorial + botón Acceder animado | `638a8a3` |
+| 8.9 | Dueños proponen flyers + aprobación admin (PENDING_REVIEW) | `bac3020` |
+| 8.10 | Flyer con imagen (R2 presign EVENT) | `0ae04c6` |
+| 8.10-hotfix | Proxy `events/` permitido (fix "no sube la imagen") | `d42f88e` |
+| 8.11 | Vista ampliada del arte + flyers en guía + sin Acceder en guía | `30a56da` |
+| 8.11b | "Limpiar semana" + revalidación instantánea + purga R2 | `444a715` ✅ en producción (verificado 2026-09-12) |
+
+Detalle completo de cada uno: cola de `worklog.md`; historial antiguo en `worklog-archivo-2026-09.md`.
+
+---
+
+## 8. Tareas pendientes (sección VIVA — actualizar al cerrar cada tarea)
+
+1. **(Dueño)** Rotar `NEXTAUTH_SECRET`/`AUTH_SECRET` en Vercel + Redeploy (arrastrado desde 18-Ago)
+2. **(Dueño, recomendado)** Rotar contraseña de Neon y llaves R2 — quedaron en texto plano
+   en el PROTOCOL.md v1 (dentro del historial git)
+3. **(Dueño)** Datos pendientes: IG de Africa Burguers · IG de Licobar JJ (@puntoencuentrolt) · dirección real de Medusa
+4. **(Opcional)** Purgar objetos huérfanos en R2 (flyers borrados antes del 8.11b — inofensivos)
+5. **(Dueño)** Revocar el PAT de GitHub al cerrar cada sesión que lo use (patrón PAT temporal)
+
+---
+
+## 9. Mantenimiento de este protocolo
+
+- Cualquier agente que descubra drift (doc ≠ realidad) **corrige el doc en la misma tarea**
+  y deja evidencia en el worklog.
+- Mantener este archivo: ficha + reglas. Sin secrets, con fecha. Si crece demasiado, podar
+  historial (eso vive en worklog), nunca las reglas de §1–§5.
+- `SESSION_HANDOFF.md` es la RAM (≤40 líneas); `worklog.md` es la cinta histórica (append-only);
+  este archivo es la Constitución. Los tres se actualizan en cada cierre de tarea.
