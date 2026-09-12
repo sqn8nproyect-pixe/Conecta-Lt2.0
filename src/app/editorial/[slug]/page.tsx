@@ -15,7 +15,7 @@ import type { Metadata } from 'next';
 import { CalendarDays, ArrowRight, MapPin, Star, Sparkles } from 'lucide-react';
 import Markdown, { type Components } from 'react-markdown';
 import { db } from '@/lib/db';
-import AccessButton from '@/components/conecta/AccessButton';
+import WeekendFlyersGrid, { type FlyerEvent } from '@/components/conecta/WeekendFlyersGrid';
 import {
   SITE_URL,
   categoryLabel,
@@ -58,6 +58,58 @@ async function getPost(slug: string) {
 }
 
 type PostData = NonNullable<Awaited<ReturnType<typeof getPost>>>;
+
+// Sprint 8.11 — flyers PUBLICADOS de la misma semana del post, para
+// que lo que suben los dueños también se refleje en la guía (página 2).
+async function getWeekendEvents(weekOf: Date): Promise<FlyerEvent[]> {
+  const rows = await db.businessEvent.findMany({
+    where: { status: 'PUBLISHED', weekOf },
+    orderBy: [{ startsAt: 'asc' }, { sortOrder: 'asc' }],
+    select: {
+      id: true,
+      title: true,
+      tagline: true,
+      emoji: true,
+      theme: true,
+      dayLabel: true,
+      dateLabel: true,
+      timeLabel: true,
+      priceNote: true,
+      promoNote: true,
+      imageUrl: true,
+      business: {
+        select: {
+          name: true,
+          slug: true,
+          zone: { select: { name: true } },
+          address: true,
+          phone: true,
+        },
+      },
+    },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    tagline: row.tagline,
+    emoji: row.emoji,
+    theme: row.theme,
+    dayLabel: row.dayLabel,
+    dateLabel: row.dateLabel,
+    timeLabel: row.timeLabel,
+    priceNote: row.priceNote,
+    promoNote: row.promoNote,
+    imageUrl: row.imageUrl,
+    business: {
+      name: row.business.name,
+      slug: row.business.slug,
+      zone: row.business.zone?.name ?? null,
+      address: row.business.address,
+      phone: row.business.phone,
+    },
+  }));
+}
 
 // SSG: pre-genera los posts publicados; si la DB cae en build,
 // devuelve [] y se generan on-demand (el build no muere).
@@ -220,8 +272,12 @@ export default async function EditorialPostPage({
   const slug = decodeURIComponent(rawSlug).toLowerCase();
 
   let post: PostData | null = null;
+  let weekendEvents: FlyerEvent[] = [];
   try {
     post = await getPost(slug);
+    if (post && post.status === 'PUBLISHED') {
+      weekendEvents = await getWeekendEvents(post.weekOf);
+    }
   } catch (error) {
     console.error('[editorial/[slug]] page: DB no disponible', error);
   }
@@ -252,16 +308,13 @@ export default async function EditorialPostPage({
 
       <article className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
         {/* Breadcrumbs visibles (coherentes con el JSON-LD) */}
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <nav aria-label="Ruta de navegación" className="text-sm text-white/50">
-            <Link href="/" className="hover:text-gold transition-colors">Inicio</Link>
-            <span className="mx-2">›</span>
-            <Link href="/editorial" className="hover:text-gold transition-colors">Editorial</Link>
-            <span className="mx-2">›</span>
-            <span className="text-white/80">Fin de semana del {formatWeek(post.weekOf)}</span>
-          </nav>
-          <AccessButton standalone />
-        </div>
+        <nav aria-label="Ruta de navegación" className="text-sm text-white/50 mb-6">
+          <Link href="/" className="hover:text-gold transition-colors">Inicio</Link>
+          <span className="mx-2">›</span>
+          <Link href="/editorial" className="hover:text-gold transition-colors">Editorial</Link>
+          <span className="mx-2">›</span>
+          <span className="text-white/80">Fin de semana del {formatWeek(post.weekOf)}</span>
+        </nav>
 
         {/* Encabezado */}
         <header className="mb-10">
@@ -288,6 +341,20 @@ export default async function EditorialPostPage({
         <div className="mb-12">
           <Markdown components={markdownComponents}>{post.body}</Markdown>
         </div>
+
+        {/* Sprint 8.11 — los flyers de los dueños, también en la guía */}
+        {weekendEvents.length > 0 && (
+          <section aria-label="Flyers del fin de semana" className="mb-12">
+            <h2 className="font-serif text-2xl text-gold mt-10 mb-2">
+              Los flyers de este fin de semana
+            </h2>
+            <p className="text-white/60 text-sm mb-5">
+              Lo publicado por los locales para esta semana — toca un flyer
+              y ve directo a su ficha.
+            </p>
+            <WeekendFlyersGrid events={weekendEvents} />
+          </section>
+        )}
 
         {/* Locales mencionados — linking interno garantizado */}
         {post.businesses.length > 0 && (

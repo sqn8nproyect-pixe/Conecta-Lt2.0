@@ -456,7 +456,7 @@ export function EventsTab() {
               {pending.length}
             </Badge>
             <span className="text-[11px] text-amber-200/50 ml-auto hidden sm:block">
-              propuestas de los dueños — aprueba para publicar en la portada
+              propuestas de los dueños — toca la miniatura del flyer para verlo en grande
             </span>
           </header>
           <ul>
@@ -888,14 +888,40 @@ function PendingEventRow({
   onReject: () => void;
   onEdit: () => void;
 }) {
+  // Sprint 8.11 — vista de revisión: si el dueño subió arte propio,
+  // el admin ve la miniatura AQUÍ y puede abrirla en grande antes
+  // de aprobar/rechazar. Sin imagen → flyer CSS (emoji).
+  const [zoom, setZoom] = useState(false);
+
   return (
     <li className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-amber-500/10 last:border-b-0 hover:bg-amber-500/[0.03] transition">
-      <span
-        aria-hidden
-        className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
-      >
-        {ev.emoji}
-      </span>
+      {ev.imageUrl ? (
+        <button
+          type="button"
+          onClick={() => setZoom(true)}
+          title="Ver el flyer en grande"
+          className="group/flyer relative shrink-0 w-14 aspect-[3/4] rounded-lg overflow-hidden border border-amber-500/30 hover:border-gold transition"
+        >
+          <img
+            src={ev.imageUrl}
+            alt={`Flyer propuesto: ${ev.title}`}
+            className="h-full w-full object-cover"
+          />
+          <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/flyer:bg-black/40 transition">
+            <Eye
+              size={16}
+              className="text-white opacity-0 group-hover/flyer:opacity-100 transition"
+            />
+          </span>
+        </button>
+      ) : (
+        <span
+          aria-hidden
+          className="text-2xl leading-none select-none w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white/5"
+        >
+          {ev.emoji}
+        </span>
+      )}
 
       <div className="flex-1 min-w-[180px]">
         <div className="flex flex-wrap items-center gap-2">
@@ -963,7 +989,85 @@ function PendingEventRow({
           <Pencil size={14} />
         </Button>
       </div>
+
+      {/* Vista ampliada del flyer (revisión del arte antes de decidir) */}
+      <FlyerReviewDialog
+        open={zoom}
+        onOpenChange={setZoom}
+        ev={ev}
+        busy={busy}
+        onApprove={() => {
+          setZoom(false);
+          onApprove();
+        }}
+        onReject={() => {
+          setZoom(false);
+          onReject();
+        }}
+      />
     </li>
+  );
+}
+
+// ── Diálogo: flyer en grande + decisión ────────────────────────
+
+function FlyerReviewDialog({
+  open,
+  onOpenChange,
+  ev,
+  busy,
+  onApprove,
+  onReject,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  ev: AdminEvent;
+  busy: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm bg-[#0d1120] border-white/15">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-gold">
+            Revisar flyer — {ev.business.name}
+          </DialogTitle>
+          <DialogDescription>
+            {ev.dayLabel} {ev.dateLabel} · {ev.timeLabel} — así se verá en
+            la portada si lo apruebas.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40">
+          <img
+            src={ev.imageUrl ?? ""}
+            alt={`Flyer de ${ev.title}`}
+            className="w-full max-h-[55vh] object-contain"
+          />
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onReject}
+            disabled={busy}
+            className="border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs"
+          >
+            <X size={13} className="mr-1" />
+            Rechazar
+          </Button>
+          <Button
+            size="sm"
+            onClick={onApprove}
+            disabled={busy}
+            className="bg-emerald-600 text-white hover:bg-emerald-600/90 text-xs"
+          >
+            <Check size={13} className="mr-1" />
+            Aprobar y publicar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
