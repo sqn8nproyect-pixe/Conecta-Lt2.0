@@ -1147,3 +1147,21 @@ Work Log:
 Stage Summary:
 - El flujo dueño→admin queda completo: dueño sube flyer → admin lo VE en grande → aprueba → sale en portada Y en la guía (página 2).
 - Recordatorios pendientes del dueño: rotar NEXTAUTH_SECRET; datos IG Africa Burguers / Licobar JJ; dirección de Medusa.
+
+---
+Task ID: sprint-8.11b-limpiar-semana
+Agent: Super Z (main agent)
+Task: "Adelante" del dueño a la oferta: ① botón "Limpiar semana" (borrado masivo de flyers vencidos de una vez) ② reflejo instantáneo en el sitio público tras borrar/aprobar (antes ISR 1h).
+
+Work Log:
+- event.service.ts: helper purgeEventImage(imageKey) — borra el arte del flyer en R2 best-effort (un fallo de R2 no bloquea el borrado DB). El schema ya tenía imageKey "para eliminación futura" — ahora se usa.
+- /api/admin/events (colección): nuevo DELETE ?weekOf=YYYY-MM-DD — findMany {id,imageKey} → deleteMany → Promise.allSettled(purge) → revalidate. Guardia server-side: solo semanas ESTRICTAMENTE pasadas en wall clock Caracas (deriveFrom(caracasParts(now))) — la en curso y futuras → 400. POST también revalida.
+- /api/admin/events/[id]: PATCH y DELETE ahora revalidan; DELETE purga imageKey antes de responder.
+- revalidateWeekendPages(): revalidatePath('/editorial') + revalidatePath('/editorial/[slug]','page'). El home no muestra businessEvent (verificado) → no se revalida.
+- EventsTab: botón "Limpiar semana" (Eraser, ml-auto) SOLO en headers de semanas vencidas (weekOf < currentWeekOf calculado client-side con los mismos helpers); AlertDialog de confirmación con conteo; purgeWeekMutation + notificación con cantidad borrada.
+- api.ts: bulkDeleteAdminEvents(weekOf) con throwAdminError.
+- tsc limpio en tocados; lint 19 pre-existentes (scripts). Deploy 444a715 → producción: DELETE /api/admin/events responde 401 protegido (antes 405) y el guard de formato corre tras la auth.
+Stage Summary:
+- Ciclo de vida completo del flyer: dueño propone → admin ve arte en grande → aprueba → sale en portada Y guía al instante → semana vencida se limpia con 1 clic (DB + imágenes R2 + público refrescado al momento).
+- Nota: los objetos huérfanos previos (flyers borrados antes de este fix) siguen en R2 — inofensivos; se pueden limpiar después si acaso.
+- Pendientes del dueño: rotar NEXTAUTH_SECRET; IG Africa Burguers / Licobar JJ; dirección de Medusa.
