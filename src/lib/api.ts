@@ -649,6 +649,23 @@ export async function deleteAdminEvent(
   return res.json();
 }
 
+/**
+ * DELETE /api/admin/events?weekOf=YYYY-MM-DD — Sprint 8.11
+ * "Limpiar semana": borra de UNA VEZ todos los flyers de una
+ * semana vencida (sábado del weekOf). El server solo acepta
+ * semanas estrictamente pasadas y purga su arte de R2.
+ */
+export async function bulkDeleteAdminEvents(
+  weekOf: string,
+): Promise<{ deleted: number }> {
+  const res = await fetch(
+    `/api/admin/events?weekOf=${encodeURIComponent(weekOf)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
 // ─── Sprint 8.9 — Owner: propuestas de flyers/eventos ────────
 //
 // El dueño propone flyers para su local: nacen PENDING_REVIEW y

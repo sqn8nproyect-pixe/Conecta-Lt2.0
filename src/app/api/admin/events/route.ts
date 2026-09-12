@@ -13,14 +13,23 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import type { Prisma, UserRole } from '@prisma/client';
 import { requireRole } from '@/server/auth';
 import { db } from '@/lib/db';
+import { caracasParts, deriveFrom } from '@/lib/event-labels';
 import {
   eventInclude,
   parseEventPayload,
+  purgeEventImage,
   serializeEvent,
 } from '@/server/services/event.service';
+
+/** Reflejo inmediato en el sitio público (portada + todas las guías). */
+function revalidateWeekendPages() {
+  revalidatePath('/editorial');
+  revalidatePath('/editorial/[slug]', 'page');
+}
 
 export async function GET(request: Request) {
   try {
@@ -89,10 +98,75 @@ export async function POST(request: Request) {
       include: eventInclude,
     });
 
+    revalidateWeekendPages();
+
     return NextResponse.json(serializeEvent(created), { status: 201 });
   } catch (e) {
     if (e instanceof Response) return e;
     console.error('POST /api/admin/events error:', e);
+    return NextResponse.json(
+      { error: 'Error interno del servidor' },
+      { status: 500 },
+    );
+  }
+}
+
+// Sprint 8.11 — DELETE ?weekOf=YYYY-MM-DD — "limpiar semana": borra
+// de UNA VEZ todos los flyers de una semana vencida (sábado del
+// weekOf), incluido su arte en R2 (best-effort). Solo semanas
+// ESTRICTAMENTE pasadas — la en curso y las futuras se rechazan.
+export async function DELETE(request: Request) {
+  try {
+    await requireRole('ADMIN' as UserRole);
+
+    const { searchParams } = new URL(request.url);
+    const weekOf = searchParams.get('weekOf');
+    if (!weekOf || !/^\d{4}-\d{2}-\d{2}$/.test(weekOf)) {
+      return NextResponse.json(
+        { error: 'Query weekOf requerida (YYYY-MM-DD, sábado de la semana).' },
+        { status: 400 },
+      );
+    }
+
+    // Guardía server-side: la semana debe ser pasada (wall clock Caracas).
+    const todayWeek = deriveFrom(
+      caracasParts(new Date().toISOString()).date,
+    )?.weekOf;
+    if (todayWeek && weekOf >= todayWeek) {
+      return NextResponse.json(
+        { error: 'Solo se pueden limpiar semanas pasadas.' },
+        { status: 400 },
+      );
+    }
+
+    const weekDate = new Date(`${weekOf}T00:00:00.000Z`);
+
+    // 1) Localizar los flyers de esa semana (para purgar su arte R2).
+    const rows = await db.businessEvent.findMany({
+      where: { weekOf: weekDate },
+      select: { id: true, imageKey: true },
+    });
+    if (rows.length === 0) {
+      return NextResponse.json({ deleted: 0 });
+    }
+
+    // 2) Borrado físico en DB.
+    const result = await db.businessEvent.deleteMany({
+      where: { weekOf: weekDate },
+    });
+
+    // 3) Purgar imágenes en R2 — best-effort, en paralelo.
+    await Promise.allSettled(
+      rows.map((r) => purgeEventImage(r.imageKey)),
+    );
+
+    // 4) La portada y las guías se actualizan AL INSTANTE.
+    revalidateWeekendPages();
+
+    return NextResponse.json({ deleted: result.count });
+  } catch (e) {
+    if (e instanceof Response) return e;
+    console.error('DELETE /api/admin/events error:', e);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 },

@@ -7,14 +7,22 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import type { Prisma, UserRole } from '@prisma/client';
 import { requireRole } from '@/server/auth';
 import { db } from '@/lib/db';
 import {
   eventInclude,
   parseEventPayload,
+  purgeEventImage,
   serializeEvent,
 } from '@/server/services/event.service';
+
+/** Reflejo inmediato en el sitio público (portada + todas las guías). */
+function revalidateWeekendPages() {
+  revalidatePath('/editorial');
+  revalidatePath('/editorial/[slug]', 'page');
+}
 
 export async function PATCH(
   request: Request,
@@ -60,6 +68,10 @@ export async function PATCH(
       include: eventInclude,
     });
 
+    // Aprobar/despublicar/editar afecta la portada y las guías →
+    // reflejar al instante, sin esperar el ISR de 1 hora.
+    revalidateWeekendPages();
+
     return NextResponse.json(serializeEvent(updated));
   } catch (e) {
     if (e instanceof Response) return e;
@@ -81,7 +93,7 @@ export async function DELETE(
     const { id } = await params;
     const existing = await db.businessEvent.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, imageKey: true },
     });
     if (!existing) {
       return NextResponse.json(
@@ -91,6 +103,12 @@ export async function DELETE(
     }
 
     await db.businessEvent.delete({ where: { id } });
+
+    // El arte subido por el dueño no queda huérfano en R2 (best-effort).
+    await purgeEventImage(existing.imageKey);
+
+    revalidateWeekendPages();
+
     return NextResponse.json({ id });
   } catch (e) {
     if (e instanceof Response) return e;

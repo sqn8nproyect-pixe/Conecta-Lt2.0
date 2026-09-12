@@ -31,6 +31,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Eraser,
   Eye,
   EyeOff,
   Sparkles,
@@ -43,6 +44,7 @@ import {
   createAdminEvent,
   updateAdminEvent,
   deleteAdminEvent,
+  bulkDeleteAdminEvents,
 } from '@/lib/api';
 import { EVENT_THEMES, EVENT_THEME_HEX } from '@/lib/event-themes';
 import {
@@ -181,6 +183,11 @@ export function EventsTab() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<AdminEvent | null>(null);
+  // Sprint 8.11 — "limpiar semana vencida" (borrado masivo por semana).
+  const [toPurge, setToPurge] = useState<{
+    weekOf: string;
+    count: number;
+  } | null>(null);
   // Sprint 8.9 — rechazo de propuestas con nota para el dueño.
   const [toReject, setToReject] = useState<AdminEvent | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -232,6 +239,28 @@ export function EventsTab() {
       addNotification('Evento eliminado.', 'info');
     },
   });
+
+  // Sprint 8.11 — limpiar una semana vencida de una sola vez.
+  const purgeWeekMutation = useMutation({
+    mutationFn: (weekOf: string) => bulkDeleteAdminEvents(weekOf),
+    onSuccess: (data) => {
+      invalidate();
+      setToPurge(null);
+      addNotification(
+        `Semana limpiada — ${data.deleted} flyer${data.deleted === 1 ? '' : 's'} eliminado${data.deleted === 1 ? '' : 's'} (imágenes incluidas).`,
+        'info',
+      );
+    },
+    onError: (e: Error) => addNotification(e.message, 'info'),
+  });
+
+  // Semana actual (sábado) en wall clock Caracas — el botón "limpiar"
+  // solo se ofrece en semanas estrictamente pasadas.
+  const currentWeekOf = useMemo(
+    () =>
+      deriveFrom(caracasParts(new Date().toISOString()).date)?.weekOf ?? null,
+    [],
+  );
 
   // ── Sprint 8.9 — aprobar / rechazar propuestas del dueño ──────
   const approveMutation = useMutation({
@@ -502,6 +531,22 @@ export function EventsTab() {
                   <Badge className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">
                     Publicada
                   </Badge>
+                )}
+                {/* Sprint 8.11 — solo semanas vencidas: borrar TODOS los
+                    flyers de una vez cuando el fin de semana ya pasó. */}
+                {currentWeekOf && weekOf < currentWeekOf && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setToPurge({ weekOf, count: events.length })
+                    }
+                    title="Eliminar todos los flyers de esta semana"
+                    className="ml-auto h-7 px-2 text-[11px] text-white/50 hover:text-red-300 hover:bg-red-500/10"
+                  >
+                    <Eraser size={12} className="mr-1" />
+                    Limpiar semana
+                  </Button>
                 )}
               </header>
               <ul>
@@ -865,6 +910,41 @@ export function EventsTab() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── AlertDialog: limpiar semana vencida (Sprint 8.11) ───── */}
+      <AlertDialog
+        open={toPurge !== null}
+        onOpenChange={(v) => !v && setToPurge(null)}
+      >
+        <AlertDialogContent className="bg-[#0d1120] border-white/15">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              ¿Limpiar la semana del{' '}
+              {toPurge ? weekHeader(toPurge.weekOf) : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminarán permanentemente los {toPurge?.count} flyers de
+              esa semana —incluidas las imágenes que subieron los dueños— y
+              dejarán de verse en la portada y en la guía al instante. Esta
+              acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                toPurge && purgeWeekMutation.mutate(toPurge.weekOf)
+              }
+              className="bg-red-600 text-white hover:bg-red-600/90"
+              disabled={purgeWeekMutation.isPending}
+            >
+              {purgeWeekMutation.isPending ? 'Limpiando…' : 'Limpiar semana'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

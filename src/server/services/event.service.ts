@@ -320,3 +320,22 @@ export function serializeEvent(ev: EventWithBusiness): AdminEvent {
     createdAt: ev.createdAt.toISOString(),
   };
 }
+
+// ── Sprint 8.11 — limpieza de arte R2 al borrar flyers ─────────
+// El flyer subido por el dueño vive en R2 (events/<slug>/uuid.ext).
+// Al eliminar el evento en DB, el objeto quedaría huérfano para
+// siempre: esto lo borra best-effort (un fallo de R2 NO bloquea el
+// borrado del evento en la base de datos).
+
+import { deleteObject } from '@/lib/r2';
+
+export async function purgeEventImage(
+  imageKey: string | null | undefined,
+): Promise<void> {
+  if (!imageKey) return;
+  try {
+    await deleteObject(imageKey);
+  } catch (e) {
+    console.error('[event.service] purge R2 image failed:', imageKey, e);
+  }
+}
