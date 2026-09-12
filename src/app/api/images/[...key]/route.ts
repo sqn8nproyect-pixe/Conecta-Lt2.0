@@ -14,8 +14,9 @@
 import { NextResponse } from 'next/server';
 import { getR2Object } from '@/lib/r2';
 
-/** Prefijos de clave permitidos (defensa contra path traversal). */
-const ALLOWED_PREFIXES = ['businesses/', 'promotions/'];
+/** Prefijos de clave permitidos (defensa contra path traversal).
+ *  `events/` = flyers personalizados de la portada fin de semana (8.10). */
+const ALLOWED_PREFIXES = ['businesses/', 'promotions/', 'events/'];
 
 /** Imágenes inmutables (keys contienen UUID) → caché agresiva. */
 const CACHE_HEADERS = {

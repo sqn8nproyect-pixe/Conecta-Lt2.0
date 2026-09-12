@@ -141,7 +141,9 @@ function FlyerImageField({
           headers: { 'Content-Type': file.type },
         });
         if (!put.ok) {
-          setLocalError('No se pudo subir la imagen. Intenta de nuevo.');
+          setLocalError(
+            `No se pudo subir la imagen (código ${put.status}). Revisa tu conexión e intenta de nuevo.`,
+          );
           return;
         }
         onChange(presign.publicUrl, presign.key);
