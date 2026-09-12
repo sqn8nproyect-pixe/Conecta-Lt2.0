@@ -1132,3 +1132,18 @@ Stage Summary:
 - Deploy d42f88e en producción; el flujo dueño→sube flyer→admin aprueba→/editorial queda operativo end-to-end.
 - Los intentos fallidos del dueño dejaron objetos huérfanos en R2 (se subieron bien, solo no se servían): inofensivos, sin exposición pública.
 - Pendiente del dueño (recordar): rotar NEXTAUTH_SECRET en Vercel; datos IG Africa Burguers / Licobar JJ y dirección de Medusa.
+
+---
+Task ID: sprint-8.11-guia-flyers-admin
+Agent: Super Z (main agent)
+Task: 3 pedidos del dueño: ① vista para que el admin vea qué imagen aprueba, ② flyers también reflejados en la página 2 (guía /editorial/[slug]), ③ eliminar botón Acceder de la página 2.
+
+Work Log:
+- Mapeo: página 1 = /editorial (muro de flyers, sin Acceder desde dd1085c); página 2 = guía /editorial/[slug] (markdown del admin) — tenía <AccessButton standalone /> y NO mostraba los eventos.
+- ① EventsTab.tsx: PendingEventRow ahora muestra la MINIATURA del flyer subido (o emoji si no hay) y al tocarla abre FlyerReviewDialog — flyer en grande (max-h 55vh) + datos del local + botones Aprobar y publicar / Rechazar dentro del diálogo. Header de la bandeja: "toca la miniatura del flyer para verlo en grande".
+- ② /editorial/[slug]/page.tsx: nueva función getWeekendEvents(weekOf) (mismo shape FlyerEvent que la portada) + sección "Los flyers de este fin de semana" reutilizando WeekendFlyersGrid, entre el cuerpo markdown y "Locales mencionados". Solo renderiza si hay eventos PUBLISHED de esa semana. ISR 3600 existente.
+- ③ Eliminado AccessButton (import + uso) de la guía; breadcrumb queda solo, igual que en la portada.
+- Verificación: tsc limpio en archivos tocados (errores restantes pre-existentes en editorial/page.tsx y WeekendFlyersGrid, no tocados); lint 19 errores solo en scripts/*.js. Deploy 30a56da → producción: sección "Los flyers de este fin de semana" presente en /editorial/que-hacer-este-fin-de-semana-los-teques-12-13-septiembre y 0 apariciones de "Acceder".
+Stage Summary:
+- El flujo dueño→admin queda completo: dueño sube flyer → admin lo VE en grande → aprueba → sale en portada Y en la guía (página 2).
+- Recordatorios pendientes del dueño: rotar NEXTAUTH_SECRET; datos IG Africa Burguers / Licobar JJ; dirección de Medusa.
