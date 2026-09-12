@@ -1115,3 +1115,20 @@ Stage Summary:
 - Flujo completo: dueño adjunta arte (opcional) → PENDING_REVIEW → admin ve la miniatura y aprueba → el flyer sale en /editorial con la imagen real del dueño.
 - Compatibilidad total: eventos sin imagen siguen renderizando con tema+emoji.
 - Pendiente post-deploy: GET /api/diagnose-auth/db-schema debe decir migracionImagen "✅ APLICADA"; E2E con sesión del dueño (subir imagen) y admin (aprobar) pendiente de prueba del dueño.
+
+---
+Task ID: sprint-8.10-hotfix-proxy-eventos
+Agent: Super Z (main agent)
+Task: El dueño reportó "no sube la imagen" del flyer personalizado. Diagnosticar y resolver.
+
+Work Log:
+- Redescubrimiento: commit 0ae04c6 (8.10) ya implementaba la subida (presign EVENT → R2 → imageUrl=/api/images/events/<slug>/<uuid>). Todo pusheado y en producción.
+- CAUSA RAÍZ: el proxy GET /api/images/[...key] tenía ALLOWED_PREFIXES=['businesses/','promotions/'] — las claves events/ (únicas que genera el flyer 8.10) devolvían 403 "Clave no permitida". Es decir: el PUT a R2 SÍ subía el archivo, pero al terminar la vista previa cambiaba del objectURL local a la URL del proxy → imagen rota al instante. Para el dueño se veía como "no sube la imagen" (100% reproducible con cualquier formato).
+- Verificado que el resto de la cadena estaba OK: event.service valida imageUrl.startsWith('/api/images/events/<slug>/'), grid público usa <img> normal, R2 configurado en Vercel (E2E 8.8 con menús ya lo probó), CORS de R2 OK (PUT 200 en E2E previo).
+- FIX: d42f88e — ALLOWED_PREFIXES ahora incluye 'events/' + mensaje de error del cliente incluye código HTTP del PUT (para diagnósticos futuros). Lint: 19 errores pre-existentes solo en scripts/*.js; tsc limpio en archivos tocados.
+- Verificación en producción (sin auth, clave sintética): ANTES 403 {"error":"Clave no permitida"} → DESPUÉS 404 {"error":"Imagen no encontrada"} = fix desplegado y funcionando.
+
+Stage Summary:
+- Deploy d42f88e en producción; el flujo dueño→sube flyer→admin aprueba→/editorial queda operativo end-to-end.
+- Los intentos fallidos del dueño dejaron objetos huérfanos en R2 (se subieron bien, solo no se servían): inofensivos, sin exposición pública.
+- Pendiente del dueño (recordar): rotar NEXTAUTH_SECRET en Vercel; datos IG Africa Burguers / Licobar JJ y dirección de Medusa.
