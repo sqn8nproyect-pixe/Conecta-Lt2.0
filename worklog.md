@@ -229,3 +229,20 @@ Work Log:
 
 Stage Summary:
 - Regla permanente grabada en la Constitución del repo (PROTOCOL.md §3.9) y visible en cada arranque de sesión (handoff). Ningún agente futuro responderá en otro idioma al dueño.
+
+---
+Task ID: fix-mapa-tiles
+Agent: Super Z (main agent)
+Task: El dueño reportó (con captura) que el mapa se rompe "cuando lo abres demasiado": todos los cuadros del fondo muestran "Map data not yet available", con pines y geolocalización visibles.
+
+Work Log:
+- Diagnóstico: LeafletMap.tsx usaba 2 capas de Esri World Dark Gray (Base + Reference). Esri devuelve cuadros de error con ESE texto exacto al pasar la cuota gratuita de tiles (throttling por uso) — coincide con la captura del dueño y el patrón "al abrirlo mucho". Agravante: no había maxZoom, así que también se podía pedir zoom fuera del rango del servicio (otra fuente del mismo cuadro de error).
+- Intento 1 descartado con evidencia: CARTO Dark Matter (basemaps.cartocdn.com) — probado en sandbox y AHORA estampa "API KEY REQUIRED" en cada cuadro (CARTO exige llave registrada desde ~2025). Descartado para no depender de cuentas/llaves del dueño.
+- Solución final: tiles estándar de OpenStreetMap (sin llave, sin costo, los más confiables a pequeña escala) + filtro CSS nocturno en globals.css (.conecta-map .leaflet-tile-pane: invert + hue-rotate 180° + brillo/contraste/saturación) que oscurece SOLO el fondo — pines, círculos, popups y controles intactos — + maxZoom 19 en mapa y capa (rango nativo OSM, nunca se piden cuadros inexistentes).
+- Verificado EN VIVO con preview (scripts/preview-map.sh, nuevo y gitignoreado: PG embebida + seed + agent-browser): desktop 18 tiles cargados / 0 rotos, zoom cercano z16 0 rotos, móvil 0 rotos. Capturas: download/correccion-mapa/ (3 PNG). El estilo nocturno quedó MÁS legible que el Esri viejo (calles carbón con brillo sutil, agua azul oscuro, rótulos claros).
+- tsc limpio en LeafletMap.tsx. Commits locales listos; push pendiente de PAT (el anterior fue revocado por el dueño, como se acordó).
+
+Stage Summary:
+- Causa raíz: cuota gratuita de Esri (no era un bug del código del mapa). Fix = proveedor estable + guardas de zoom + estética nocturna preservada vía CSS.
+- Cero llaves API, cero registros, cero costo para el dueño.
+- PENDIENTE PUSH: el fix vive en commits locales — sube con el próximo PAT temporal.

@@ -9,7 +9,7 @@
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 Sprint 8.12 (carrusel de publicidad) DESPLEGADO y verificado en producción (`e49d2cb` en origin/main; Vercel ~100 s). Verificado: `/api/ads` → 200 `{"ads":[]}` (tabla Advertisement creada por db-bootstrap), `/` → 200, `views` graceful, `go` 404, `admin/ads` 401 sin sesión. La portada NO cambia visualmente hasta que exista ≥1 anuncio activo (hoy 0). Capturas de referencia: `download/preview-sprint-8.12/` (5 PNG); preview regenerable con `bash scripts/preview-run.sh` (scripts gitignoreados, se conservan en sandbox).
+**Estado del workspace:** 🟢 Sprint 8.12 (carrusel de publicidad) DESPLEGADO y verificado en producción (`29aa1cb`). 🟡 **Fix del mapa EN LOCAL sin push** (PAT revocado): el dueño reportó cuadros "Map data not yet available" al abrir mucho el mapa → causa: cuota gratuita de Esri tiles; fix = OpenStreetMap estándar + filtro CSS nocturno (globals.css) + maxZoom 19, verificado en sandbox (0 tiles rotos, capturas en `download/correccion-mapa/`, 3 PNG). Commits locales `fix-mapa-tiles` esperando PAT. Capturas del carrusel: `download/preview-sprint-8.12/`; preview mapa regenerable con `bash scripts/preview-map.sh`.
 
 **Tareas en esta sesión:** 3 (sprint 8.12 código · auto-heal git en boot · preview visual)
 
