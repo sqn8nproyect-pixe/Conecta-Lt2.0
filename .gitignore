@@ -75,3 +75,4 @@ public/screenshots/etapa*-*.png
 /scripts/preview-*
 /public/test-ads/
 /scripts/gen-test-ads.py
+/scripts/ad-variants/
