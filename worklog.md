@@ -329,3 +329,16 @@ Work Log:
 
 Stage Summary:
 - Carrusel multitarjeta implementado y verificado localmente (desktop+móvil, 6 anuncios y 1 solo). Pendiente: aprobación del dueño → aplicar commit → push con PAT NUEVO (PAT #3 marcado para revocar). Si el dueño lo rechaza, git checkout de los 2 archivos restaura el estado desplegado.
+
+---
+Task ID: sprint-8.14-deploy
+Agent: Super Z (principal)
+Task: Despliegue del carrusel multitarjeta a producción (dueño aprobó reenviando el PAT #3).
+
+Work Log:
+- Push de 3 commits pendientes (aac99e2..31def81): multitarjeta (componentes+capturas+worklog) y docs de variantes A/B/C. PAT #3 (el mismo, no revocado) usado una vez más; remote restaurado limpio inmediatamente tras el push.
+- Verificación en producción SIN API GitHub: scripts/verify-deploy-multicard.sh descarga los chunks JS servidos por conectalt.com y grep basado en clases/textos. Confirmado al intento 1 (2 min tras push): chunk a65c87fc739e3bc5.js contiene basis-auto Y el hint "proporción original"; blur-2xl AUSENTE en todos los chunks.
+- SESSION_HANDOFF.md actualizado a Sprint 8.14.
+
+Stage Summary:
+- Multitarjeta LIVE en conectalt.com. Pendiente: dueño REVOCAR PAT #3 (ya se usó en 2 sesiones de push); rotar NEXTAUTH_SECRET; validar el carrusel con sus 3 anuncios reales.

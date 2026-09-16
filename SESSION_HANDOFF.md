@@ -5,15 +5,15 @@
 > Historial: worklog.md (cola) + worklog-archivo-2026-09.md.
 
 **Fecha inicio sesión:** 2026-09-12
-**Última actividad:** 2026-09-16 22:35 UTC
+**Última actividad:** 2026-09-17 00:20 UTC
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 Sprint 8.12 + fix del mapa EN PRODUCCIÓN (`4b40f85`). ⚠️ Fondo difuminado RECHAZADO por el dueño ("rompe la estética") — sigue en producción (`e184306`) pendiente de reemplazo. Escaparate de 3 variantes en `download/sugerencias-anuncios/` (A vitrina / B color del arte / C anuncio nativo), sin push: el carrusel mostraba el arte con object-cover (recorte) → ahora 2 capas: fondo = misma imagen difuminada (blur+opacity) + frente = arte completo (object-contain); igual en las 2 vistas previas de AdsTab + hint "Ideal horizontal 1200×400 · sin recortes". Verificado con 3 artes de prueba en proporciones distintas (marco íntegro en las 3, desktop y móvil): capturas `download/correccion-anuncios/` (4 PNG); preview regenerable `bash scripts/preview-ads.sh`. Verificación: chunk 372d5c1f4dd46fa9.js contiene las 2 capas (blur-2xl + object-contain). PAT #3 pendiente de revocar.
+**Estado del workspace:** 🟢 Sprint 8.14 — CARRUSEL MULTITARJETA EN PRODUCCIÓN (`31def81`, chunk a65c87fc739e3bc5.js: basis-auto + hint nuevo, sin blur). El dueño rechazó el fondo difuminado y pidió carrusel multitarjeta: cada anuncio es una tarjeta independiente con su PROPORCIÓN ORIGINAL (altura fija h-150/190/230 + w-auto, sin blur, sin object-cover); varias tarjetas en fila, flechas a los lados, drag táctil (embla align:'start', loop >1 anuncio). AdsTab sin capas blur + hint "se muestra completa, en su proporción original". Verificado localmente con 6 anuncios demo (3 realistas + 3 de marco en proporciones extremas): capturas `download/carrusel-multitarjeta/` (5 PNG desktop/móvil/anuncio-único); regenerable `bash scripts/preview-multicard.sh`. Truco E2E: pausar autoplay con 'mouseover' (mouseenter NO delega en React) y localizar flechas por sr-only "Next slide" (sin aria-label). PAT #3 volvió a usarse para este push (dueño lo reenvió) — REVOCAR YA y pedir uno nuevo si hace falta. Variantes A/B/C rechazadas quedan como docs (`a9be9fc`, `ba479f9`).
 
 **Tareas en esta sesión:** 3 (sprint 8.12 código · auto-heal git en boot · preview visual)
 
-**Siguiente paso acordado:** dueño escoge variante (A/B/C) → implemento limpia + push + verificación. Luego métricas y paquetes de venta; ver métricas (vistas/clics/CTR) y sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
+**Siguiente paso acordado:** dueño valida el multitarjeta en producción con sus 3 anuncios reales. Luego métricas y paquetes de venta; ver métricas (vistas/clics/CTR) y sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
 
 **Pendientes del usuario (dueño):**
 - Rotar NEXTAUTH_SECRET/AUTH_SECRET en Vercel + Redeploy (arrastrado desde 18-Ago)
