@@ -296,3 +296,19 @@ Stage Summary:
 - Fix de anuncios recortados EN PRODUCCIÓN Y VERIFICADO (e184306).
 - Lección de protocolo: la API status de GitHub es intermitente por rate-limit anónimo; la verificación por chunks servidos (grep de classNames del fix) es directa y concluyente.
 - Dueño debe revocar PAT #3 al confirmar.
+
+---
+Task ID: escaparate-variantes-anuncios
+Agent: Super Z (main agent)
+Task: El dueño rechazó el fondo difuminado desplegado ("se ve horrible y rompe toda la estética"). Pidió 3 sugerencias con capturas que sigan la estética del sitio, SIN subir nada al repo, para escoger.
+
+Work Log:
+- REPO INTACTO: ningún commit nuevo de código, nada pushado. El componente se restaura con git checkout al terminar el preview (trap). Único commit local = docs de este registro.
+- Artes realistas nuevos (scripts/gen-test-ads.py, gitignoreado): logo sobre blanco 1024², flyer rojo 1024², flyer vertical neón 600×900 — imitan los anuncios reales del dueño.
+- Un solo componente con 3 variantes (scripts/ad-variants/AdCarousel.variant.tsx, gitignoreado; marcador @@VARIANT@@): A "Vitrina" (object-contain sobre fondo oscuro sólido #0d0d17), B "Color del arte" (canvas 8×8 muestrea bordes → color clamp nocturno canal máx 56 + gradiente negro lateral), C "Anuncio nativo" (split 44%/56%: arte + panel con PUBLICIDAD, título line-clamp-2 y botón dorado VER MÁS). Todas con arte completo (sin recorte, requisito original intacto).
+- Runner scripts/preview-variants.sh: ?noautoplay=1 congela el carrusel (NOAUTOPLAY en el componente); avance por [data-slot="carousel-next"] (los botones NO tienen aria-label — lección: "Next slide" es un span sr-only interno); lámina visible verificada por src de la imagen centrada. 12 capturas + comparativa.
+- Entregable: download/sugerencias-anuncios/00-COMPARATIVA.png (+ A-vitrina/, B-color-arte/, C-anuncio-nativo/ × 4 capturas c/u).
+- PRODUCCIÓN SIGUE CON EL FONDO DIFUMINADO (e184306) hasta que el dueño escoja. Recordar: revocar PAT #3.
+
+Stage Summary:
+- Escaparate completo local sin tocar el repo. Decisión pendiente del dueño: A, B o C → tras elegir, implemento la variante limpia (carrusel + vistas previas admin coherentes), commit, push y verificación.

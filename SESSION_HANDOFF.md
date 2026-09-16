@@ -9,11 +9,11 @@
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 Sprint 8.12 + fix del mapa EN PRODUCCIÓN (`4b40f85`). ✅ **FIX DE ANUNCIOS RECORTADOS DESPLEGADO** (`e184306`, verificado en chunks de producción): el carrusel mostraba el arte con object-cover (recorte) → ahora 2 capas: fondo = misma imagen difuminada (blur+opacity) + frente = arte completo (object-contain); igual en las 2 vistas previas de AdsTab + hint "Ideal horizontal 1200×400 · sin recortes". Verificado con 3 artes de prueba en proporciones distintas (marco íntegro en las 3, desktop y móvil): capturas `download/correccion-anuncios/` (4 PNG); preview regenerable `bash scripts/preview-ads.sh`. Verificación: chunk 372d5c1f4dd46fa9.js contiene las 2 capas (blur-2xl + object-contain). PAT #3 pendiente de revocar.
+**Estado del workspace:** 🟢 Sprint 8.12 + fix del mapa EN PRODUCCIÓN (`4b40f85`). ⚠️ Fondo difuminado RECHAZADO por el dueño ("rompe la estética") — sigue en producción (`e184306`) pendiente de reemplazo. Escaparate de 3 variantes en `download/sugerencias-anuncios/` (A vitrina / B color del arte / C anuncio nativo), sin push: el carrusel mostraba el arte con object-cover (recorte) → ahora 2 capas: fondo = misma imagen difuminada (blur+opacity) + frente = arte completo (object-contain); igual en las 2 vistas previas de AdsTab + hint "Ideal horizontal 1200×400 · sin recortes". Verificado con 3 artes de prueba en proporciones distintas (marco íntegro en las 3, desktop y móvil): capturas `download/correccion-anuncios/` (4 PNG); preview regenerable `bash scripts/preview-ads.sh`. Verificación: chunk 372d5c1f4dd46fa9.js contiene las 2 capas (blur-2xl + object-contain). PAT #3 pendiente de revocar.
 
 **Tareas en esta sesión:** 3 (sprint 8.12 código · auto-heal git en boot · preview visual)
 
-**Siguiente paso acordado:** validar en conectalt.com que los 3 anuncios se ven completos (recargar con Ctrl+F5), ver métricas (vistas/clics/CTR) y sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
+**Siguiente paso acordado:** dueño escoge variante (A/B/C) → implemento limpia + push + verificación. Luego métricas y paquetes de venta; ver métricas (vistas/clics/CTR) y sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
 
 **Pendientes del usuario (dueño):**
 - Rotar NEXTAUTH_SECRET/AUTH_SECRET en Vercel + Redeploy (arrastrado desde 18-Ago)
