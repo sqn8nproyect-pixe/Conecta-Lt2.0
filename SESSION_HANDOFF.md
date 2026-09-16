@@ -9,18 +9,18 @@
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 Sprint 8.12 + fix del mapa EN PRODUCCIÓN (`4b40f85`). ⚠️ **Commit local `9bd49e4` SIN SUBIR**: fix de anuncios recortados — el carrusel mostraba el arte con object-cover (recorte) → ahora 2 capas: fondo = misma imagen difuminada (blur+opacity) + frente = arte completo (object-contain); igual en las 2 vistas previas de AdsTab + hint "Ideal horizontal 1200×400 · sin recortes". Verificado con 3 artes de prueba en proporciones distintas (marco íntegro en las 3, desktop y móvil): capturas `download/correccion-anuncios/` (4 PNG); preview regenerable `bash scripts/preview-ads.sh`. PUSH PENDIENTE de PAT nuevo (el #2 ya fue revocado, correcto).
+**Estado del workspace:** 🟢 Sprint 8.12 + fix del mapa EN PRODUCCIÓN (`4b40f85`). ✅ **FIX DE ANUNCIOS RECORTADOS DESPLEGADO** (`e184306`, verificado en chunks de producción): el carrusel mostraba el arte con object-cover (recorte) → ahora 2 capas: fondo = misma imagen difuminada (blur+opacity) + frente = arte completo (object-contain); igual en las 2 vistas previas de AdsTab + hint "Ideal horizontal 1200×400 · sin recortes". Verificado con 3 artes de prueba en proporciones distintas (marco íntegro en las 3, desktop y móvil): capturas `download/correccion-anuncios/` (4 PNG); preview regenerable `bash scripts/preview-ads.sh`. Verificación: chunk 372d5c1f4dd46fa9.js contiene las 2 capas (blur-2xl + object-contain). PAT #3 pendiente de revocar.
 
 **Tareas en esta sesión:** 3 (sprint 8.12 código · auto-heal git en boot · preview visual)
 
-**Siguiente paso acordado:** dueño pasa PAT nuevo → push de `9bd49e4` → los 3 anuncios de prueba del dueño se verán COMPLETOS en producción (~100 s). Luego: validar en conectalt.com, ver métricas (vistas/clics/CTR) y sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
+**Siguiente paso acordado:** validar en conectalt.com que los 3 anuncios se ven completos (recargar con Ctrl+F5), ver métricas (vistas/clics/CTR) y sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
 
 **Pendientes del usuario (dueño):**
 - Rotar NEXTAUTH_SECRET/AUTH_SECRET en Vercel + Redeploy (arrastrado desde 18-Ago)
 - (Recomendado) Rotar contraseña Neon y llaves R2 — expuestas en PROTOCOL.md v1 del historial git
 - Datos: IG Africa Burguers · IG Licobar JJ (@puntoencuentrolt) · dirección real de Medusa
 - Revocar PAT al cerrar cada sesión que lo use (patrón PAT temporal — el dueño ya lo aplica: 2/2 revocados a tiempo)
-- Próximo push debe incluir: `9bd49e4` fix(publicidad) anuncios sin recorte
+- `9bd49e4`+`17a22fc`+docs ya pushados en `e184306`
 
 **Gotchas activos:**
 - `unset DATABASE_URL DIRECT_URL` antes de prisma CLI/node (el shell pisa `.env` con SQLite vieja). Standalone local: `set -a; source .env; set +a; NODE_ENV=production PORT=3100 bun .next/standalone/server.js`
