@@ -567,6 +567,15 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   margin-bottom: 12px !important;
 }
 
+/* Mapa nocturno: los tiles de OpenStreetMap son claros; esta cadena de
+   filtros los oscurece para mantener la estética dark del sitio (invierte
+   el color y re-rota el matiz: el agua queda azul oscuro, las calles gris
+   carbón y los rótulos legibles). Aplica SOLO al fondo del mapa — pines,
+   círculos, popups y controles no se filtran. */
+.conecta-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
+}
+
 /* ─── Fichas Enriquecidas — Active Promotion pulse & gallery utilities ─── */
 
 @keyframes promo-pulse {

@@ -131,18 +131,23 @@ export function LeafletMap({
     <MapContainer
       center={LOS_TEQUES_CENTER}
       zoom={14}
+      maxZoom={19}
       scrollWheelZoom
       zoomControl={false}
       style={{ height: '100%', width: '100%' }}
       className="conecta-map"
     >
+      {/* Tiles estándar de OpenStreetMap: gratis, sin llave y los más
+          confiables para sitios pequeños. Historial del bug reportado por el
+          dueño: Esri World Dark Gray devolvía cuadros "Map data not yet
+          available" al pasar su cuota gratuita (el mapa se rompía al abrirlo
+          mucho), y CARTO ahora exige API key (cuadros "API KEY REQUIRED").
+          El estilo nocturno se recupera con un filtro CSS en globals.css
+          (.conecta-map .leaflet-tile-pane) que solo afecta el fondo. */}
       <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        attribution='&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
-      />
-      <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
-        attribution=''
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        maxZoom={19}
       />
       {/* Native Leaflet zoom, positioned bottom-right to avoid the
           top-left search overlay (the default top-left placement would
