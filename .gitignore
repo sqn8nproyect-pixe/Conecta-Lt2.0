@@ -70,3 +70,6 @@ db/*.db-journal
 /verify-*.png
 public/screenshots/map-*-legend*.png
 public/screenshots/etapa*-*.png
+# preview artifacts (sandbox-only; regenerate with: bash scripts/preview-run.sh)
+/download/preview-sprint-*/
+/scripts/preview-*

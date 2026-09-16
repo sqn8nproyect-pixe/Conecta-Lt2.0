@@ -180,3 +180,21 @@ Stage Summary:
 - PROTOCOL.md v2 = Constitución anti-drift; cadena de contexto coherente: session-boot.sh → SESSION_HANDOFF (RAM) → worklog (cinta) → PROTOCOL.md (reglas).
 - Sprint 8.11b confirmado en producción: la tarea aprobada con "adelante" ya estaba completa; no se duplicó nada.
 - Pendientes del dueño sin cambios: rotar NEXTAUTH_SECRET (recomendado también Neon/R2 por exposición en el historial git del v1); IG Africa Burguers / Licobar JJ; dirección Medusa; revocar PAT al cerrar sesión.
+
+---
+Task ID: sprint-8.12-preview
+Agent: Super Z (main agent)
+Task: El dueño pidió ver una vista previa del carrusel de publicidad ANTES de subirlo al repo (push sigue bloqueado por el PAT). Levantar la app real del commit e83e175 en el sandbox con datos de ejemplo y capturar evidencia visual.
+
+Work Log:
+- Verificación previa: HEAD e83e175 intacto, árbol limpio; sandbox sin acceso a Neon (.env local quedó con file:) y procesos de fondo mueren entre llamadas → la preview se ejecuta todo-en-uno en una sola llamada.
+- PostgreSQL embebida instalada FUERA del repo (/home/z/preview-pg, paquete embedded-postgres, puerto 5433) — no toca package.json ni bun.lock del proyecto.
+- scripts/preview-run.sh (orquestador con esperas DOM) + scripts/preview-seed.ts (seed local: VE→Miranda→Los Teques+zonas, 4 categorías, 6 negocios con covers reales de /public, usuario del dueño para el login demo, 3 anuncios ejemplo: Africa Burguers enlace interno, Licobar JJ interno, Medusa externo wa.me).
+- Flujo validado EN VIVO: prisma db push → DDL idempotente de db-bootstrap creó tabla Advertisement → seed → next dev :3000 → AgeGate → portada: carrusel renderiza bajo el hero, AUTO-AVANCE de 5s verificado (capturas 01 vs 02), vista móvil correcta, contador de impresiones funcionó (las vistas subieron solas al visitar: dedupe por sesión OK), login demo (Acceder → Acceso demo → email) → Panel Admin → tab nuevo "Publicidad" (requirió click real de Playwright; el el.click() de Radix no activaba el tab) → lista con métricas (3 activos, 3808 vistas, 176 clics, CTR 4.6%) → formulario "Nuevo anuncio" completo (dropzone, destino interno/externo, fechas, orden, activo).
+- GET /api/ads devuelve solo anuncios vivos; log del servidor SIN errores (cartel "2 Issues" = overlay dev de Next, no existe en producción).
+- Capturas → download/preview-sprint-8.12/ (5 PNG). cleanup() mata servidores al salir; scripts/preview-* quedan SIN trackear para iterar rápido; borrar antes de cualquier commit.
+
+Stage Summary:
+- El dueño puede aprobar diseño/flujo SIN deploy: 5 capturas reales de la app del commit e83e175 corriendo con datos de ejemplo.
+- No se subió nada al repo ni a producción; seguimos esperando el PAT para push (lo que verá en conectalt.com será idéntico a las capturas).
+- Reutilizable: `bash scripts/preview-run.sh` regenera la preview completa en ~3 min.
