@@ -5,8 +5,9 @@
 > (imprime handoff + git + última entrada del worklog); este documento es la Constitución
 > que le da prioridad a cada fuente y define lo que NO se puede hacer de memoria.
 >
-> Última actualización: **2026-09-12** (v2 — reemplaza la "ficha de verificación" del
-> 28-Ago, que estaba desactualizada y contenía secrets en texto plano).
+> Última actualización: **2026-09-16** (v2.1 — nueva regla permanente §3.9: comunicación
+> 100% en español con el dueño). v2 del 12-Sep reemplazó la "ficha de verificación" del
+> 28-Ago, que estaba desactualizada y contenía secrets en texto plano.
 
 ---
 
@@ -68,6 +69,12 @@ Después:
 7. **Si un doc contradice la realidad → corregir el doc EN la misma tarea.** Así muere el drift.
 8. **Conversación compactada/resumida → re-verificar todo lo que se vaya a usar del resumen**
    antes de actuar sobre él (regla 0 nació de esto).
+9. **Comunicación 100% en español — REGLA PERMANENTE (pedido explícito del dueño).**
+   El dueño NO lee inglés y no debe asumirse lo contrario. Todo lo que el dueño lee va
+   en español llano (no técnico): respuestas del chat, avisos, guías, documentos
+   entregables, textos de capturas y mensajes de commit. Solo los identificadores de
+   código ya existentes quedan en inglés (convención técnica), y los términos técnicos
+   sin traducción natural (deploy, push, admin) se explican en contexto.
 
 ---
 
@@ -93,7 +100,7 @@ Una tarea está cerrada SOLO cuando:
 - [ ] Commit descriptivo + push a `main`
 - [ ] **Verificación en producción con curl citando evidencia** (~2 min tras push)
 - [ ] worklog + SESSION_HANDOFF + `session-task.sh`
-- [ ] Aviso final al dueño en **español llano** (no técnico)
+- [ ] Aviso final al dueño en **español llano** (no técnico) — regla permanente §3.9
 
 **Ruido pre-existente que NO bloquea:** 19 errores de lint en `scripts/*.js`; el build
 local puede fallar si el `.env` del sandbox no tiene la cadena Neon (Vercel sí construye

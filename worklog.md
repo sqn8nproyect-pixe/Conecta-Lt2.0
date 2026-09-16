@@ -215,3 +215,17 @@ Stage Summary:
 - El dueño crea su primer anuncio en Panel Admin → tab "Publicidad" → + Nuevo anuncio: arte → destino (interno /local/<slug> o externo https/wa.me) → fechas de campaña (opcional) → activo. Métricas de vistas/clics/CTR por anuncio para cobrar.
 - Capturas de referencia (app real con datos de ejemplo): download/preview-sprint-8.12/ (5 PNG). Preview regenerable en sandbox: `bash scripts/preview-run.sh` (scripts sin trackear vía .gitignore, se conservan en el sandbox).
 - Recordatorios enviados al dueño: revocar YA el PAT usado en esta sesión; rotar NEXTAUTH_SECRET (+Neon/R2 recomendado); datos pendientes (IG Africa Burguers, IG Licobar JJ @puntoencuentrolt, dirección Medusa).
+
+---
+Task ID: regla-idioma-espanol
+Agent: Super Z (main agent)
+Task: El dueño pidió (en español) que toda interacción sea en español porque no entiende otros idiomas, y que se agregue al protocolo.
+
+Work Log:
+- PROTOCOL.md actualizado a v2.1: nueva regla permanente §3.9 "Comunicación 100% en español" — todo lo que el dueño lee (chat, avisos, guías, entregables, textos de capturas, mensajes de commit) en español llano; identificadores de código ya existentes quedan en inglés; términos técnicos se explican en contexto.
+- Reforzada la lista de Terminado (§5): el aviso final ahora referencia §3.9.
+- SESSION_HANDOFF.md: línea "**Idioma:**" al inicio (visible en cada boot, junto a la línea Chat).
+- session-task.sh ejecutado + commit/push.
+
+Stage Summary:
+- Regla permanente grabada en la Constitución del repo (PROTOCOL.md §3.9) y visible en cada arranque de sesión (handoff). Ningún agente futuro responderá en otro idioma al dueño.
