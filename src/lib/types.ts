@@ -436,6 +436,50 @@ export interface AdminEventInput {
   imageKey?: string | null;
 }
 
+// ─── Publicidad (Sprint 8.12 — carrusel de la portada) ──────────
+
+/** Anuncio tal como lo consume el carrusel público (solo lo mínimo). */
+export interface PublicAd {
+  id: string;
+  /** Nombre interno — se usa como alt/aria del arte. */
+  title: string;
+  /** Ruta interna del proxy /api/images/ads/…. */
+  imageUrl: string;
+  /** "/local/<slug>" o "https://…" (el clic pasa por /api/ads/[id]/go). */
+  linkUrl: string;
+}
+
+/** Anuncio con métricas — lo ve el panel admin. */
+export interface AdminAd {
+  id: string;
+  title: string;
+  imageUrl: string;
+  imageKey: string | null;
+  linkUrl: string;
+  active: boolean;
+  sortOrder: number;
+  /** ISO de la ventana de campaña (null = sin límite). */
+  startsAt: string | null;
+  endsAt: string | null;
+  views: number;
+  clicks: number;
+  createdAt: string;
+}
+
+/** Cuerpo de POST (completo) / PATCH (parcial) de /api/admin/ads. */
+export interface AdminAdInput {
+  title: string;
+  /** Ruta del proxy obtenida del presign (imageType AD). */
+  imageUrl: string;
+  imageKey?: string | null;
+  linkUrl: string;
+  active?: boolean;
+  sortOrder?: number;
+  /** ISO strings (null = sin límite de fechas). */
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
 /** Cuerpo de POST/PATCH de las rutas owner (Sprint 8.9): el dueño no
  *  toca businessId (viene del slug), status (server lo fuerza) ni
  *  sortOrder (lo fija el admin). */

@@ -62,6 +62,7 @@ import {
   LogOut,
   Camera,
   CalendarDays,
+  Megaphone,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { isAdminEmail } from '@/lib/admin-config';
@@ -135,6 +136,7 @@ import {
 } from '@/components/ui/dialog';
 import { AdminMetricsTab } from '@/components/conecta/admin/AdminMetricsTab';
 import { EventsTab } from '@/components/conecta/admin/EventsTab';
+import { AdsTab } from '@/components/conecta/admin/AdsTab';
 import {
   PendingPhotosTab,
   QK_PENDING_IMAGES,
@@ -2103,6 +2105,14 @@ export function AdminDashboard() {
             <CalendarDays size={14} className="mr-1.5" />
             Eventos
           </TabsTrigger>
+          {/* Sprint 8.12 — carrusel de publicidad de la portada */}
+          <TabsTrigger
+            value="ads"
+            className="data-[state=active]:bg-gold data-[state=active]:text-obsidian text-white/80 hover:text-white hover:bg-white/10"
+          >
+            <Megaphone size={14} className="mr-1.5" />
+            Publicidad
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen" className="mt-6">
@@ -2128,6 +2138,9 @@ export function AdminDashboard() {
         </TabsContent>
         <TabsContent value="eventos" className="mt-6">
           <EventsTab />
+        </TabsContent>
+        <TabsContent value="ads" className="mt-6">
+          <AdsTab />
         </TabsContent>
       </Tabs>
     </motion.div>

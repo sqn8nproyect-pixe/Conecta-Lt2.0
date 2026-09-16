@@ -21,6 +21,7 @@ import type {
   PriceRange,
 } from '@/lib/types';
 import { NightPlanner } from '@/components/planner/NightPlanner';
+import { AdCarousel } from '@/components/conecta/AdCarousel';
 import { ActivePromotionsBadge } from '@/components/establishment/ActivePromotionsBadge';
 import { CapacityBadge } from '@/components/establishment/CapacityBadge';
 import { imageFallback } from '@/components/conecta/image-fallback';
@@ -285,6 +286,11 @@ export function HomePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Sprint 8.12 — Carrusel de publicidad (solo renderiza si hay
+          anuncios vivos; rotación auto 5s + flechas, métricas en el
+          panel admin → tab Publicidad). */}
+      <AdCarousel />
 
       {/* Etapa 6 — Populares esta semana (hidden entirely when empty). */}
       {popular.length > 0 && (

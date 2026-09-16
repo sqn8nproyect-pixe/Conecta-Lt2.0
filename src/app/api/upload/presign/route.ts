@@ -28,8 +28,10 @@ const EXT_MAP: Record<string, string> = {
 
 /** Tipos de imagen aceptados en el body.
  *  EVENT (Sprint 8.10): arte del flyer personalizado para la
- *  portada "Qué hacer este fin de semana" (/editorial). */
-type ImageTypeParam = 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU' | 'EVENT';
+ *  portada "Qué hacer este fin de semana" (/editorial).
+ *  AD (Sprint 8.12): arte de anuncios del carrusel de publicidad
+ *  de la portada — SOLO admin, sin negocio asociado. */
+type ImageTypeParam = 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU' | 'EVENT' | 'AD';
 
 const VALID_IMAGE_TYPES: ReadonlySet<string> = new Set<ImageTypeParam>([
   'COVER',
@@ -37,6 +39,7 @@ const VALID_IMAGE_TYPES: ReadonlySet<string> = new Set<ImageTypeParam>([
   'PROMOTION',
   'MENU',
   'EVENT',
+  'AD',
 ]);
 
 export async function POST(request: Request) {
@@ -78,7 +81,55 @@ export async function POST(request: Request) {
 
     const b = body as Record<string, unknown>;
 
-    // ── Validar campos requeridos ───────────────────────────
+    // ── Validar imageType ───────────────────────────────────
+    if (
+      typeof b.imageType !== 'string' ||
+      !VALID_IMAGE_TYPES.has(b.imageType)
+    ) {
+      throw new Response(
+        JSON.stringify({
+          error: 'imageType debe ser COVER, GALLERY, PROMOTION, MENU, EVENT o AD',
+        }),
+        { status: 400, headers: { 'content-type': 'application/json' } },
+      );
+    }
+    const imageType = b.imageType as ImageTypeParam;
+
+    // ── Validar fileType: para MENU se permiten además PDFs ─
+    const isMenuType = b.imageType === 'MENU';
+    const allowedForThis: readonly string[] =
+      isMenuType ? ALLOWED_MENU_TYPES : ALLOWED_TYPES;
+    if (
+      typeof b.fileType !== 'string' ||
+      !allowedForThis.includes(b.fileType)
+    ) {
+      throw new Response(
+        JSON.stringify({
+          error: `Tipo de archivo no permitido. Permitidos: ${allowedForThis.join(', ')}`,
+        }),
+        { status: 400, headers: { 'content-type': 'application/json' } },
+      );
+    }
+
+    // ── AD (8.12): solo ADMIN, sin negocio asociado ─────────
+    // El anuncio no pertenece a un local: el arte vive en ads/ y
+    // la autorización es exclusivamente por rol ADMIN.
+    if (imageType === 'AD') {
+      if (!isAdminEmail(user.email)) {
+        throw new Response(
+          JSON.stringify({ error: 'Solo el administrador puede subir arte de publicidad.' }),
+          { status: 403, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      const fileType = b.fileType as string;
+      const ext = EXT_MAP[fileType] || 'jpg';
+      const uuid = randomUUID();
+      const key = `ads/${uuid}.${ext}`;
+      const result = await generatePresignedUploadUrl(key, fileType);
+      return NextResponse.json(result);
+    }
+
+    // ── Validar campos requeridos (flujos por negocio) ──────
     if (
       typeof b.businessSlug !== 'string' ||
       b.businessSlug.trim().length === 0
@@ -89,38 +140,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Validar fileType: para MENU se permiten además PDFs ─
-    const isMenuType = b.imageType === 'MENU';
-    const allowedForThis = isMenuType ? ALLOWED_MENU_TYPES : ALLOWED_TYPES;
-    if (
-      typeof b.fileType !== 'string' ||
-      !allowedForThis.includes(
-        b.fileType as (typeof allowedForThis)[number],
-      )
-    ) {
-      throw new Response(
-        JSON.stringify({
-          error: `Tipo de archivo no permitido. Permitidos: ${allowedForThis.join(', ')}`,
-        }),
-        { status: 400, headers: { 'content-type': 'application/json' } },
-      );
-    }
-
-    if (
-      typeof b.imageType !== 'string' ||
-      !VALID_IMAGE_TYPES.has(b.imageType)
-    ) {
-      throw new Response(
-        JSON.stringify({
-          error: 'imageType debe ser COVER, GALLERY, PROMOTION o MENU',
-        }),
-        { status: 400, headers: { 'content-type': 'application/json' } },
-      );
-    }
+    // ── Validar fileType ya hecho arriba; validar imageType ya hecho ──
 
     const businessSlug = b.businessSlug.trim();
     const fileType = b.fileType as string;
-    const imageType = b.imageType as ImageTypeParam;
 
     // ── Verificar propiedad del negocio ─────────────────────
     const business = await db.business.findUnique({
@@ -170,7 +193,7 @@ export async function POST(request: Request) {
       default:
         throw new Response(
           JSON.stringify({
-            error: 'imageType debe ser COVER, GALLERY, PROMOTION, MENU o EVENT',
+            error: 'imageType debe ser COVER, GALLERY, PROMOTION, MENU, EVENT o AD',
           }),
           { status: 400, headers: { 'content-type': 'application/json' } },
         );

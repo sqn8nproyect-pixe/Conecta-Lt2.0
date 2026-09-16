@@ -660,3 +660,39 @@ model BusinessEvent {
   @@index([status, weekOf, startsAt])
   @@index([businessId])
 }
+
+// Sprint 8.12 — Carrusel de publicidad de la portada (home).
+// Anuncios vendidos por el admin: arte subido a R2 vía presign
+// (imageType AD → clave ads/<uuid>.<ext>), con ventana opcional
+// de campaña y métricas de vistas/clics para el anunciante.
+// linkUrl acepta SOLO dos formas (validadas en ad.service):
+//   - "/local/<slug>"  → ficha del negocio en el directorio
+//   - "https://…"      → destino externo (WhatsApp, IG, web)
+model Advertisement {
+  id        String    @id @default(cuid())
+
+  // Nombre interno para el panel admin (se usa como alt/aria).
+  title     String
+
+  imageUrl  String // ruta interna del proxy /api/images/ads/…
+  imageKey  String? // clave R2 para purga del objeto al borrar
+
+  linkUrl   String
+
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+
+  // Ventana opcional de campaña (null = sin límite de fechas).
+  startsAt  DateTime?
+  endsAt    DateTime?
+
+  // Métricas: impresiones (batch al montar el carrusel, dedupe por
+  // sesión) y clics (incrementados en el redirect /api/ads/[id]/go).
+  views     Int       @default(0)
+  clicks    Int       @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([active, sortOrder])
+}

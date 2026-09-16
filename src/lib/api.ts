@@ -4,6 +4,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import type {
+  AdminAd,
+  AdminAdInput,
   AdminAnalyticsOverview,
   AdminBusiness,
   AdminEvent,
@@ -1113,7 +1115,7 @@ export async function updateOwnerPromotion(
 export async function presignUpload(
   businessSlug: string,
   fileType: string,
-  imageType: 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU' | 'EVENT',
+  imageType: 'COVER' | 'GALLERY' | 'PROMOTION' | 'MENU' | 'EVENT' | 'AD',
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const res = await fetch('/api/upload/presign', {
     method: 'POST',
@@ -1166,5 +1168,69 @@ export async function deleteBusinessImage(
     { method: 'DELETE' },
   );
   if (!res.ok) await throwOwnerError(res);
+}
+
+// ─── Publicidad (Sprint 8.12 — carrusel de anuncios) ─────
+
+/**
+ * GET /api/admin/ads — lista TODOS los anuncios con métricas.
+ */
+export async function fetchAdminAds(): Promise<AdminAd[]> {
+  const res = await fetch(`/api/admin/ads`);
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+/**
+ * POST /api/admin/ads — crea un anuncio del carrusel.
+ */
+export async function createAdminAd(input: AdminAdInput): Promise<AdminAd> {
+  const res = await fetch(`/api/admin/ads`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+/**
+ * PATCH /api/admin/ads/[id] — edición parcial del anuncio.
+ */
+export async function updateAdminAd(
+  id: string,
+  input: Partial<AdminAdInput>,
+): Promise<AdminAd> {
+  const res = await fetch(`/api/admin/ads/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwAdminError(res);
+  return res.json();
+}
+
+/**
+ * DELETE /api/admin/ads/[id] — borra el anuncio (+ purga R2).
+ */
+export async function deleteAdminAd(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/ads/${id}`, { method: 'DELETE' });
+  if (!res.ok) await throwAdminError(res);
+}
+
+/**
+ * POST /api/ads/views — informa impresiones del carrusel (batch).
+ * Fire-and-forget: los fallos se ignoran (no molesta al usuario).
+ */
+export async function recordAdViews(ids: string[]): Promise<void> {
+  try {
+    await fetch(`/api/ads/views`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+  } catch {
+    // métrica best-effort
+  }
 }
 

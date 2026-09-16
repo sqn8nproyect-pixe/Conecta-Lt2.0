@@ -66,6 +66,23 @@ dirty=$(git status -s | wc -l | tr -d ' ')
 ahead=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
 echo "   Cambios sin commit: $dirty | Commits sin push: $ahead"
 
+# ── 7b. AUTO-HEAL: alinear workspace con origin/main ────────
+# El sandbox revierte snapshots y puede dejar el árbol viejo
+# (le pasó a presign/route.ts 2 veces). origin/main = verdad.
+if git fetch origin main --quiet 2>/dev/null; then
+  head_sha=$(git rev-parse HEAD 2>/dev/null)
+  origin_sha=$(git rev-parse origin/main 2>/dev/null)
+  if [ -n "$origin_sha" ] && [ "$head_sha" != "$origin_sha" ]; then
+    echo "⑦b 🔧 HEAD ($head_sha) ≠ origin/main ($origin_sha) → git reset --hard origin/main"
+    git reset --hard origin/main >/dev/null 2>&1
+    echo "   ✅ Workspace realineado con producción."
+  else
+    echo "⑦b  HEAD == origin/main ✅"
+  fi
+else
+  echo "⑦b  ⚠️ git fetch falló (¿sin red/PAT?) — continuar con estado local"
+fi
+
 # ── 8. CONTEXTO VOLÁTIL (la RAM) ─────────────────────────────
 echo "⑧  ═══ SESSION_HANDOFF.md (estado actual) ═══"
 cat SESSION_HANDOFF.md 2>/dev/null || echo "   (no existe — crearlo)"
