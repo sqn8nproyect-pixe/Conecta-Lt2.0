@@ -262,3 +262,21 @@ Stage Summary:
 - Fix del mapa EN PRODUCCIÓN Y VERIFICADO: tiles OSM + filtro nocturno + maxZoom 19. Vercel status success para el SHA exacto.
 - Lección de protocolo (aplicada): el minificador reescribe valores CSS (invert(1)→invert(100%)) — al verificar producción, grep por la propiedad/clase, no por el valor literal. Documentado aquí para futuras verificaciones.
 - El dueño debe revocar este PAT al cerrar la sesión (patrón PAT temporal).
+
+---
+Task ID: fix-anuncios-recorte
+Agent: Super Z (main agent)
+Task: El dueño reportó (con capturas) que los 3 anuncios de prueba que creó "se recortan al espacio disponible" en el carrusel de portada. Diagnóstico, fix y verificación.
+
+Work Log:
+- Causa raíz: AdCarousel forzaba el arte a una franja fija (150/190/230px) con object-cover → cualquier imagen cuadrada o vertical (como las del dueño: logo del pin, bigote Licobar) se recortaba por los lados o arriba/abajo. Mismo defecto en las 2 vistas previas del panel admin (AdsTab: formulario y miniatura de fila).
+- Fix (patrón profesional tipo YouTube/Instagram): 2 capas de <img> — fondo = la MISMA imagen con object-cover + blur-2xl + scale-110 + opacity-40 (rellena el marco sin bordes duros); frente = arte COMPLETO con object-contain (nunca se recorta, cualquier proporción). aria-hidden + alt="" en la capa decorativa para lectores de pantalla.
+- AdsTab: mismas 2 capas en formulario y fila + hint nuevo para anunciantes: "Ideal horizontal 1200×400 · cualquier proporción se muestra completa, sin recortes".
+- Verificación E2E en sandbox (scripts/preview-ads.sh, gitignoreado): PG embebida + seed + 3 anuncios de prueba generados con PIL en proporciones distintas y MARCO VISIBLE (cuadrada 1024×1024, horizontal 1200×400, vertical 600×900 — scripts/gen-test-ads.py) + agent-browser. Resultado: object-fit "contain" confirmado; las 3 láminas se ven con el marco íntegro y fondo difuminado (desktop y móvil 390×844). Capturas: download/correccion-anuncios/ (4 PNG).
+- eslint limpio; 0 errores tsc en los archivos editados (los 41 errores reportados por bunx tsc son pre-existentes del repo en este entorno, ajenos al cambio).
+- Commit local 9bd49e4. Push con el PAT #2 FALLÓ: token ya revocado por el dueño (correcto). Remote limpio de credenciales.
+
+Stage Summary:
+- El carrusel acepta CUALQUIER proporción de arte sin recortarla: la imagen completa siempre visible + fondo difuminado autogenerado. Los 3 anuncios de prueba del dueño se verán enteros al desplegar.
+- PENDIENTE PUSH: commit 9bd49e4 espera PAT nuevo del dueño.
+- Capturas de referencia para el dueño: download/correccion-anuncios/.
