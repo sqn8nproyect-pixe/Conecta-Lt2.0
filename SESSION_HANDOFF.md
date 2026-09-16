@@ -5,14 +5,14 @@
 > Historial: worklog.md (cola) + worklog-archivo-2026-09.md.
 
 **Fecha inicio sesión:** 2026-09-12
-**Última actividad:** 2026-09-16 20:40 UTC
+**Última actividad:** 2026-09-16 20:53 UTC
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 
-**Estado del workspace:** 🟡 Sprint 8.12 (carrusel de publicidad) COMPLETO en commit local `e83e175` — **push bloqueado: esperando PAT nuevo** (el anterior fue revocado por el dueño, como se acordó). Preview validada en sandbox con PostgreSQL embebida + datos de ejemplo: carrusel con autoavance 5s, vistas/clics contando, tab "Publicidad" del panel y formulario verificados → capturas en `download/preview-sprint-8.12/` (5 PNG). Nada subido a producción.
+**Estado del workspace:** 🟢 Sprint 8.12 (carrusel de publicidad) DESPLEGADO y verificado en producción (`e49d2cb` en origin/main; Vercel ~100 s). Verificado: `/api/ads` → 200 `{"ads":[]}` (tabla Advertisement creada por db-bootstrap), `/` → 200, `views` graceful, `go` 404, `admin/ads` 401 sin sesión. La portada NO cambia visualmente hasta que exista ≥1 anuncio activo (hoy 0). Capturas de referencia: `download/preview-sprint-8.12/` (5 PNG); preview regenerable con `bash scripts/preview-run.sh` (scripts gitignoreados, se conservan en sandbox).
 
 **Tareas en esta sesión:** 3 (sprint 8.12 código · auto-heal git en boot · preview visual)
 
-**Siguiente paso acordado:** al recibir el PAT (`conecta-push-8.12`, repo, 7 días): `git push origin main` → esperar ~2 min → curl `GET /api/ads` (debe dar `{"ads":[]}`) y `GET /` → worklog + borrar `scripts/preview-*.ts|sh` → responder al dueño con guía del primer anuncio + recordatorio de revocar PAT.
+**Siguiente paso acordado:** dueño crea su primer anuncio (Panel Admin → "Publicidad" → + Nuevo anuncio: arte → destino interno/externo → fechas → activo) y valida el carrusel en producción. En la próxima sesión: ver carrera de métricas (vistas/clics/CTR) con tráfico real; sugerir paquetes de venta (semanal/quincenal) cuando haya 2-3 anunciantes.
 
 **Pendientes del usuario (dueño):**
 - Rotar NEXTAUTH_SECRET/AUTH_SECRET en Vercel + Redeploy (arrastrado desde 18-Ago)

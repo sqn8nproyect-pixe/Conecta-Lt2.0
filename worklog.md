@@ -198,3 +198,20 @@ Stage Summary:
 - El dueño puede aprobar diseño/flujo SIN deploy: 5 capturas reales de la app del commit e83e175 corriendo con datos de ejemplo.
 - No se subió nada al repo ni a producción; seguimos esperando el PAT para push (lo que verá en conectalt.com será idéntico a las capturas).
 - Reutilizable: `bash scripts/preview-run.sh` regenera la preview completa en ~3 min.
+
+---
+Task ID: sprint-8.12-deploy
+Agent: Super Z (main agent)
+Task: Recibido el PAT nuevo del dueño → push del sprint 8.12 (carrusel de publicidad), verificación en producción y cierre de sesión.
+
+Work Log:
+- Auto-commit del sandbox (6cef5a2) revisado y rehecho: había trackeado capturas y scripts de preview que este worklog decía mantener sin trackear → `git reset --soft HEAD~1`; PNGs y `scripts/preview-*` fuera del repo (regla nueva en .gitignore), worklog+handoff re-commiteados como `e49d2cb`.
+- Push con el PAT nuevo: `7184e71..e49d2cb main → main` (2 commits: `e83e175` feature sprint 8.12 + `e49d2cb` docs).
+- Vercel desplegó en ~100 s. Verificación en producción: `GET /api/ads` → 200 `{"ads":[]}` (db-bootstrap creó la tabla Advertisement al desplegar); `GET /` → 200; `POST /api/ads/views` con `{}` → `{"ok":true,"counted":0}` (graceful, sin 500); `GET /api/ads/<inexistente>/go` → 404 `{"error":"Anuncio no disponible"}`; `GET /api/admin/ads` sin sesión → 401. Todo según diseño.
+- session-task.sh ejecutado; handoff actualizado al estado desplegado.
+
+Stage Summary:
+- Sprint 8.12 EN PRODUCCIÓN: la portada renderiza el carrusel SOLO cuando exista ≥1 anuncio vivo (hoy 0 → portada idéntica a la actual; cero riesgo visual).
+- El dueño crea su primer anuncio en Panel Admin → tab "Publicidad" → + Nuevo anuncio: arte → destino (interno /local/<slug> o externo https/wa.me) → fechas de campaña (opcional) → activo. Métricas de vistas/clics/CTR por anuncio para cobrar.
+- Capturas de referencia (app real con datos de ejemplo): download/preview-sprint-8.12/ (5 PNG). Preview regenerable en sandbox: `bash scripts/preview-run.sh` (scripts sin trackear vía .gitignore, se conservan en el sandbox).
+- Recordatorios enviados al dueño: revocar YA el PAT usado en esta sesión; rotar NEXTAUTH_SECRET (+Neon/R2 recomendado); datos pendientes (IG Africa Burguers, IG Licobar JJ @puntoencuentrolt, dirección Medusa).
