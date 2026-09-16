@@ -5,7 +5,7 @@
 > Historial: worklog.md (cola) + worklog-archivo-2026-09.md.
 
 **Fecha inicio sesión:** 2026-09-12
-**Última actividad:** 2026-09-16 21:25 UTC
+**Última actividad:** 2026-09-16 21:36 UTC
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
