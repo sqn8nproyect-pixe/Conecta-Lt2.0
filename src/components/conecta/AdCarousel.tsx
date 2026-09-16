@@ -1,16 +1,23 @@
 'use client';
 
 // ─────────────────────────────────────────────────────────────
-// CONECTA-LT — AdCarousel (Sprint 8.12)
+// CONECTA-LT — AdCarousel (Sprint 8.14 — carrusel MULTITARJETA)
 //
 // Carrusel de publicidad de la portada (home). Láminas vendidas
 // por el admin desde el panel (tab "Publicidad").
 //
+// Diseño MULTITARJETA: cada anuncio es una tarjeta independiente
+// en una misma fila horizontal. La tarjeta envuelve el arte con
+// su PROPORCIÓN ORIGINAL exacta (altura fija, ancho natural de la
+// imagen) — sin fondos difuminados ni rellenos: se ven varias
+// tarjetas a la vez y las flechas desplazan entre ellas.
+//
 // Comportamiento:
 //  - Carga GET /api/ads (solo anuncios vivos). Si no hay, NO
 //    renderiza nada (la portada queda intacta).
-//  - Rotación automática cada 5 s (embla, loop) con flechas;
-//    se pausa mientras el cursor está encima.
+//  - Rotación automática cada 5 s (embla, loop) con flechas a los
+//    lados; se pausa mientras el cursor está encima. También se
+//    puede deslizar con el dedo en móvil (drag nativo de embla).
 //  - VISTAS: al montar informa los ids en un solo POST batch
 //    (/api/ads/views), deduplicado por sesión en sessionStorage
 //    para que navegar dentro de la SPA no infle la métrica.
@@ -104,42 +111,36 @@ export function AdCarousel() {
       onMouseLeave={onMouseLeave}
     >
       <Carousel
-        opts={{ loop: ads.length > 1 }}
+        opts={{ align: 'start', loop: ads.length > 1 }}
         setApi={(e) => setApi(e)}
         className="w-full"
       >
         <CarouselContent>
           {ads.map((ad) => (
-            <CarouselItem key={ad.id}>
+            <CarouselItem
+              key={ad.id}
+              className="basis-auto"
+              aria-label={`Anuncio: ${ad.title}`}
+            >
               <a
                 href={`/api/ads/${ad.id}/go`}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
-                className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                aria-label={`Anuncio: ${ad.title}`}
+                className="group relative block overflow-hidden rounded-xl border border-white/15 bg-white/5 transition-colors duration-300 hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
               >
-                {/* Fondo difuminado: rellena los laterales cuando el arte
-                    no es horizontal, sin recortar jamás el anuncio. */}
-                <img
-                  src={ad.imageUrl}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-40"
-                />
-                {/* Arte COMPLETO (object-contain): nunca se recorta,
-                    sin importar la proporción que suba el anunciante. */}
+                {/* Arte con su PROPORCIÓN ORIGINAL: altura fija del carrusel
+                    y ancho natural (w-auto) — la imagen nunca se recorta ni
+                    se estira, y la tarjeta mide exactamente lo que el arte. */}
                 <img
                   src={ad.imageUrl}
                   alt={ad.title}
                   loading="lazy"
                   draggable={false}
-                  className="relative w-full h-[150px] sm:h-[190px] md:h-[230px] object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+                  className="block h-[150px] sm:h-[190px] md:h-[230px] w-auto max-w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                 />
                 {/* Etiqueta de transparencia publicitaria */}
-                <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-1 text-[10px] font-mono tracking-widest text-white/75 border border-white/10">
-                  <Megaphone size={10} />
+                <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[9px] font-mono tracking-widest text-white/75 border border-white/10">
+                  <Megaphone size={9} />
                   PUBLICIDAD
                 </span>
               </a>

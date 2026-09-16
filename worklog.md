@@ -312,3 +312,20 @@ Work Log:
 
 Stage Summary:
 - Escaparate completo local sin tocar el repo. Decisión pendiente del dueño: A, B o C → tras elegir, implemento la variante limpia (carrusel + vistas previas admin coherentes), commit, push y verificación.
+
+---
+Task ID: sprint-8.14
+Agent: Super Z (principal)
+Task: Carrusel MULTITARJETA de publicidad — petición explícita del dueño tras rechazar el fondo difuminado y las 3 variantes propuestas. "Mantener las proporciones exactas de la imagen original y mostrar varios bloques uno al lado del otro, con las flechas a los lados". SOLO LOCAL, sin push.
+
+Work Log:
+- Reescrito AdCarousel.tsx (Sprint 8.14): CarouselItem pasa de basis-full a basis-auto; cada tarjeta envuelve la imagen con altura fija (h-150/190/230) y ancho natural (w-auto) → proporción original exacta, sin capa de fondo difuminado. Estética del sitio: rounded-xl, border-white/15, bg-white/5, hover:border-white/30, badge PUBLICIDAD compacto (9px). opts embla: align:'start', loop cuando >1 anuncio. Flechas prev/next intactas (a los lados) y drag táctil de embla.
+- AdsTab.tsx (admin): quitadas las 2 capas blur (preview del formulario y miniatura de fila); vista previa centrada con proporción original; hint actualizado: "Ideal cuadrada 1080×1080 o horizontal 1200×400 · se muestra completa, en su proporción original".
+- Nuevo scripts/preview-mc-data.ts: 6 anuncios demo (3 realistas arte-blanco/rojo/noche + 3 de marco en proporciones extremas 1024²/1200×400/600×900). gitignoreado vía /scripts/preview-*.
+- Nuevo scripts/preview-ads-solo.ts (modelo Prisma correcto: db.advertisement): desactiva sortOrder>0 para capturar el caso de un solo anuncio.
+- Nuevo scripts/preview-multicard.sh v3 (E2E): pausa del autoplay con 'mouseover' despachado por polling en cuanto el carrusel existe (mouseenter NO delega en React — el intento previo no pausaba); botones Next/Prev localizados por sr-only "Next slide" (no tienen aria-label); verificaciones: anchos de items [248,248,171,248,708,171] = imagen+padding/borde (proporciones exactas), sin clases blur, transform de pista se desplaza -248px con la flecha, autoplay pausado, anuncio único → 1 tarjeta.
+- Capturas en download/carrusel-multitarjeta/: 01 escritorio fila en posición 0, 02 tras flecha, 03 móvil 390×844, 04 móvil tras flecha, 05 anuncio único.
+- Sin commit y sin push: cambios en src/ quedan como modificaciones locales sin stagear; main sigue en ba479f9 sincronizada con origin.
+
+Stage Summary:
+- Carrusel multitarjeta implementado y verificado localmente (desktop+móvil, 6 anuncios y 1 solo). Pendiente: aprobación del dueño → aplicar commit → push con PAT NUEVO (PAT #3 marcado para revocar). Si el dueño lo rechaza, git checkout de los 2 archivos restaura el estado desplegado.
