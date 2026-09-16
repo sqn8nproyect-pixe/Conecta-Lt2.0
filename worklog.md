@@ -246,3 +246,19 @@ Stage Summary:
 - Causa raíz: cuota gratuita de Esri (no era un bug del código del mapa). Fix = proveedor estable + guardas de zoom + estética nocturna preservada vía CSS.
 - Cero llaves API, cero registros, cero costo para el dueño.
 - PENDIENTE PUSH: el fix vive en commits locales — sube con el próximo PAT temporal.
+
+---
+Task ID: fix-mapa-deploy
+Agent: Super Z (main agent)
+Task: Recibido PAT nuevo del dueño → push del fix del mapa (+ protocolo v2.1), verificación en producción y cierre.
+
+Work Log:
+- Push: `29aa1cb..4b40f85 main → main` (3 commits: protocolo §3.9 español, fix mapa, docs).
+- Verificación en producción CONFIUNDADA al inicio por 2 trampas de herramientas: (1) el HTML/CSS servido desde el borde hkg1 parecía viejo, y (2) mi grep buscaba `invert(1)` cuando Lightning CSS minifica la regla a `invert(100%)`. Resuelto con pruebas duras: el build local del MISMO SHA produce los mismos nombres de chunks (hash determinista), y los chunks NUEVOS responden 200 en conectalt.com: `c41784a40dfa7a28.js` contiene `tile.openstreetmap.org` y CERO `arcgisonline`; `a426011aacbf531a.css` contiene `invert(100%)` (filtro nocturno).
+- GitHub status API del SHA: "success — Deployment has completed" (Vercel, 21:40:41 UTC, environment Production).
+- Limpieza de temporales del diagnóstico (scripts/*.html, hdr.txt).
+
+Stage Summary:
+- Fix del mapa EN PRODUCCIÓN Y VERIFICADO: tiles OSM + filtro nocturno + maxZoom 19. Vercel status success para el SHA exacto.
+- Lección de protocolo (aplicada): el minificador reescribe valores CSS (invert(1)→invert(100%)) — al verificar producción, grep por la propiedad/clase, no por el valor literal. Documentado aquí para futuras verificaciones.
+- El dueño debe revocar este PAT al cerrar la sesión (patrón PAT temporal).

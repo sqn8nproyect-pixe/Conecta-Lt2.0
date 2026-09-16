@@ -5,11 +5,11 @@
 > Historial: worklog.md (cola) + worklog-archivo-2026-09.md.
 
 **Fecha inicio sesión:** 2026-09-12
-**Última actividad:** 2026-09-16 21:36 UTC
+**Última actividad:** 2026-09-16 22:02 UTC
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 Sprint 8.12 (carrusel de publicidad) DESPLEGADO y verificado en producción (`29aa1cb`). 🟡 **Fix del mapa EN LOCAL sin push** (PAT revocado): el dueño reportó cuadros "Map data not yet available" al abrir mucho el mapa → causa: cuota gratuita de Esri tiles; fix = OpenStreetMap estándar + filtro CSS nocturno (globals.css) + maxZoom 19, verificado en sandbox (0 tiles rotos, capturas en `download/correccion-mapa/`, 3 PNG). Commits locales `fix-mapa-tiles` esperando PAT. Capturas del carrusel: `download/preview-sprint-8.12/`; preview mapa regenerable con `bash scripts/preview-map.sh`.
+**Estado del workspace:** 🟢 Sprint 8.12 (carrusel) + **fix del mapa DESPLEGADOS y verificados en producción** (`4b40f85`, Vercel success 21:40 UTC). Mapa: tiles OSM estándar + filtro nocturno CSS (ojo: minificado como `invert(100%)`, NO `invert(1)`) + maxZoom 19; causa raíz era la cuota gratuita de Esri. Capturas del fix: `download/correccion-mapa/` (3 PNG); capturas del carrusel: `download/preview-sprint-8.12/`. Previews regenerables: `bash scripts/preview-run.sh` (carrusel) y `bash scripts/preview-map.sh` (mapa).
 
 **Tareas en esta sesión:** 3 (sprint 8.12 código · auto-heal git en boot · preview visual)
 
