@@ -73,3 +73,5 @@ public/screenshots/etapa*-*.png
 # preview artifacts (sandbox-only; regenerate with: bash scripts/preview-run.sh)
 /download/preview-sprint-*/
 /scripts/preview-*
+/public/test-ads/
+/scripts/gen-test-ads.py

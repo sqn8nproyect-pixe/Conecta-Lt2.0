@@ -182,10 +182,18 @@ function AdImageField({
       {displayUrl ? (
         <div className="flex items-start gap-3">
           <div className="relative flex-1 h-28 rounded-xl overflow-hidden border border-white/15 bg-white/5">
+            {/* Fondo difuminado + arte completo: la vista previa muestra
+                el anuncio entero, igual que se verá en la portada. */}
+            <img
+              src={displayUrl}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover scale-110 blur-xl opacity-40"
+            />
             <img
               src={displayUrl}
               alt="Arte del anuncio"
-              className="h-full w-full object-cover"
+              className="relative h-full w-full object-contain"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -233,6 +241,9 @@ function AdImageField({
           <ImagePlus size={20} className="text-white/50" />
           <span className="text-xs text-white/60">
             Arrastra la imagen o haz clic para subir (JPG/PNG/WebP · 5 MB)
+          </span>
+          <span className="text-[11px] text-white/40">
+            Ideal horizontal 1200×400 · cualquier proporción se muestra completa, sin recortes
           </span>
         </button>
       )}
@@ -288,12 +299,19 @@ function AdRow({
           : 'border-white/5 bg-white/[0.02] opacity-70'
       }`}
     >
-      {/* Miniatura */}
+      {/* Miniatura (arte completo sobre fondo difuminado, como en portada) */}
       <div className="relative w-28 sm:w-40 shrink-0 h-16 sm:h-20 rounded-xl overflow-hidden border border-white/10 bg-white/5">
         <img
           src={ad.imageUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover scale-110 blur-xl opacity-40"
+          loading="lazy"
+        />
+        <img
+          src={ad.imageUrl}
           alt={ad.title}
-          className="h-full w-full object-cover"
+          className="relative h-full w-full object-contain"
           loading="lazy"
         />
       </div>

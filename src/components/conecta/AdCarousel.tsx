@@ -118,12 +118,24 @@ export function AdCarousel() {
                 className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                 aria-label={`Anuncio: ${ad.title}`}
               >
+                {/* Fondo difuminado: rellena los laterales cuando el arte
+                    no es horizontal, sin recortar jamás el anuncio. */}
+                <img
+                  src={ad.imageUrl}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-40"
+                />
+                {/* Arte COMPLETO (object-contain): nunca se recorta,
+                    sin importar la proporción que suba el anunciante. */}
                 <img
                   src={ad.imageUrl}
                   alt={ad.title}
                   loading="lazy"
                   draggable={false}
-                  className="w-full h-[150px] sm:h-[190px] md:h-[230px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                  className="relative w-full h-[150px] sm:h-[190px] md:h-[230px] object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                 />
                 {/* Etiqueta de transparencia publicitaria */}
                 <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-1 text-[10px] font-mono tracking-widest text-white/75 border border-white/10">
