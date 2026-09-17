@@ -3,10 +3,13 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-09-10
-**HEAD commit:** `d273e29` (pushed a GitHub, desplegado en Vercel)
-**Estado general:** ✅ Producción operativa en Vercel + Neon PostgreSQL. Historial git limpio. Dominio custom `conectalt.com` activo. ✅ **10-Sep: chat original murió ("¡Ups! Algo salió mal") — proyecto restaurado al 100% en sandbox nuevo siguiendo RECOVERY.md. Workspace sincronizado a d273e29 (= producción). Neon reconectado y verificado E2E (28 negocios, AgeGate, home, directorio — 0 errores).** ✅ worklog.md archivado (544KB → 40KB; historial en `worklog-archivo-2026-09.md`).
-
+**Última actualización:** 2026-09-17
+**HEAD commit:** `ca3e934` (pushed a GitHub, desplegado en Vercel)
+**Estado general:** ✅ Producción operativa (Vercel + Neon). Next.js **16.3.5** (CVEs parcheadas), cabeceras de seguridad activas, rutas diagnose-auth cerradas (solo ADMIN), RBAC requireRole en 42 rutas API.
+**SEO/GEO:** sitemap dinámico (37 URLs) + /llms.txt dinámico + robots.ts con 17 bots IA explícitos + JSON-LD (WebSite/Organization → LocalBusiness → Article). Bing Webmaster registrado vía import de Google Search Console.
+**Legal:** Privacidad/Términos/Quiénes Somos actualizados 17-sep (cookie 30d, R2, carta digital, publicidad).
+**UI:** Carrusel multitarjeta en producción; botón ✕ móvil siempre visible.
+**Local:** .env apunta a PG embebida :5433 (sin credenciales Neon — rotadas; el dueño pega DATABASE_URL real cuando haga falta E2E contra producción).
 ---
 
 ## 🔁 Protocolo de Sesión (LEER PRIMERO)
