@@ -1427,11 +1427,12 @@ export function MenuTab({ slug, businessName }: MenuTabProps) {
                             </span>
                           )}
 
-                          {/* Eliminar (aparece al hover) */}
+                          {/* Eliminar: SIEMPRE visible en móvil (pointer grueso);
+                              en PC aparece al hover del grupo o al enfocar */}
                           <button
                             type="button"
                             onClick={() => menuFileDeleteMutation.mutate(img.id)}
-                            className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 opacity-0 transition-opacity hover:bg-red-500 focus:opacity-100 group-hover:opacity-100"
+                            className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 hover:bg-red-500 opacity-100 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
                             aria-label="Eliminar archivo de la carta"
                           >
                             <X size={12} className="text-white" />
