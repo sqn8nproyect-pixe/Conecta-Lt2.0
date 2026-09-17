@@ -369,3 +369,25 @@ Work Log:
 
 Stage Summary:
 - Fix del botón ✕ EN PRODUCCIÓN: visible siempre en móvil (pointer:coarse), hover en PC, en carta (MenuTab), galería/portada (OwnerDashboard) y zona de subida (image-upload-zone). Los dueños de locales pueden borrar sus fotos de carta solos. Pendiente: dueño revoca PAT #4 al final de los cambios; seguir recordando rotación de NEXTAUTH_SECRET.
+
+---
+Task ID: 8.14-fix-push
+Agent: Super Z (principal)
+Task: Push del commit d334660 (botón eliminar visible en móvil) con PAT nuevo + verificación en producción
+
+Work Log:
+- Push exitoso con PAT nuevo: 79cb3c1..a3d8df1 main -> main (incluye d334660 "fix(owner): botón eliminar siempre visible en móvil")
+- Remote restaurado a URL limpia inmediatamente después del push
+- Verificación por CSS compilado de producción (los chunks de MenuTab solo cargan con sesión de dueño, así que se verifica vía CSS global):
+  - https://conectalt.com/_next/static/chunks/9e6e99b1aa6d9e31.css contiene:
+  - @media (pointer:fine){.pointer-fine\:opacity-0{opacity:0} → en PC oculto por defecto
+  - @media (hover:hover){.pointer-fine\:group-hover\:opacity-100...} → en PC aparece al hover
+  - .pointer-fine\:focus-visible\:opacity-100:focus-visible → accesible por teclado en PC
+  - En móvil (pointer:coarse) ninguna aplica → base opacity-100 → ✕ SIEMPRE visible ✓
+- Extra: contestada pregunta del dueño — sitemap.ts es DINÁMICO (verificado en vivo: conectalt.com/sitemap.xml sirve 37 URLs = 3 estáticas + 33 locales ACTIVE + 1 editorial PUBLISHED, lastmod real por updatedAt, ISR 1h, fallback estático si DB falla)
+
+Stage Summary:
+- Fix botón ✕ en móvil LIVE en producción (commit d334660)
+- Los dueños de locales (ej. licobarjj) ya pueden borrar su carta/galería desde el teléfono
+- Sitemap dinámico confirmado funcionando con datos reales de DB
+- Recordatorio pendiente para el dueño: revocar este PAT cuando confirmemos; rotar NEXTAUTH_SECRET + Redeploy; datos de anunciantes (IG Africa Burguers, IG Licobar JJ, dirección Medusa)
