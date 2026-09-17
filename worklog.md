@@ -197,3 +197,20 @@ Work Log:
 Stage Summary:
 - GitHub 100% sincronizado con el local; cero commits pendientes.
 - Recordar al dueño: revocar el PAT en github.com/settings/tokens.
+
+---
+Task ID: vercel-function-storage-2026-09-17
+Agent: Super Z (principal)
+Task: Advertencia de Vercel — 75% del Function Storage gratuito (10 GB) consumido.
+
+Work Log:
+- Investigación local (protocolo §1: evidencia, no memoria): 75 rutas API = 75 funciones serverless por deployment; Prisma CLI (67 MB) estaba en DEPENDENCIES (se empaqueta en las funciones) en vez de devDependencies; output:"standalone" duplicaba el bundle en cada build de Vercel; ~206 commits/pushes desde el 15-Ago = ~206 deployments retenidos.
+- Fix 1: "prisma" movido a devDependencies (vercel.json usa installCommand "bun install" que instala también devDeps → "prisma generate" del buildCommand sigue funcionando). @prisma/client permanece en dependencies.
+- Fix 2: output:"standalone" ahora condicional a BUILD_STANDALONE=1. vercel.json NO lo setea (build de Vercel normal, sin bundle duplicado); el script local "build" ya lo setea (BUILD_STANDALONE=1 next build) → scripts E2E con .next/standalone/server.js siguen intactos.
+- package.json validado (JSON ok) + tsc de next.config.ts ok.
+- Pendiente del dueño (acción principal): purgar deployments viejos en Vercel (panel o vía API con token temporal) — ahí vive el grueso de los GB acumulados.
+- Pendiente: PAT para push + deploy de los fixes.
+
+Stage Summary:
+- Causas del consumo identificadas con evidencia; correcciones de build listas en local (commit sin push).
+- Siguiente optimization opcional: Prisma con driver adapter (@prisma/adapter-neon, elimina el engine de ~40 MB por función) y consolidar rutas API.

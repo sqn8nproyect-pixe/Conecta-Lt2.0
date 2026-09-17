@@ -28,7 +28,7 @@
 - REVOCAR el PAT usado el 17-sep (push de documentación ya completado) — github.com/settings/tokens
 
 **Gotchas activos:**
-- `unset DATABASE_URL DIRECT_URL` antes de prisma CLI/node (el shell pisa `.env`). `.env` actual = PG embebida 127.0.0.1:5433. Standalone: `set -a; source .env; set +a; NODE_ENV=production PORT=3100 bun .next/standalone/server.js`
+- `unset DATABASE_URL DIRECT_URL` antes de prisma CLI/node (el shell pisa `.env`). `.env` actual = PG embebida 127.0.0.1:5433. Standalone: build local con `bun run build` (ya setea BUILD_STANDALONE=1); correr: `set -a; source .env; set +a; NODE_ENV=production PORT=3100 bun .next/standalone/server.js`
 - El sandbox mata procesos background entre tool calls: server + test en la MISMA llamada bash (la PG embebida 5433 también muere — arrancarla y usarla en la misma llamada)
 - `bun -e` falla con Prisma (engines) — usar archivos `bun scripts/x.ts`
 - AgeGate (cookie 30d) bloquea browser headless: aceptarlo antes de probar la SPA · `NEXT_PUBLIC_*` se hornean en build (cambiarlos en Vercel exige Redeploy)

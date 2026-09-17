@@ -46,8 +46,12 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  /* config options here */
+  // standalone SOLO para la vista previa local (scripts E2E usan
+  // .next/standalone/server.js). En Vercel sobra: la plataforma empaqueta
+  // las funciones a su manera y el bundle duplicado engorda el uso de
+  // Function Storage (advertencia 75% de 10 GB, 2026-09-17).
+  // El build local lo activa solo: "build": "prisma generate && BUILD_STANDALONE=1 next build ..."
+  output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
   typescript: {
     ignoreBuildErrors: true,
   },
