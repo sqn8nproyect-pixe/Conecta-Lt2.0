@@ -230,3 +230,18 @@ Work Log:
 
 Stage Summary:
 - 102 deployments purgados de 107; Function Storage liberado (confirmar cifra en panel). Script reutilizable para futuras limpiezas.
+
+---
+Task ID: vercel-storage-deploy-2026-09-17
+Agent: Super Z (principal)
+Task: Push de los fixes de Function Storage + verificación del deployment en producción.
+
+Work Log:
+- Push con PAT (el mismo del inicio del día, sigue activo): ca6d999..20137db (2 commits: dd6a8c3 fixes de storage + 20137db script de purga). Remote restaurado limpio.
+- Deployment nuevo verificado vía API de Vercel: dpl_68xM5TXqGn58bDDmzDyD5FVAc2U5 READY, target=production, 16:24 UTC — construido SIN output standalone y SIN prisma CLI en dependencies (funciones más livianas).
+- Producción: / y /local → 200.
+- Cadena completa del día: advertencia 75% de 10 GB → diagnóstico con evidencia (prisma CLI empaquetado + standalone duplicado + 107 deployments retenidos) → purga de 102 deployments (0 fallos) → fixes de build en producción.
+- Deuda con el dueño: REVOCAR el PAT de GitHub (sigue activo; ya se usó en 2 sesiones) + el token de Vercel (si puso 1 day, vence solo) + poner Retention corto en Vercel.
+
+Stage Summary:
+- Funciones más livianas EN PRODUCCIÓN; storage purgado. El uso real se confirma en el panel de Vercel (Usage) cuando refresque la métrica.
