@@ -426,3 +426,24 @@ Work Log:
 Stage Summary:
 - Páginas legales al día con la realidad del producto (menú, anuncios, R2, cookie 30d)
 - Sin cambios de identidad legal: sigue CONECTA-LT / Los Teques / sqn8nproyect@gmail.com / CeroTraba
+
+---
+Task ID: 8.17-security
+Agent: Super Z (principal)
+Task: Auditoría de ciberseguridad + remediación inmediata
+
+Work Log:
+- Auditoría completa: secrets, RBAC (42 rutas con requireRole), uploads presign (whitelist mime), auth v5 cookies secure/sameSite, Prisma anti-SQLi, XSS, rate limits, headers, dependencias (npm audit vía lockfile temporal)
+- Hallazgo crítico: Next.js 16.1.3 con ~35 CVEs públicas (DoS, middleware bypass, cache poisoning, RCE específicas) → fix en 16.2.11+/16.3.3+
+- Hallazgo alto: 5 rutas /api/diagnose-auth/* públicas (db-schema exponía enum/columnas; verificado HTTP 200 anónimo en producción)
+- Ya preparado en local de sesión previa (auto-commits a4abb0a/7be30ec): guards requireRole('ADMIN') en las 5 rutas + SECURITY_HEADERS en next.config.ts (CSP frame-ancestors/object-src/base-uri, XFO DENY, nosniff, referrer strict-origin-when-cross-origin, permissions-policy, COOP same-origin-allow-popups)
+- Upgrade Next.js + eslint-config-next a 16.3.5; build de producción local completo OK (todas las rutas prerenderizadas)
+- Commit 0e83825, push, verificación en producción:
+  - Las 6 cabeceras de seguridad presentes en conectalt.com
+  - db-schema y last-auth-error ahora HTTP 401 sin sesión
+  - Smoke test: /, /local, ficha, sitemap.xml, llms.txt → todos 200
+
+Stage Summary:
+- Paquete de seguridad LIVE: Next 16.3.5 + headers + diagnose-auth cerrado
+- Pendiente del dueño: rotar NEXTAUTH_SECRET en Vercel + Redeploy; revocar PAT actual
+- Fase 2 propuesta (no urgente): rate limit en escrituras públicas (reseñas/reservas), Zod en API, bun update de libs transitivas (lodash/nanoid/sharp), CSP completa con report-only
