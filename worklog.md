@@ -409,3 +409,20 @@ Stage Summary:
 - conectalt.com ya es legible y citable por ChatGPT, Claude, Perplexity, Gemini, Copilot, Meta AI y Apple Intelligence
 - Base técnica GEO completa: robots explícito + llms.txt + JSON-LD en 3 niveles (WebSite/Organization → LocalBusiness por ficha → Article por guía) + sitemap dinámico
 - Pendiente MANUAL del dueño: dar de alta en Google Search Console + Bing Webmaster Tools (alimenta ChatGPT), verificar con HTML meta, enviar sitemap
+
+---
+Task ID: 8.16-legal
+Agent: Super Z (principal)
+Task: Revisión y actualización de Quiénes Somos, Privacidad y Términos
+
+Work Log:
+- Revisión completa de LegalPage.tsx (privacidad 12 secciones + términos 15) y AboutPage.tsx
+- Privacidad: cookie age-verified 30 días (antes decía sessionStorage, falso desde Sprint 7B) en §5 y §6; añadido Cloudflare R2 en terceros (§4); añadidos datos de dueños (carta/fotos) y conteo agregado de clics en anuncios (§1)
+- Términos: §2 añade carta digital, guías editoriales y espacios PUBLICIDAD; §6 añade derechos sobre imágenes subidas; §7 incluye carta en obligaciones del dueño
+- Quiénes somos: 5 → 7 capas de valor (Carta Digital con Imagen Real + Guías Editoriales Semanales, iconos BookOpen/Newspaper); Directorio Exclusivo ahora menciona verificación/aprobación por el equipo
+- Fecha legal: 23 ago → 17 sep 2026
+- Commit b4f9a52, push, verificado en producción chunk ab8a2dc0a32133be.js (age-verified, siete capas, Cloudflare, Carta Digital, fecha, PUBLICIDAD todos presentes)
+
+Stage Summary:
+- Páginas legales al día con la realidad del producto (menú, anuncios, R2, cookie 30d)
+- Sin cambios de identidad legal: sigue CONECTA-LT / Los Teques / sqn8nproyect@gmail.com / CeroTraba
