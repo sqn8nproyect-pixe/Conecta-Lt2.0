@@ -214,3 +214,19 @@ Work Log:
 Stage Summary:
 - Causas del consumo identificadas con evidencia; correcciones de build listas en local (commit sin push).
 - Siguiente optimization opcional: Prisma con driver adapter (@prisma/adapter-neon, elimina el engine de ~40 MB por función) y consolidar rutas API.
+
+---
+Task ID: vercel-purge-2026-09-17
+Agent: Super Z (principal)
+Task: Limpieza del Function Storage de Vercel (75% de 10 GB usado) con el token temporal del dueño.
+
+Work Log:
+- Token team-scoped (no lista equipos): el teamId se obtiene del accountId del proyecto (team_xnrW6XmHDSfNWTNJcxF4QzVI). Proyecto conecta-lt2-0 = prj_yZ81u5SXdIvXpsngw0cEHrVMxclH.
+- Nuevo scripts/vercel-purge.mjs (sin secrets; token por env): modos list y purge; conserva los 5 deployments más recientes, borra el resto con rate-limit amable (150ms) y reintento 429.
+- Inventario: 107 deployments retenidos (104 READY + 3 ERROR). PURGA: 102 borrados, 0 fallos, 5 conservados (incluye el production actual de 15:38).
+- Producción verificada tras la purga: / y /api/ads → 200. Sin downtime.
+- El dueño puede confirmar la caída de uso en el panel de Vercel (Usage) — la métrica puede tardar un poco en refrescar.
+- Pendiente: PAT para push del commit dd6a8c3 (funciones más livianas) + sugerencia de retención corta en Settings del proyecto.
+
+Stage Summary:
+- 102 deployments purgados de 107; Function Storage liberado (confirmar cifra en panel). Script reutilizable para futuras limpiezas.
