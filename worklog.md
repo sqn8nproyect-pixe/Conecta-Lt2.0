@@ -447,3 +447,18 @@ Stage Summary:
 - Paquete de seguridad LIVE: Next 16.3.5 + headers + diagnose-auth cerrado
 - Pendiente del dueño: rotar NEXTAUTH_SECRET en Vercel + Redeploy; revocar PAT actual
 - Fase 2 propuesta (no urgente): rate limit en escrituras públicas (reseñas/reservas), Zod en API, bun update de libs transitivas (lodash/nanoid/sharp), CSP completa con report-only
+
+---
+Task ID: 8.18-protocolo
+Agent: Super Z (principal)
+Task: Protocolo de cierre — guardar todo y revisar todo
+
+Work Log:
+- GIT: working tree limpio, push del worklog pendiente (f53a1f4) → main sincronizado, remote limpio
+- PRODUCCIÓN revisada: 9 URLs clave 200 (home, local, editorial, guía, 2 fichas, sitemap, llms.txt, robots) · 3 APIs públicas 200 · X-Frame-Options DENY ✓ · CSP frame-ancestors ✓ · diagnose-auth 401 ✓
+- SESSION_HANDOFF.md reescrito con estado 8.14→8.18, pendientes del dueño y gotchas nuevos (verificación por chunks/CSS, PG embebida muere entre tool calls, truco npm audit)
+- Contenido legal/GEO ya verificado en chunks (6/6 strings) en sprints anteriores
+
+Stage Summary:
+- Sesión cerrada en verde: multitarjeta + fix botón + GEO (llms.txt/robots/JSON-LD) + legal actualizada + seguridad (Next 16.3.5, headers, diagnose-auth cerrado)
+- Dueño informado de sus 4 pendientes: revocar PAT, rotar NEXTAUTH_SECRET, datos anunciantes, confirmar sitemap en Bing
