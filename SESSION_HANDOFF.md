@@ -9,8 +9,7 @@
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 SEGURO + GEO + LEGAL al día, TODO en producción (origin/main = `ca3e934`).
-⚠️ **Push pendiente (SOLO docs, sin código):** `9aa77f4` (boot: .env→PG embebida, archive worklog 27→10, PROJECT_STATUS) + docs de esta verificación. Pedir PAT temporal al dueño para sincronizar.
+**Estado del workspace:** 🟢 SEGURO + GEO + LEGAL al día, TODO en producción. GitHub 100% sincronizado con local (17-sep, push de docs con PAT temporal).
 - **8.14 multitarjeta**: vivo (chunk a65c87fc739e3bc5.js, basis-auto).
 - **8.15 GEO** (`b58637b`): /llms.txt dinámico (33 locales + guías + "cómo citar", ISR 1h), robots.ts con 17 bots IA, JSON-LD WebSite+Organization, sitemap dinámico (37 URLs).
 - **8.16 legal** (`b4f9a52`): Privacidad/Términos/Quiénes Somos al día (cookie age-verified 30d, R2, carta digital + guías + PUBLICIDAD, 5→7 capas). Fecha: 17 sep 2026.
@@ -26,7 +25,7 @@
 - (Recomendado) Rotar contraseña Neon y llaves R2 — expuestas en PROTOCOL.md v1 del historial git
 - Datos: IG Africa Burguers · IG Licobar JJ (@puntoencuentrolt) · dirección real de Medusa
 - Confirmar en Bing "Mapas del sitio" el sitemap; en unos días repetir "Solicitar indexación"
-- Dar PAT temporal para sincronizar los commits de documentación pendientes (después revocarlo)
+- REVOCAR el PAT usado el 17-sep (push de documentación ya completado) — github.com/settings/tokens
 
 **Gotchas activos:**
 - `unset DATABASE_URL DIRECT_URL` antes de prisma CLI/node (el shell pisa `.env`). `.env` actual = PG embebida 127.0.0.1:5433. Standalone: `set -a; source .env; set +a; NODE_ENV=production PORT=3100 bun .next/standalone/server.js`

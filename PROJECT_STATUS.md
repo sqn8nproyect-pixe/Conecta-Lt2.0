@@ -4,7 +4,7 @@
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
 **Última actualización:** 2026-09-17
-**HEAD commit:** `ca3e934` en GitHub (desplegado en Vercel) · local `9aa77f4` + docs de verificación 17-sep (push pendiente de PAT)
+**HEAD commit:** GitHub sincronizado con local el 17-sep (producción desplegada en `ca3e934`; commits posteriores = solo documentación)
 **Estado general:** ✅ Producción operativa (Vercel + Neon). Next.js **16.3.5** (CVEs parcheadas), cabeceras de seguridad activas, rutas diagnose-auth cerradas (solo ADMIN), RBAC requireRole en 42 rutas API.
 **SEO/GEO:** sitemap dinámico (37 URLs) + /llms.txt dinámico + robots.ts con 17 bots IA explícitos + JSON-LD (WebSite/Organization → LocalBusiness → Article). Bing Webmaster registrado vía import de Google Search Console.
 **Legal:** Privacidad/Términos/Quiénes Somos actualizados 17-sep (cookie 30d, R2, carta digital, publicidad).
