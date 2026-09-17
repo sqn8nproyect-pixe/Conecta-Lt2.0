@@ -97,6 +97,35 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// ── JSON-LD global (GEO) ────────────────────────────────────
+// Organization + WebSite para que los buscadores y los modelos
+// de IA (ChatGPT, Perplexity, Gemini) identifiquen la entidad
+// detrás del dominio. Las páginas de ficha ya emiten su propio
+// LocalBusiness (@graph), este bloque es el nivel superior.
+const siteJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${siteUrl}#website`,
+      url: siteUrl,
+      name: "CONECTA-LT",
+      alternateName: "Guía Nocturna de Los Teques",
+      description:
+        "Directorio nocturno de Los Teques: licorerías, tascas, licobares y discotecas con horarios verificados, ofertas y reseñas.",
+      inLanguage: "es-VE",
+      publisher: { "@id": `${siteUrl}#organization` },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${siteUrl}#organization`,
+      name: "CONECTA-LT",
+      url: siteUrl,
+      logo: `${siteUrl}/images/logo.png`,
+    },
+  ],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -107,6 +136,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: siteJsonLd }}
+        />
         <QueryProvider>
           <SessionProvider>{children}</SessionProvider>
         </QueryProvider>
