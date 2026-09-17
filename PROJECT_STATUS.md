@@ -4,7 +4,7 @@
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
 **Última actualización:** 2026-09-17
-**HEAD commit:** `ca3e934` (pushed a GitHub, desplegado en Vercel)
+**HEAD commit:** `ca3e934` en GitHub (desplegado en Vercel) · local `9aa77f4` + docs de verificación 17-sep (push pendiente de PAT)
 **Estado general:** ✅ Producción operativa (Vercel + Neon). Next.js **16.3.5** (CVEs parcheadas), cabeceras de seguridad activas, rutas diagnose-auth cerradas (solo ADMIN), RBAC requireRole en 42 rutas API.
 **SEO/GEO:** sitemap dinámico (37 URLs) + /llms.txt dinámico + robots.ts con 17 bots IA explícitos + JSON-LD (WebSite/Organization → LocalBusiness → Article). Bing Webmaster registrado vía import de Google Search Console.
 **Legal:** Privacidad/Términos/Quiénes Somos actualizados 17-sep (cookie 30d, R2, carta digital, publicidad).
@@ -109,7 +109,7 @@ Plataforma de descubrimiento y conexión para licorerías, tascas y discotecas e
 | Estado servidor | TanStack Query (React Query) | |
 | Base de datos | **PostgreSQL en Neon** (NO SQLite) | |
 | ORM | Prisma 6 | `import { db } from '@/lib/db'` |
-| Auth | NextAuth v4 + Prisma Adapter | Ver nota sobre openid-client abajo |
+| Auth | **Auth.js v5** (next-auth@5.0.0-beta.32) + Prisma Adapter | JWT strategy; ver gotcha #0 |
 | Mapas | react-leaflet + Leaflet | |
 | Animación | Framer Motion | |
 | Runtime | Bun | |
@@ -273,19 +273,13 @@ Para cambiar quién tiene acceso admin, editar `ADMIN_EMAILS` en `src/lib/admin-
 ### 8. Login Demo ( signIn con redirect:false + reload )
 `Navbar.tsx` `handleLogin` usa `signIn('demo-credentials', { redirect:false })` y luego `window.location.reload()`. **NO** usar `window.location.href = res.url` porque `res.url` puede ser cross-origin y perder la cookie de sesión.
 
-### 9. Sandbox: DATABASE_URL override + .env en SQLite
-**Estado real tras el incidente de seguridad del 18-Ago:**
-- `.env` local contiene `DATABASE_URL=file:/home/z/my-project/db/custom.db` (SQLite)
-- `.env.local` (que tenía Neon URL con el password rotado) se perdió del sandbox
-- `schema.prisma` tiene `provider="postgresql"` (gotcha #5)
-- **Consecuencia**: el dev server arranca OK (HTTP 200 en `/`), pero TODOS los endpoints que tocan la DB retornan 503/500 (Prisma no puede usar SQLite con schema postgresql)
+### 9. Sandbox: .env apunta a PG embebida local (actualizado 17-Sep)
+**Estado real (verificado 2026-09-17):**
+- `.env` local contiene `DATABASE_URL`/`DIRECT_URL` → `postgresql://…@127.0.0.1:5433/conectalt` (PG embebida del sandbox, restaurada en el boot del 17-Sep, commit `9aa77f4`)
+- La cadena Neon real NO vive en el sandbox (rotada tras el incidente del 18-Ago); el dueño la pega cuando haga falta E2E contra producción
+- `schema.prisma` tiene `provider="postgresql"` (gotcha #5) — coincide con el `.env` actual; el dev server funciona contra la PG embebida
 
-**Workaround para verificar UI en sandbox:**
-1. Cambiar temporalmente `prisma/schema.prisma` de `provider="postgresql"` a `provider="sqlite"` (SIN commitear)
-2. `bun run db:push` (crea tablas en SQLite local)
-3. `bun run db:seed` (siembra 21 negocios desde `src/lib/data.ts`)
-4. Reiniciar dev server
-5. Revertir el cambio antes de cualquier commit/push (sino rompe Vercel)
+**Preview local sin Neon:** `bash scripts/preview-run.sh` (levanta la PG embebida en /home/z/preview-pg; server + test en la MISMA llamada bash — el sandbox mata procesos background entre tool calls).
 
 **Para producción real**: la app corre en Vercel con Neon (el `.env` de Vercel tiene las credenciales correctas, sin relación con el sandbox local).
 
@@ -333,8 +327,8 @@ Esto funciona para: `conectalt.com`, `*.vercel.app`, y localhost. Ver commit `80
 - ✅ ~~Solicitar review a Google Safe Browsing~~ — Resuelto: bloqueo levantado el 24-Ago, conectalt.com vuelve a ser accesible desde Chrome
 
 ### Media prioridad (mejoras)
-- **Migrar a Auth.js v5** (~2-3 horas): eliminaría la dependencia del patch script de openid-client y daría soporte oficial a Next.js 16. NextAuth v4 no tiene soporte oficial para Next 16.
-- **Fix error TS pre-existente**: `trustHost does not exist in type AuthOptions` en `src/lib/auth.ts` (no rompe runtime, es solo types incompletos de NextAuth v4)
+- ✅ ~~Migrar a Auth.js v5~~ — HECHO 2026-09-10 (next-auth@5.0.0-beta.32, ver gotcha #0)
+- **Fix errores tsc pre-existentes**: ~27 errores residuales en archivos no críticos (no rompen runtime — `next.config.ts` tiene `ignoreBuildErrors: true`)
 - **Sprint 6 (opcional): Night Route multi-stop** — FASE 15 del blueprint. `wantsRoute` ya defaultea a false en el schema, tipos definidos pero UI no implementada.
 
 ### Baja prioridad
@@ -383,7 +377,7 @@ prisma/
 └── verify-neon.ts        # Script para verificar conexión Neon + counts
 
 scripts/
-└── patch-openid-client.js  # Patch para Google OAuth (CRÍTICO)
+└── session-boot.sh         # Ritual de inicio de sesión (handoff + git + worklog)
 ```
 
 ## 🚀 Comandos útiles

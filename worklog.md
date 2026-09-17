@@ -167,3 +167,19 @@ Work Log:
 Stage Summary:
 - Sesión cerrada en verde: multitarjeta + fix botón + GEO (llms.txt/robots/JSON-LD) + legal actualizada + seguridad (Next 16.3.5, headers, diagnose-auth cerrado)
 - Dueño informado de sus 4 pendientes: revocar PAT, rotar NEXTAUTH_SECRET, datos anunciantes, confirmar sitemap en Bing
+
+---
+Task ID: verificacion-protocolo-2026-09-17
+Agent: Super Z (principal)
+Task: El dueño pidió revisar que ayer se actualizó y guardó todo como indica el protocolo.
+
+Work Log:
+- VERIFICADO (git): worklog.md con las 10 entradas (cierre 8.18 incluido), SESSION_HANDOFF.md al día, commit de cierre ca3e934 SÍ está en origin/main. Working tree limpio, sin secrets trackeados (solo .env.example en git).
+- VERIFICADO (curl): producción 5/5 rutas 200 (/, /llms.txt, /sitemap.xml, /robots.txt, /api/ads); CSP frame-ancestors + XFO DENY + HSTS presentes; /api/diagnose-auth/db-schema → 401 anónimo.
+- Hallazgo 1: 1 commit local sin push (9aa77f4, docs del boot post-snapshot: .env→PG embebida, archive worklog 27→10, PROJECT_STATUS). Push falló sin PAT: el repo es público (ls-remote funciona sin credenciales, push no). Pendiente PAT temporal.
+- Hallazgo 2 (drift interno en PROJECT_STATUS.md, corregido per §3.7): stack decía Auth v4 + patch-openid-client "CRÍTICO" (realidad: v5 beta.32, patch eliminado — verificado con package.json y ls); gotcha #9 decía .env SQLite (realidad verificada: PG embebida 127.0.0.1:5433); item pendiente "Migrar a v5" ya hecho el 10-Sep; HEAD reflejaba ca3e934 sin el commit local.
+- SESSION_HANDOFF.md reescrito a 40 líneas exactas (pasaba de 42): push pendiente marcado arriba, verificación de hoy añadida, gotchas compactados sin perder ninguno.
+
+Stage Summary:
+- Cierre de ayer CONFIRMADO completo y en GitHub; producción verde y segura.
+- Único pendiente operativo: push de los commits de documentación (9aa77f4 + este) cuando el dueño dé un PAT temporal (después revocarlo).
