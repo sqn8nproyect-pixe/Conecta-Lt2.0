@@ -391,3 +391,21 @@ Stage Summary:
 - Los dueños de locales (ej. licobarjj) ya pueden borrar su carta/galería desde el teléfono
 - Sitemap dinámico confirmado funcionando con datos reales de DB
 - Recordatorio pendiente para el dueño: revocar este PAT cuando confirmemos; rotar NEXTAUTH_SECRET + Redeploy; datos de anunciantes (IG Africa Burguers, IG Licobar JJ, dirección Medusa)
+
+---
+Task ID: 8.15-geo
+Agent: Super Z (principal)
+Task: GEO — visibilidad de conectalt.com en IAs (ChatGPT, Claude, Perplexity, Gemini)
+
+Work Log:
+- robots.ts: regla EXPLÍCITA para 17 rastreadores de IA (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot/User/SearchBot, PerplexityBot/User, Google-Extended, Applebot-Extended, meta-externalagent, Amazonbot, CCBot, Bytespider, YouBot, Diffbot, ImagesiftBot) — allow público, disallow /api/ y /r/
+- src/app/llms.txt/route.ts NUEVO: llms.txt dinámico (estándar llmstxt.org) — H1 + descripción + locales ACTIVE agrupados por categoría (nombre, zona, dirección, precio, especialidad) + posts PUBLISHED + sección "Cómo citar". ISR 1h, fallback estático si DB falla, Content-Type text/markdown
+- layout.tsx: JSON-LD global @graph WebSite (@id #website, inLanguage es-VE) + Organization (@id #organization, logo) — nivel superior del LocalBusiness que ya emiten las fichas
+- Lint OK (errores tsc restantes: 27 preexistentes en archivos no tocados)
+- Commit b58637b, push con PAT, remote limpio
+- Verificado en producción al primer intento: robots.txt con los 17 bots, /llms.txt 200 con contenido real de DB (33 locales), JSON-LD en el home
+
+Stage Summary:
+- conectalt.com ya es legible y citable por ChatGPT, Claude, Perplexity, Gemini, Copilot, Meta AI y Apple Intelligence
+- Base técnica GEO completa: robots explícito + llms.txt + JSON-LD en 3 niveles (WebSite/Organization → LocalBusiness por ficha → Article por guía) + sitemap dinámico
+- Pendiente MANUAL del dueño: dar de alta en Google Search Console + Bing Webmaster Tools (alimenta ChatGPT), verificar con HTML meta, enviar sitemap
