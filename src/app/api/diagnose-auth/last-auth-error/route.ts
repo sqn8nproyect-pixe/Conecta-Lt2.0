@@ -9,9 +9,21 @@
 // Nota: no expone secretos — solo mensajes/stacks de errores de auth.
 
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/server/auth';
+import type { UserRole } from '@prisma/client';
 import { db } from '@/lib/db';
 
 export async function GET() {
+  // ── Cierre de seguridad (2026-09-17) ─────────────────────────
+  // Estas rutas eran de diagnóstico público; desde la auditoría de
+  // ciberseguridad exigen sesión de ADMIN (defensa en depth incluida
+  // en requireRole: JWT role + lista ADMIN_EMAILS).
+  try {
+    await requireRole('ADMIN' as UserRole);
+  } catch (e) {
+    if (e instanceof Response) return e;
+    throw e;
+  }
   try {
     const rows = await db.authErrorLog.findMany({
       orderBy: { createdAt: 'desc' },

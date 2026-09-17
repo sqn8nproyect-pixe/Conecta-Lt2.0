@@ -2,10 +2,22 @@
 // y hace un HEAD request a Google para ver si acepta los parámetros.
 
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/server/auth';
+import type { UserRole } from '@prisma/client';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 export async function GET() {
+  // ── Cierre de seguridad (2026-09-17) ─────────────────────────
+  // Estas rutas eran de diagnóstico público; desde la auditoría de
+  // ciberseguridad exigen sesión de ADMIN (defensa en depth incluida
+  // en requireRole: JWT role + lista ADMIN_EMAILS).
+  try {
+    await requireRole('ADMIN' as UserRole);
+  } catch (e) {
+    if (e instanceof Response) return e;
+    throw e;
+  }
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 

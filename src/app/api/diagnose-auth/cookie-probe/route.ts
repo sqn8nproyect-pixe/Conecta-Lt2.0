@@ -16,9 +16,21 @@
 // No expone secretos: solo cuenta cookies y lista NOMBRES (no valores).
 
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/server/auth';
+import type { UserRole } from '@prisma/client';
 import type { NextRequest } from 'next/server';
 
-export function GET(request: NextRequest) {
+export async function GET(request: NextRequest) {
+  // ── Cierre de seguridad (2026-09-17) ─────────────────────────
+  // Estas rutas eran de diagnóstico público; desde la auditoría de
+  // ciberseguridad exigen sesión de ADMIN (defensa en depth incluida
+  // en requireRole: JWT role + lista ADMIN_EMAILS).
+  try {
+    await requireRole('ADMIN' as UserRole);
+  } catch (e) {
+    if (e instanceof Response) return e;
+    throw e;
+  }
   const prev = Number(request.cookies.get('cl_probe')?.value ?? '0');
   const visitas = Number.isFinite(prev) && prev >= 0 ? prev + 1 : 1;
 

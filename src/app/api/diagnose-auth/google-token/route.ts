@@ -17,10 +17,22 @@
 //     (solo dice si EL secret del entorno es válido, sí o no).
 
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/server/auth';
+import type { UserRole } from '@prisma/client';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 export async function GET() {
+  // ── Cierre de seguridad (2026-09-17) ─────────────────────────
+  // Estas rutas eran de diagnóstico público; desde la auditoría de
+  // ciberseguridad exigen sesión de ADMIN (defensa en depth incluida
+  // en requireRole: JWT role + lista ADMIN_EMAILS).
+  try {
+    await requireRole('ADMIN' as UserRole);
+  } catch (e) {
+    if (e instanceof Response) return e;
+    throw e;
+  }
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
