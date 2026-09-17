@@ -342,3 +342,17 @@ Work Log:
 
 Stage Summary:
 - Multitarjeta LIVE en conectalt.com. Pendiente: dueño REVOCAR PAT #3 (ya se usó en 2 sesiones de push); rotar NEXTAUTH_SECRET; validar el carrusel con sus 3 anuncios reales.
+
+---
+Task ID: fix-boton-eliminar-movil
+Agent: Super Z (principal)
+Task: Botón ✕ de eliminar imagen solo aparecía al hover (invisible en teléfono). El dueño de un local (ej. licobarjj) no ve cómo borrar su carta subida como imagen. Petición: "hazlo".
+
+Work Log:
+- Investigación: el dueño del local SÍ puede eliminar sus imágenes MENU sin admin (DELETE /api/owner/businesses/[slug]/images?imageId= borra de R2 y DB; moderación solo para aprobación). Hallazgo: botón con opacity-0 group-hover:opacity-100 → invisible en táctil (3 lugares: MenuTab "Carta en archivos", OwnerDashboard galería/portada, image-upload-zone compartido).
+- Fix en 3 archivos: opacity-100 por defecto + pointer-fine:opacity-0 / pointer-fine:group-hover:opacity-100 / pointer-fine:focus-visible:opacity-100 (Tailwind 4.1). Móvil (pointer:coarse): siempre visible; PC: igual que antes.
+- Verificado: eslint 0 errores; CSS compilado en dev contiene @media (pointer: fine) (9 usos).
+- Commit d334660 local. PUSH FALLÓ: PAT #3 REVOCADO por el dueño (correcto, "could not read Password"). Pendiente: push con PAT nuevo.
+
+Stage Summary:
+- Fix listo y verificado localmente; falta push con PAT nuevo que pedirá el dueño. Responder al dueño: instrucciones para generar token (Settings → Developer settings → Tokens classic, scope repo).
