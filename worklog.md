@@ -356,3 +356,16 @@ Work Log:
 
 Stage Summary:
 - Fix listo y verificado localmente; falta push con PAT nuevo que pedirá el dueño. Responder al dueño: instrucciones para generar token (Settings → Developer settings → Tokens classic, scope repo).
+
+---
+Task ID: fix-boton-eliminar-movil-deploy
+Agent: Super Z (principal)
+Task: Despliegue del fix del botón eliminar en móvil (PAT #4).
+
+Work Log:
+- PAT #3 reenviado por el dueño → push FALLÓ de nuevo (revocado, como se le pidió). Se le explicó paso a paso cómo generar uno nuevo.
+- PAT #4 (ghp_cou...aUBo) recibido → push OK 31def81..79cb3c1 (3 commits: fix d334660 + auto-commits del entorno). Remote restaurado limpio.
+- Verificación en producción: chunk JS contiene pointer-fine:opacity-0 (clases del fix) → confirmado al intento 3 (~2 min tras push).
+
+Stage Summary:
+- Fix del botón ✕ EN PRODUCCIÓN: visible siempre en móvil (pointer:coarse), hover en PC, en carta (MenuTab), galería/portada (OwnerDashboard) y zona de subida (image-upload-zone). Los dueños de locales pueden borrar sus fotos de carta solos. Pendiente: dueño revoca PAT #4 al final de los cambios; seguir recordando rotación de NEXTAUTH_SECRET.
