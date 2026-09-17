@@ -63,7 +63,7 @@ export function LegalPage({ kind }: LegalPageProps) {
           </div>
         </div>
         <div className="text-xs text-white/40 font-mono">
-          Última actualización: 23 de agosto de 2026
+          Última actualización: 17 de septiembre de 2026
         </div>
       </motion.div>
 
@@ -214,7 +214,15 @@ function PrivacyContent() {
           <li>
             <strong className="text-white">Datos de navegación:</strong> eventos
             analíticos anónimos (apertura del Night Planner, vistas de comercios,
-            clics en WhatsApp, búsquedas) y métricas de rendimiento.
+            clics en WhatsApp, búsquedas), métricas de rendimiento y el conteo
+            agregado de clics en los anuncios publicitarios, sin asociación a tu
+            identidad.
+          </li>
+          <li>
+            <strong className="text-white">Contenido de dueños de locales:</strong>{' '}
+            si administras un comercio, los datos y archivos que cargues en tu
+            panel (carta digital, fotografías, horarios, promociones y datos de
+            contacto del negocio).
           </li>
           <li>
             <strong className="text-white">Datos técnicos:</strong> cookies de
@@ -293,6 +301,11 @@ function PrivacyContent() {
             datos PostgreSQL administrada.
           </li>
           <li>
+            <strong className="text-white">Cloudflare:</strong> almacenamiento de
+            imágenes (cartas digitales, fotografías de locales y anuncios)
+            mediante su servicio R2.
+          </li>
+          <li>
             <strong className="text-white">Autoridades competentes:</strong> si
             somos requeridos por orden judicial o legal válida.
           </li>
@@ -311,10 +324,11 @@ function PrivacyContent() {
           redes sociales.
         </p>
         <p className="mb-3">
-          Almacenamos en tu navegador (sessionStorage) el hecho de que
-          verificaste ser mayor de 18 años, para no pedirte la verificación en
-          cada navegación dentro de la misma sesión. Este dato se elimina al
-          cerrar el navegador.
+          Almacenamos en tu navegador una cookie propia llamada{' '}
+          <code className="font-mono text-gold">age-verified</code> con el hecho
+          de que verificaste ser mayor de 18 años, para no repetirte la
+          verificación en cada visita. Vence automáticamente a los 30 días y no
+          contiene datos personales ni identificadores de seguimiento.
         </p>
         <p className="text-sm text-white/60">
           Puedes deshabilitar las cookies en tu navegador, pero el inicio de
@@ -331,8 +345,8 @@ function PrivacyContent() {
           alcohólicas, requerimos que confirmes tener al menos <strong className="text-white">
           18 años</strong> para acceder al contenido. No recopilamos tu edad
           exacta ni tu fecha de nacimiento; solo registramos la confirmación
-          booleana (&quot;mayor de 18&quot;) en sessionStorage. Si eres menor de edad,
-          por favor abandona este sitio.
+          booleana (&quot;mayor de 18&quot;) en una cookie propia que vence a los 30
+          días. Si eres menor de edad, por favor abandona este sitio.
         </p>
       </section>
 
@@ -478,11 +492,17 @@ function TermsContent() {
           Miranda, Venezuela. Ofrece:
         </p>
         <ul className="list-disc pl-6 mt-3 space-y-2 text-sm">
-          <li>Catálogo de licorerías, tascas y discotecas afiliadas.</li>
+          <li>Catálogo de licorerías, tascas, licobares y discotecas afiliadas.</li>
           <li>Sistema de reservas online.</li>
           <li>Promociones y cupones de descuento.</li>
           <li>Reseñas y calificaciones de usuarios.</li>
           <li>Recomendador inteligente (Night Planner).</li>
+          <li>Carta digital: los comercios publican su menú como imagen en su ficha.</li>
+          <li>Guías editoriales semanales de planes y eventos en Los Teques.</li>
+          <li>
+            Espacios publicitarios de los propios comercios afiliados,
+            identificados con el rótulo PUBLICIDAD.
+          </li>
           <li>Panel de gestión para dueños de comercios.</li>
         </ul>
         <p className="mt-3 text-sm text-white/60">
@@ -567,6 +587,11 @@ function TermsContent() {
           <li>No publicar información personal de otras personas sin su consentimiento.</li>
           <li>No publicar contenido que promueva el consumo irresponsable de alcohol.</li>
           <li>No usar bots ni scripts para automatizar publicaciones.</li>
+          <li>
+            Contar con los derechos sobre las imágenes y archivos que subas al
+            sitio (cartas digitales, fotografías del local) y no infringir
+            derechos de terceros al publicarlos.
+          </li>
         </ul>
         <p className="mt-3 text-sm text-white/60">
           Nos reservamos el derecho de eliminar contenido que infrinja estos
@@ -584,7 +609,7 @@ function TermsContent() {
         </p>
         <ul className="list-disc pl-6 space-y-2 text-sm">
           <li>Proporcionar información veraz sobre tu negocio.</li>
-          <li>Mantener actualizados horarios, promociones y datos de contacto.</li>
+          <li>Mantener actualizados horarios, promociones, carta digital y datos de contacto.</li>
           <li>No publicar promociones falsas o engañosas.</li>
           <li>Responder a las reservas en un plazo razonable.</li>
           <li>No usar el panel para publicar contenido malicioso o spam.</li>

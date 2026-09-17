@@ -23,6 +23,8 @@ import {
   Lock,
   Car,
   UserCheck,
+  BookOpen,
+  Newspaper,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
@@ -30,7 +32,7 @@ const features = [
   {
     icon: Compass,
     title: 'Directorio Exclusivo',
-    text: 'Acceso a perfiles enriquecidos con fotografías reales, horarios de apertura y contacto directo con los locales más selectos de la capital mirandina (licorerías, tascas, discotecas y licobares).',
+    text: 'Acceso a perfiles enriquecidos con fotografías reales, horarios de apertura y contacto directo con los locales más selectos de la capital mirandina (licorerías, tascas, discotecas y licobares). Cada perfil es verificado y aprobado por nuestro equipo antes de publicarse.',
   },
   {
     icon: MapPin,
@@ -51,6 +53,16 @@ const features = [
     icon: Tag,
     title: 'Promociones Verificadas',
     text: 'Accede a ofertas, eventos especiales y cupones exclusivos con códigos de canje válidos directamente en los locales colaboradores.',
+  },
+  {
+    icon: BookOpen,
+    title: 'Carta Digital con Imagen Real',
+    text: 'Tascas y licobares publican su carta real dentro de su ficha, subida y actualizada por el propio dueño desde su panel, para que veas productos y referencias antes de salir de casa.',
+  },
+  {
+    icon: Newspaper,
+    title: 'Guías Editoriales Semanales',
+    text: 'Cada semana publicamos qué hacer en Los Teques: planes, recomendaciones y eventos con enlaces directos a las fichas de los locales, para que nunca te quedes sin plan.',
   },
 ];
 
@@ -111,7 +123,7 @@ export function AboutPage() {
         <p className="text-white/60 leading-relaxed mt-4">
           Antes de ConectAlt, planificar una salida implicaba navegar de forma caótica entre
           múltiples redes sociales, chats de WhatsApp y listas de información desactualizadas.
-          Hoy, resolvemos esa fricción de raíz integrando cinco capas de valor en un único y
+          Hoy, resolvemos esa fricción de raíz integrando siete capas de valor en un único y
           robusto producto tecnológico.
         </p>
       </motion.div>
@@ -125,7 +137,7 @@ export function AboutPage() {
       >
         <div className="flex items-center gap-2 mb-6">
           <Compass size={18} className="text-gold" />
-          <h2 className="text-xl font-serif text-white">Nuestras cinco capas de valor</h2>
+          <h2 className="text-xl font-serif text-white">Nuestras siete capas de valor</h2>
         </div>
         <div className="space-y-4">
           {features.map((f, i) => (
