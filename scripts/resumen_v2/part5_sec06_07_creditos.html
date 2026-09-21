@@ -1,0 +1,143 @@
+<!-- ============ 06 GESTIÓN: PANELES ============ -->
+<section class="cap">
+  <div class="cap-banner">
+    <div class="cap-num">06</div>
+    <div>
+      <div class="cap-kicker">QUIÉN CONTROLA QUÉ · PANELES CON ACCESO POR ROL</div>
+      <h2>Gestión: paneles dueño y administrador</h2>
+    </div>
+  </div>
+  <p class="lead">La operación diaria de la plataforma vive en dos paneles privados protegidos
+  por el control de roles: el <b>panel del dueño de negocio</b> y el <b>panel de
+  administrador</b>. Ninguno aparece en el HTML público y ninguno responde sin sesión válida
+  con el rol correspondiente.</p>
+  <h3>Panel del dueño de negocio</h3>
+  <p>El dueño gestiona su local de punta a punta desde siete secciones: <b>información
+  comercial</b> (nombre, descripción, horarios, redes y dirección), <b>reservas</b> con sus
+  códigos y estados, <b>promociones</b> con creación de cupones y canje, <b>carta digital</b>
+  con productos y precios, <b>eventos</b> de la semana, <b>guías editoriales</b> con carga de
+  flyers, y el estado de sus <b>reseñas</b>. Cada cambio se publica al instante en la ficha
+  pública sin intervención técnica, que es la promesa central del producto para el comercio
+  local.</p>
+  <figure class="shot">
+    <div class="shot-frame">
+      <div class="shot-bar"><i></i><i></i><i></i><span class="url">conectalt.com — panel del dueño</span></div>
+      <img src="capturas/18-panel-admin.jpg" alt="Panel del dueño de negocio">
+    </div>
+    <figcaption><b>Figura 13.</b> Panel del dueño: reservas, promos, carta y eventos en una sola vista.</figcaption>
+  </figure>
+  <h3>Panel de administrador</h3>
+  <p>El administrador supervisa la plataforma completa: métricas de uso y analítica, aprobación
+  de comercios nuevos, moderación de reseñas y contenido, gestión de usuarios y —incorporado
+  en septiembre— la <b>administración de eventos</b> que alimenta la agenda semanal. El panel
+  también centraliza el ciclo de vida del anuncio: desde dar de alta a un anunciante hasta
+  asignarle impresiones, lo que prepara el terreno para el módulo de métricas publicitarias.</p>
+  <figure class="shot">
+    <div class="shot-frame">
+      <div class="shot-bar"><i></i><i></i><i></i><span class="url">conectalt.com — administración de eventos</span></div>
+      <img src="capturas/19-admin-eventos.jpg" alt="Administración de eventos">
+    </div>
+    <figcaption><b>Figura 14.</b> Administración de eventos: la agenda semanal se gestiona aquí.</figcaption>
+  </figure>
+  <h3>Control de acceso por rol (RBAC en 42 rutas de API)</h3>
+  <table class="tabla">
+    <thead><tr><th style="width:22%;">Rol</th><th>Qué puede hacer</th></tr></thead>
+    <tbody>
+      <tr><td><b>Usuario</b></td><td>Explorar la guía, reservar con código, canjear cupones, publicar reseñas, guardar favoritos y gestionar su perfil.</td></tr>
+      <tr><td><b>Dueño de negocio</b></td><td>Gestionar su local de punta a punta desde el panel: información comercial, reservas, promociones y cupones, carta digital, eventos y guías editoriales.</td></tr>
+      <tr><td><b>Administrador</b></td><td>Supervisar la plataforma completa: métricas y analítica, aprobación de comercios, moderación de reseñas, usuarios, eventos y ciclo de vida de anuncios.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 07 PRÓXIMOS PASOS ============ -->
+<section class="cap">
+  <div class="cap-banner">
+    <div class="cap-num">07</div>
+    <div>
+      <div class="cap-kicker">AGENDA INMEDIATA · FUNCIONES EN CAMINO</div>
+      <h2>Próximos pasos</h2>
+    </div>
+  </div>
+  <p class="lead">Con la infraestructura saneada, la agenda se concentra en <b>decisiones del
+  dueño</b> y en la siguiente función comercial. Ninguna acción requiere intervención técnica
+  salvo la rotación de claves, que tiene su guía documentada en el propio proyecto.</p>
+  <h3>Agenda inmediata del dueño</h3>
+  <table class="tabla">
+    <thead><tr><th style="width:34%;">Acción</th><th style="width:30%;">Dónde</th><th>Detalle</th></tr></thead>
+    <tbody>
+      <tr><td><b>Confirmar la caída de uso</b></td><td>Vercel → Usage</td><td>La métrica tarda en refrescar tras la purga del 17-sep.</td></tr>
+      <tr><td><b>Revocar el PAT de GitHub</b></td><td>github.com/settings/tokens</td><td>Usado dos veces; revocación inmediata.</td></tr>
+      <tr><td><b>Rotar NEXTAUTH_SECRET</b></td><td>Vercel → Variables + Redeploy</td><td>Cierra sesiones activas (efecto esperado).</td></tr>
+      <tr><td><b>Confirmar el sitemap</b></td><td>Bing → Mapas del sitio</td><td>Repetir «Solicitar indexación» en unos días.</td></tr>
+      <tr><td><b>Entregar datos comerciales</b></td><td>IG Africa Burguers · IG Licobar JJ (@puntoencuentrolt) · dirección real de Medusa</td><td>Completar fichas pendientes del directorio.</td></tr>
+    </tbody>
+  </table>
+  <h3>Funciones en camino</h3>
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><b>Métricas de anuncios y paquetes</b></div>
+      <p>Vistas, clics y CTR por anunciante junto con los paquetes de venta. Se activa cuando haya dos o tres anunciantes reales; el carrusel multitarjeta ya es su base técnica.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><b>Fase 2 de seguridad</b></div>
+      <p>Límite de tasa en reseñas y reservas, validación estricta de datos, actualización de dependencias y política CSP completa en modo reporte. Arranca cuando el dueño lo apruebe.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>Optimización de driver Neon</b></div>
+      <p>Un adaptador de driver para Neon eliminaría unos 40 MB por función y consolidaría aún más el peso de la plataforma. Opcional, de futuro.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><b>Crecimiento de anunciantes</b></div>
+      <p>Con el incidente resuelto y la capa publicitaria estable, el foco comercial es incorporar los primeros anunciantes reales del directorio.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CRÉDITOS ============ -->
+<section class="cap">
+  <div class="cap-banner">
+    <div class="cap-num">§</div>
+    <div>
+      <div class="cap-kicker">QUIÉN HACE POSIBLE CONECTA-LT</div>
+      <h2>Créditos y soporte</h2>
+    </div>
+  </div>
+  <div class="credit-hero">
+    <img src="data:image/png;base64,{{CEROTRABA}}" alt="Cerotraba">
+    <div class="name">Sebastián Quintana</div>
+    <div class="role">CEO · AGENCIA DE AUTOMATIZACIONES CEROTRABA</div>
+    <p>Conecta LT fue <b style="color:#F0E6C8;">realizado por Sebastián Quintana</b>, CEO de la
+    agencia de automatizaciones <b style="color:#F0E6C8;">Cerotraba</b>: arquitectura, desarrollo,
+    seguridad, infraestructura y estrategia digital de la guía nocturna de Los Teques. Cerotraba
+    acompaña al proyecto en su evolución continua, desde el saneamiento de infraestructura de
+    septiembre hasta la preparación SEO/GEO que posiciona a la plataforma ante buscadores y
+    asistentes de inteligencia artificial.</p>
+  </div>
+  <h3>Soporte del proyecto</h3>
+  <table class="tabla">
+    <thead><tr><th style="width:30%;">Canal</th><th>Para qué</th></tr></thead>
+    <tbody>
+      <tr><td><b>conectalt.com</b></td><td>Plataforma en producción: guía, mapa, planner, reservas y promociones.</td></tr>
+      <tr><td><b>Documentación del proyecto</b></td><td>Manual de Usuario v2.0, guías de despliegue y de rotación de claves (NEXTAUTH_SECRET, Neon, R2).</td></tr>
+      <tr><td><b>Panel Vercel / Neon</b></td><td>Uso de recursos, variables de entorno y retención automática de despliegues (7 días).</td></tr>
+    </tbody>
+  </table>
+  <p class="small-note">Documento de gestión elaborado el 18 de septiembre de 2026 con datos
+  verificados contra producción: API pública, base de datos y configuración desplegada en
+  conectalt.com. Las capturas de pantalla son reales y corresponden a la versión vigente de la
+  plataforma.</p>
+</section>
+
+<!-- ============ CONTRAPORTADA ============ -->
+<div class="back">
+  <div class="brand"><span class="g">CONECTA</span><span class="c">-LT</span></div>
+  <p>Resumen Ejecutivo v2.0 · Septiembre 2026. Producción operativa, incidente de almacenamiento
+  resuelto de principio a fin y hoja de ruta clara: seguridad, anunciantes y visibilidad ante
+  la inteligencia artificial.</p>
+  <div class="meta">REALIZADO POR SEBASTIÁN QUINTANA · CEO DE LA AGENCIA DE AUTOMATIZACIONES CEROTRABA</div>
+  <div class="meta" style="margin-top:14px;">CONECTALT.COM · LOS TEQUES, VENEZUELA</div>
+  <div class="back-bar"></div>
+</div>
+</body>
+</html>

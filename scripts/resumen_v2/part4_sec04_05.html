@@ -1,0 +1,89 @@
+<!-- ============ 04 SEGURIDAD Y LEGAL ============ -->
+<section class="cap">
+  <div class="cap-banner">
+    <div class="cap-num">04</div>
+    <div>
+      <div class="cap-kicker">SEGURIDAD TÉCNICA · MARCO LEGAL · PENDIENTES DEL DUEÑO</div>
+      <h2>Seguridad y legal</h2>
+    </div>
+  </div>
+  <p class="lead">El frente de seguridad mantiene el estándar elevado del período anterior: la
+  aplicación corre <b>Next.js 16.3.5</b> —versión que cierra unas <b>35 vulnerabilidades
+  conocidas</b>—, todas las respuestas del sitio incluyen <b>seis cabeceras de protección</b>
+  (entre ellas CSP, HSTS y anti-incrustación) y el control de roles cubre <b>42 rutas de
+  API</b>, con las rutas de diagnóstico cerradas al público.</p>
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg><b>Repositorio 100% limpio</b></div>
+      <p>Tras el incidente de exposición del 18 de agosto, el historial quedó reescrito y verificado: 94 commits limpios y la gran mayoría de los tokens comprometidos ya revocados por el dueño.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg><b>Tres roles, 42 rutas protegidas</b></div>
+      <p>Usuario, dueño y administrador acceden por RBAC con verificación de rol en servidor. Los paneles y las rutas de diagnóstico no aparecen en el HTML público ni responden sin sesión válida.</p>
+    </div>
+  </div>
+  <h3>Pendientes de seguridad que dependen del dueño</h3>
+  <table class="tabla">
+    <thead><tr><th style="width:38%;">Acción pendiente</th><th>Detalle</th><th style="width:14%;">Prioridad</th></tr></thead>
+    <tbody>
+      <tr><td><b>Rotar NEXTAUTH_SECRET</b> en Vercel + Redeploy</td><td>Pendiente desde el 18 de agosto; al rotar se cierran las sesiones activas y hay que volver a iniciar sesión (efecto esperado, no un error).</td><td>Alta</td></tr>
+      <tr><td><b>Revocar el PAT de GitHub</b> usado el 17-sep</td><td>Se utilizó en dos sesiones para sincronizar documentación; revocación inmediata en github.com/settings/tokens.</td><td>Alta</td></tr>
+      <tr><td><b>Rotar contraseña de Neon y llaves de R2</b></td><td>Recomendado por exposición histórica en el repositorio antiguo, ya limpiado.</td><td>Media</td></tr>
+    </tbody>
+  </table>
+  <h3>Marco legal actualizado</h3>
+  <p>Las páginas de <b>Privacidad, Términos y Quiénes Somos</b> se actualizaron el 17 de
+  septiembre con la política vigente: uso de la cookie de verificación de edad de 30 días,
+  almacenamiento de imágenes en R2, funcionamiento de la carta digital, guías editoriales y
+  la capa publicitaria, que pasó de cinco a <b>siete capas descritas</b>. Con ello, la
+  plataforma documenta de forma accesible qué datos trata, para qué y con qué base legal,
+  requisito indispensable para el plan comercial que viene.</p>
+</section>
+
+<!-- ============ 05 VISIBILIDAD DIGITAL (SEO/GEO) ============ -->
+<section class="cap">
+  <div class="cap-banner">
+    <div class="cap-num">05</div>
+    <div>
+      <div class="cap-kicker">SEO TRADICIONAL + GEO: BUSCADORES Y ASISTENTES DE IA</div>
+      <h2>Visibilidad digital</h2>
+    </div>
+  </div>
+  <p class="lead">El sitio quedó preparado tanto para buscadores tradicionales como para la
+  nueva capa de respuestas con IA: la guía no solo se indexa, sino que <b>explica a los
+  asistentes de IA cómo citarla</b> cuando respondan preguntas sobre vida nocturna en Los
+  Teques.</p>
+  <div class="feat-grid feat-grid-3">
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><b>Sitemap dinámico · 37 URLs</b></div>
+      <p>Generado solo: locales, categorías y guías entran al índice sin pasos manuales.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>/llms.txt dinámico</b></div>
+      <p>Se actualiza solo cada hora con los 33 locales y las guías, e incluye instrucciones de citación para los asistentes de IA.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>17 robots de IA autorizados</b></div>
+      <p>robots.ts concede permisos explícitos a los rastreadores de OpenAI, Anthropic, Google-Extended y otros.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><b>JSON-LD completo</b></div>
+      <p>WebSite y Organization, LocalBusiness por cada ficha y Article para las guías editoriales.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><b>Bing Webmaster</b></div>
+      <p>Registro hecho por importación de Google Search Console; el sitemap quedó enviado y falta confirmar indexación en el panel.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg><b>Posicionamiento local</b></div>
+      <p>Datos estructurados de negocio local por ficha: dirección, horarios y categoría legibles por buscadores y mapas.</p>
+    </div>
+  </div>
+  <div class="callout c-cyan">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 15a5 5 0 1 1 5-5"/></svg>
+    <div><div class="t">POR QUÉ IMPORTA EL GEO</div>
+    Cuando alguien le pregunte a un asistente de IA «¿dónde rumbear en Los Teques?», la
+    respuesta podrá apoyarse en el contenido estructurado de conectalt.com y citar la guía.
+    Ser fuente verificada de los asistentes es la siguiente frontera del descubrimiento local.</div>
+  </div>
+</section>

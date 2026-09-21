@@ -1,0 +1,135 @@
+<!-- ============ 02 (continuación) ============ -->
+<section class="cap">
+  <h3>Mapa interactivo y directorio con filtros</h3>
+  <p>El mapa de Los Teques muestra los 33 locales como marcadores diferenciados por categoría,
+  se centra en la posición del usuario con un toque y ajusta el zoom sin perder nitidez; las
+  correcciones de septiembre dejaron el mapa fluido tanto en escritorio como en móvil, con el
+  botón de cierre siempre visible en pantallas pequeñas. El directorio complementa al mapa con
+  búsqueda por texto, filtros por categoría y ordenamiento por popularidad, y cada tarjeta
+  resume rating, zona y estado de apertura antes de entrar a la ficha completa.</p>
+  <figure class="shot">
+    <div class="shot-frame">
+      <div class="shot-bar"><i></i><i></i><i></i><span class="url">conectalt.com/mapa</span></div>
+      <img src="capturas/05-mapa.jpg" alt="Mapa interactivo de locales">
+    </div>
+    <figcaption><b>Figura 8.</b> Mapa con marcadores por categoría y geolocalización del visitante.</figcaption>
+  </figure>
+
+  <h3>Guías editoriales, la agenda de la semana <span class="nuevo">NUEVO</span></h3>
+  <p>Las guías editoriales reúnen los flyers reales que los locales publican para el fin de
+  semana y los ordenan en una agenda visual por día: qué discotecas abren, qué tasca trae
+  música en vivo, qué licobar lanza una promoción nocturna. Cada flyer enlaza a la ficha del
+  local, así que la guía funciona como escaparate semanal y como canal de descubrimiento para
+  el público. Para los dueños es un canal gratuito: suben su arte desde el panel y la
+  plataforma lo distribuye en el inicio y en la guía correspondiente.</p>
+  <figure class="shot">
+    <div class="shot-frame">
+      <div class="shot-bar"><i></i><i></i><i></i><span class="url">conectalt.com — guía editorial del fin de semana</span></div>
+      <img src="capturas/14-editorial.jpg" alt="Guía editorial con flyers del fin de semana">
+    </div>
+    <figcaption><b>Figura 9.</b> Agenda editorial con flyers reales de los locales.</figcaption>
+  </figure>
+
+  <h3>Carrusel multitarjeta de anuncios <span class="nuevo">NUEVO</span></h3>
+  <p>El inicio incorporó un <b>carrusel multitarjeta</b> que muestra varios anuncios a la vez,
+  adaptando el ancho de cada tarjeta al formato del arte (cuadrado, horizontal o vertical) sin
+  recortar la creatividad del anunciante. El carrusel pausa al pasar el cursor, se desliza con
+  las flechas en escritorio y con el dedo en móvil, y el botón de cierre <b>✕ es siempre
+  visible en pantallas pequeñas</b> para cumplir una experiencia publicitaria limpia y
+  respetuosa. Es la base comercial sobre la que se montarán las métricas de anuncios del
+  próximo trimestre.</p>
+  <figure class="shot">
+    <div class="shot-frame">
+      <div class="shot-bar"><i></i><i></i><i></i><span class="url">conectalt.com — carrusel de anuncios</span></div>
+      <img src="capturas/17-anuncios-carrusel.jpg" alt="Carrusel multitarjeta de anuncios">
+    </div>
+    <figcaption><b>Figura 10.</b> Carrusel multitarjeta: varios anuncios visibles con formatos mixtos.</figcaption>
+  </figure>
+
+  <h3>Cuenta con Google y perfil de usuario</h3>
+  <p>El inicio de sesión funciona con <b>Google en un clic</b>, tanto en conectalt.com como en
+  la URL de Vercel, y el acceso de demostración sigue disponible para recorrer la plataforma
+  sin crear cuenta. La verificación de edad quedó en una cookie de <b>30 días</b>: quien ya
+  pasó la puerta cinematográfica no la ve de nuevo durante un mes. El perfil concentra la vida
+  del usuario dentro de la plataforma: reservas con sus códigos, favoritos, cupones guardados,
+  notificaciones y cierre de sesión.</p>
+  <div class="shot-row">
+    <figure>
+      <div class="shot-frame">
+        <div class="shot-bar"><i></i><i></i><i></i><span class="url">modal de inicio de sesión</span></div>
+        <img src="capturas/08-login-modal.jpg" alt="Modal de inicio de sesión con Google">
+      </div>
+      <figcaption><b>Figura 11.</b> Acceso con Google en un clic.</figcaption>
+    </figure>
+    <figure>
+      <div class="shot-frame">
+        <div class="shot-bar"><i></i><i></i><i></i><span class="url">perfil del usuario</span></div>
+        <img src="capturas/20-perfil-usuario.jpg" alt="Perfil de usuario con reservas y favoritos">
+      </div>
+      <figcaption><b>Figura 12.</b> Perfil: reservas, favoritos y cupones.</figcaption>
+    </figure>
+  </div>
+  <div class="chips">
+    <span>Night Planner v2 · 6 pasos</span><span>Carta digital</span><span>Aforo en tiempo real</span>
+    <span>Cupones de canje</span><span>Guías editoriales</span><span>Carrusel multitarjeta</span>
+    <span>Mapa corregido</span><span>Cookie de verificación 30 días</span><span>Reservas con código</span>
+  </div>
+</section>
+
+<!-- ============ 03 INFRAESTRUCTURA: INCIDENTE VERCEL ============ -->
+<section class="cap">
+  <div class="cap-banner">
+    <div class="cap-num">03</div>
+    <div>
+      <div class="cap-kicker">INFRAESTRUCTURA · RESUELTO DE PRINCIPIO A FIN</div>
+      <h2>Incidente en Vercel: almacenamiento saneado</h2>
+    </div>
+  </div>
+  <p class="lead">El 17 de septiembre, Vercel avisó de que el equipo había consumido el <b>75%
+  del almacenamiento de funciones gratuito</b> (10 GB). La investigación con evidencia local
+  identificó tres causas acumuladas y la limpieza se ejecutó en cadena el mismo día, sin
+  interrumpir el servicio ni un minuto.</p>
+  <div class="feat-grid feat-grid-3">
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg><b>Copias sin límite</b></div>
+      <p>Cada publicación guarda una copia empaquetada completa: quedaron retenidas 107 copias desde el 15 de agosto sin política de limpieza.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><b>Librería pesada repetida</b></div>
+      <p>Una librería de base de datos de 67 MB viajaba dentro de cada una de las 75 funciones por estar clasificada como dependencia de producción.</p>
+    </div>
+    <div class="feat">
+      <div class="fh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><b>Empaquetado duplicado</b></div>
+      <p>El modo «standalone», pensado solo para pruebas locales, duplicaba el paquete en cada construcción.</p>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="n">102</div><div class="l">Copias eliminadas</div></div>
+    <div class="kpi"><div class="n">0</div><div class="l">Fallos y sin caídas</div></div>
+    <div class="kpi"><div class="n">-95%</div><div class="l">Copias retenidas</div></div>
+    <div class="kpi"><div class="n">7 días</div><div class="l">Retención automática</div></div>
+  </div>
+  <div class="bars">
+    <div class="brow">
+      <div class="bl"><span>Antes de la purga (15 ago – 17 sep)</span><b>107 copias retenidas</b></div>
+      <div class="btrack"><div class="bfill bg-red" style="width:100%;"></div></div>
+    </div>
+    <div class="brow">
+      <div class="bl"><span>Después de la purga del 17 de septiembre</span><b>5 copias (las más recientes)</b></div>
+      <div class="btrack"><div class="bfill bg-green" style="width:4.7%;"></div></div>
+    </div>
+  </div>
+  <p>La secuencia aplicada fue limpia y verificable. Primero se purgaron de forma automatizada
+  <b>102 copias antiguas</b> conservando las cinco más recientes, con las rutas públicas
+  verificadas tras cada lote. En paralelo se corrigió la clasificación de la librería pesada y
+  se desactivó el empaquetado duplicado; el despliegue nuevo quedó en producción esa misma
+  tarde con funciones notablemente más livianas. Finalmente, el dueño configuró en el panel de
+  Vercel una <b>retención automática de una semana</b>: desde ese momento las copias viejas se
+  eliminan solas y la advertencia de almacenamiento no debería volver.</p>
+  <div class="callout c-gold">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div><div class="t">VERIFICACIÓN PENDIENTE</div>
+    Confirmar la caída del consumo en Vercel → <b>Usage</b>: la métrica tarda unas horas en
+    refrescar tras la purga. Es la única tarea viva del incidente y depende del dueño.</div>
+  </div>
+</section>

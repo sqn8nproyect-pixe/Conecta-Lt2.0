@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>CONECTA-LT · Resumen Ejecutivo v2 — Septiembre 2026</title>
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#0A0F1C; --bg2:#0B1322; --panel:#101a2c; --panel2:#0d1526;
+  --line:rgba(255,255,255,.09); --line-gold:rgba(228,185,91,.28);
+  --gold:#E4B95B; --gold-l:#F3D382; --gold-d:#B98A2F;
+  --cyan:#4FC3F7; --cyan-d:#1E7FA8;
+  --txt:#E8ECF4; --mut:#9AA7BD; --faint:#66738C;
+  --serif:'Playfair Display', Georgia, serif;
+  --sans:'Inter', 'Segoe UI', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+@page{size:794px 1123px;margin:0;}
+html,body{margin:0;padding:0;background:var(--bg);}
+body{font-family:'Inter', 'Segoe UI', sans-serif;color:var(--txt);font-size:13.5px;line-height:1.66;
+     -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+img{display:block;max-width:100%;}
+@media screen{
+  html{background:#05080f;}
+  body{width:794px;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.6);
+       transform-origin:top center;zoom:.85;}
+}
+
+/* ============ PORTADA ============ */
+.cover{height:1123px;position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;overflow:hidden;
+  background:
+    radial-gradient(620px 420px at 50% 30%, rgba(228,185,91,.10), transparent 62%),
+    radial-gradient(560px 380px at 78% 78%, rgba(79,195,247,.07), transparent 60%),
+    linear-gradient(168deg,#0C1526 0%, #0A0F1C 52%, #080D18 100%);}
+.cover::before{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(228,185,91,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(228,185,91,.045) 1px,transparent 1px);
+  background-size:56px 56px;opacity:.5;}
+.cover-top{position:absolute;top:46px;left:0;right:0;display:flex;justify-content:center;}
+.cover-top span{font-size:10.5px;letter-spacing:4.5px;color:var(--mut);font-weight:600;}
+.cover-brand{font-family:'Playfair Display', Georgia, serif;font-weight:900;font-size:62px;line-height:1.05;
+  letter-spacing:1px;margin-top:-26px;position:relative;}
+.cover-brand .g{color:var(--gold);} .cover-brand .c{color:var(--cyan);}
+.cover-sub{font-size:11px;letter-spacing:7px;color:var(--mut);margin-top:10px;font-weight:500;}
+.cover-rule{width:64px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:54px 0 44px;}
+.cover h1{font-family:'Playfair Display', Georgia, serif;font-weight:700;font-size:42px;color:#fff;letter-spacing:.5px;}
+.cover-desc{max-width:470px;color:var(--mut);font-size:13.5px;margin-top:16px;line-height:1.7;}
+.cover-meta{display:flex;gap:10px;margin-top:24px;}
+.cover-meta span{font-size:10px;letter-spacing:2.4px;font-weight:700;color:var(--gold);
+  border:1px solid var(--line-gold);border-radius:999px;padding:7px 16px;background:rgba(228,185,91,.06);}
+.cover-credit{position:absolute;bottom:64px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:16px;background:rgba(16,26,44,.85);
+  border:1px solid var(--line-gold);border-radius:14px;padding:14px 24px;}
+.cover-credit img{height:34px;width:auto;}
+.cover-credit .txt{text-align:left;}
+.cover-credit .who{font-size:12.5px;font-weight:700;color:#fff;letter-spacing:.3px;}
+.cover-credit .role{font-size:10px;color:var(--mut);letter-spacing:.4px;margin-top:2px;}
+.cover-credit .role b{color:var(--cyan);font-weight:600;}
+.cover-bar{position:absolute;bottom:0;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,var(--gold),var(--cyan) 55%,#1B2C4A);}
+
+/* ============ ESTRUCTURA DE SECCIONES ============ */
+.cap{padding:38px 50px 38px;break-before:page;}
+.cap-banner{display:flex;align-items:center;gap:18px;margin-bottom:15px;
+  padding-bottom:12px;border-bottom:1px solid var(--line);}
+.cap-num{font-family:'Playfair Display', Georgia, serif;font-weight:900;font-size:52px;line-height:1;
+  color:transparent;-webkit-text-stroke:1.4px rgba(228,185,91,.55);}
+.cap-kicker{font-size:9px;letter-spacing:3px;color:var(--faint);font-weight:700;margin-bottom:5px;}
+.cap-banner h2{font-family:'Playfair Display', Georgia, serif;font-weight:700;font-size:27px;color:#fff;letter-spacing:.3px;line-height:1.15;}
+.lead{font-size:14.5px;color:#DDE4F0;line-height:1.7;margin-bottom:10px;}
+.cap p{margin-bottom:10px;text-align:justify;color:#CBD4E4;}
+.cap p b, .lead b{color:#F0E6C8;font-weight:600;}
+h3{font-size:15.5px;color:var(--cyan);font-weight:700;margin:15px 0 8px;
+  padding-left:11px;border-left:3px solid var(--gold);break-after:avoid;letter-spacing:.2px;}
+h3 .nuevo{display:inline-block;vertical-align:2px;margin-left:8px;font-size:8.5px;font-weight:800;
+  letter-spacing:1.2px;color:#0A0F1C;background:linear-gradient(90deg,var(--gold-l),var(--gold));
+  border-radius:999px;padding:3px 9px;}
+.small-note{font-size:11px;color:var(--faint);}
+
+/* ============ KPI ============ */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0 10px;break-inside:avoid;}
+.kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-top:2px solid var(--gold);border-radius:10px;padding:13px 12px 11px;text-align:center;}
+.kpi .n{font-family:'Playfair Display', Georgia, serif;font-weight:900;font-size:29px;color:var(--gold);line-height:1;}
+.kpi .l{font-size:9px;letter-spacing:1.5px;color:var(--mut);font-weight:700;margin-top:6px;text-transform:uppercase;}
+
+/* ============ CAPTURAS ============ */
+figure.shot{margin:12px 0 12px;break-inside:avoid;}
+.shot-frame{border:1px solid var(--line-gold);border-radius:11px;overflow:hidden;
+  background:#0D1526;box-shadow:0 10px 30px rgba(0,0,0,.45);}
+.shot-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;
+  background:#111C31;border-bottom:1px solid var(--line);}
+.shot-bar i{width:8px;height:8px;border-radius:50%;background:#2A3A57;display:inline-block;}
+.shot-bar i:nth-child(1){background:#E06A5A;} .shot-bar i:nth-child(2){background:#E4B95B;} .shot-bar i:nth-child(3){background:#5BB98B;}
+.shot-bar .url{flex:1;text-align:center;font-size:9px;color:var(--faint);letter-spacing:1px;
+  background:#0B1322;border-radius:6px;padding:3px 10px;font-weight:600;}
+.shot-frame img{width:100%;}
+figcaption{font-size:10.3px;color:var(--faint);margin-top:7px;text-align:center;letter-spacing:.2px;}
+figcaption b{color:var(--mut);font-weight:600;}
+.shot-row{display:flex;gap:14px;margin:12px 0 12px;break-inside:avoid;}
+.shot-row figure{flex:1;margin:0;}
+.shot-row figcaption{text-align:center;}
+.phones{display:flex;gap:20px;justify-content:center;align-items:flex-start;margin:10px 0 8px;break-inside:avoid;}
+.phone{width:222px;border:1px solid var(--line-gold);border-radius:20px;overflow:hidden;
+  box-shadow:0 10px 26px rgba(0,0,0,.5);background:#0D1526;}
+.phone img{width:100%;}
+.phone-cap{width:222px;font-size:10.3px;color:var(--faint);text-align:center;margin-top:7px;line-height:1.45;}
+
+/* ============ CALLOUTS ============ */
+.callout{border-radius:10px;padding:12px 15px;margin:11px 0;font-size:12.3px;line-height:1.6;
+  border:1px solid;display:flex;gap:11px;break-inside:avoid;}
+.callout svg{flex:none;margin-top:2px;}
+.callout .t{font-size:9.5px;font-weight:800;letter-spacing:2px;margin-bottom:4px;}
+.c-gold{background:rgba(228,185,91,.07);border-color:rgba(228,185,91,.32);color:#E9DFC4;}
+.c-gold .t{color:var(--gold);}
+.c-cyan{background:rgba(79,195,247,.06);border-color:rgba(79,195,247,.30);color:#CBE7F6;}
+.c-cyan .t{color:var(--cyan);}
+.c-teal{background:rgba(91,185,139,.06);border-color:rgba(91,185,139,.30);color:#CDE9DB;}
+.c-teal .t{color:#5BB98B;}
+
+/* ============ FEATURES / TARJETAS ============ */
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:11px 0;}
+.feat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;break-inside:avoid;}
+.feat .fh{display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+.feat .fh svg{color:var(--gold);flex:none;}
+.feat .fh b{font-size:12.8px;color:#fff;letter-spacing:.2px;}
+.feat p{font-size:11.6px;color:var(--mut);margin:0;text-align:left;line-height:1.55;}
+.feat-grid-3{grid-template-columns:repeat(3,1fr);}
+.feat-grid-3 .feat p{font-size:11px;}
+
+/* ============ TABLA ============ */
+table.tabla{width:100%;border-collapse:collapse;margin:11px 0;font-size:11.6px;break-inside:avoid;}
+.tabla th{background:rgba(228,185,91,.10);color:var(--gold);text-align:left;font-weight:700;
+  font-size:10px;letter-spacing:1.4px;padding:8px 11px;border-bottom:1.5px solid var(--line-gold);}
+.tabla td{padding:8px 11px;border-bottom:1px solid var(--line);color:#CBD4E4;vertical-align:top;}
+.tabla td b{color:#fff;font-weight:600;}
+.tabla tr{break-inside:avoid;}
+
+/* ============ PASOS ============ */
+.pasos{margin:12px 0;}
+.paso{display:flex;gap:13px;margin-bottom:8px;break-inside:avoid;}
+.paso .pn{flex:none;width:25px;height:25px;border-radius:50%;background:rgba(228,185,91,.12);
+  border:1px solid var(--line-gold);color:var(--gold);font-weight:800;font-size:12px;
+  display:flex;align-items:center;justify-content:center;margin-top:1px;}
+.paso .pt{font-size:12.6px;color:#CBD4E4;line-height:1.6;}
+.paso .pt b{color:#fff;}
+
+/* ============ CHIPS / BARRAS ============ */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+.chips span{font-size:10.5px;font-weight:600;color:var(--gold-l);border:1px solid var(--line-gold);
+  background:rgba(228,185,91,.06);border-radius:999px;padding:6px 14px;}
+.bars{margin:14px 0 6px;}
+.brow{margin-bottom:12px;break-inside:avoid;}
+.brow .bl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mut);margin-bottom:5px;}
+.brow .bl b{color:#fff;font-size:11.5px;}
+.btrack{height:14px;border-radius:7px;background:#111C31;border:1px solid var(--line);overflow:hidden;}
+.bfill{height:100%;border-radius:7px;}
+.bg-gold{background:linear-gradient(90deg,var(--gold-d),var(--gold));}
+.bg-cyan{background:linear-gradient(90deg,var(--cyan-d),var(--cyan));}
+.bg-green{background:linear-gradient(90deg,#2E7D5B,#5BB98B);}
+.bg-red{background:linear-gradient(90deg,#8C3A31,#E06A5A);}
+
+/* ============ ÍNDICE ============ */
+.toc{padding:52px 54px;}
+.toc h2{font-family:'Playfair Display', Georgia, serif;font-weight:700;font-size:30px;color:#fff;margin-bottom:6px;}
+.toc .sub{color:var(--faint);font-size:12.5px;margin-bottom:24px;}
+.toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px;}
+.toc-it{display:flex;gap:11px;padding:8px 4px;border-bottom:1px dashed var(--line);break-inside:avoid;}
+.toc-it .tn{font-family:'Playfair Display', Georgia, serif;font-weight:900;font-size:17px;color:var(--gold);flex:none;width:26px;}
+.toc-it .tt b{display:block;font-size:11.8px;color:#fff;letter-spacing:.2px;}
+.toc-it .tt span{font-size:10px;color:var(--faint);line-height:1.4;display:block;margin-top:2px;}
+
+/* ============ CRÉDITOS / CIERRE ============ */
+.credit-hero{background:linear-gradient(160deg,#101A2E,#0C1526);border:1px solid var(--line-gold);
+  border-radius:16px;padding:30px 34px;text-align:center;margin:18px 0;break-inside:avoid;}
+.credit-hero img{height:52px;margin:0 auto 16px;}
+.credit-hero .name{font-family:'Playfair Display', Georgia, serif;font-weight:900;font-size:30px;color:#fff;}
+.credit-hero .role{font-size:12.5px;color:var(--gold);letter-spacing:1.6px;font-weight:600;margin-top:7px;}
+.credit-hero p{font-size:12.4px;color:var(--mut);max-width:520px;margin:12px auto 0;text-align:center;line-height:1.7;}
+.back{height:1123px;break-before:page;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;position:relative;
+  background:
+    radial-gradient(600px 400px at 50% 40%, rgba(228,185,91,.08), transparent 60%),
+    linear-gradient(168deg,#0C1526 0%, #0A0F1C 55%, #080D18 100%);}
+.back .brand{font-family:'Playfair Display', Georgia, serif;font-weight:900;font-size:44px;}
+.back .brand .g{color:var(--gold);} .back .brand .c{color:var(--cyan);}
+.back p{color:var(--mut);font-size:12.5px;max-width:430px;margin-top:18px;line-height:1.75;}
+.back .meta{margin-top:26px;font-size:10px;letter-spacing:2.6px;color:var(--faint);font-weight:700;}
+.back-bar{position:absolute;bottom:0;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,var(--gold),var(--cyan) 55%,#1B2C4A);}
+</style>
+</head>
+<body>

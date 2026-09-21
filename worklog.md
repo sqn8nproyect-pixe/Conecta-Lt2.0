@@ -245,3 +245,77 @@ Work Log:
 
 Stage Summary:
 - Funciones más livianas EN PRODUCCIÓN; storage purgado. El uso real se confirma en el panel de Vercel (Usage) cuando refresque la métrica.
+
+---
+Task ID: resumen-ejecutivo-pdf-2026-09-18
+Agent: Super Z (principal)
+Task: El dueño pidió un resumen ejecutivo en PDF descargable.
+
+Work Log:
+- Preguntas de alcance al dueño: cobertura = estado completo, audiencia = solo dueño, extensión 2-3 páginas, estilo corporativo claro (azul marino + teal), imprescindible = métricas Vercel, con gráficos, tono ejecutivo.
+- Pipeline skill pdf ruta Report: paleta cascade (intent cold, seed 11, azul marino #405f6f + acento #227fad); portada Template 01 HUD (HTML → html2poster.js 794px, validada con poster_validate + cover_validate sin colisiones); gráfico de barras matplotlib (deployments 107 → 5, reglas charts.md); cuerpo ReportLab (FreeSerif, 4 secciones numeradas, 2 callouts de métricas, 2 tablas, figura 1); fusión pypdf normalizada a A4 exacto.
+- QA final: pdf_qa.py PASS 12/12, font.check 0 issues, sin páginas en blanco, fill ratio OK.
+- Entregados: download/Resumen_Ejecutivo_ConectaLT_2026-09-18.pdf (4 páginas, 171 KB) + download/resumen_ejecutivo_portada.html (fuente editable). Scripts reutilizables en scripts/ (gen_chart_vercel.py, gen_resumen_body.py, merge_resumen.py, resumen_cover.html).
+
+Stage Summary:
+- Resumen ejecutivo entregado y descargable; contenido basado en PROJECT_STATUS/SESSION_HANDOFF/worklog (fuente de verdad), con cierre del incidente Vercel como sección destacada y agenda del dueño en tabla.
+
+---
+Task ID: manual-implementacion-pdf-2026-09-18
+Agent: Super Z (principal)
+Task: El dueño pidió un manual de implementación en PDF descargable para usuarios, dueños y administradores, con capturas de pantalla reales, que cubra qué es ConectaLT, tecnologías, escalabilidad, alcance, funciones y beneficios.
+
+Work Log:
+- Pipeline skill pdf ruta Creative Flow (manual/handbook): paleta cascade intent cold seed 11 (idéntica al resumen ejecutivo: azul marino #405f6f + acento #227fad), portada Template 01 HUD inline (línea ancla 8px + grid 5%), tipografías Inter + Playfair Display, página A4 794×1123px, margen 0.
+- 21 CAPTURAS REALES: 18 en vivo desde conectalt.com con agent-browser (AgeGate, home desktop, directorio 33 locales, ficha SEO + interactiva de Bodegón Bicentenario y Licobar JJ, mapa Explorador de Rumba, Night Planner paso 1 + resultados con score 79%, modal login, aforo tiempo real, promoción PUNTO24, carta digital, guía editorial 12 flyers, home/ficha móvil 390×844, carrusel de anuncios + Populares) + 3 del repo (panel admin y Eventos de e2e-shots, perfil real de Ana Rodríguez stage2). Login demo de producción NO disponible (Google-only); panel del dueño documentado con tabla funcional + capturas de contexto.
+- Datos reales verificados vía API/producción: 33 locales (13 licorerías, 7 tascas, 7 discotecas, 6 licobares), 116 reseñas, 7 ofertas activas, 12 eventos semanales, sitemap 37 URLs, 42 rutas RBAC, Next 16.3.5, incidente storage Vercel (102 purgados) en sección escalabilidad.
+- Estructura: portada + índice + 10 secciones (qué es, alcance, tecnologías/arquitectura+seguridad+GEO, escalabilidad, funciones/beneficios por rol, guía usuarios 6.1-6.8, guía dueños 7.1-7.4 con pasos de reclamo, guía administradores 8.1-8.3, plan de implementación fases 0-4 + matriz de responsables, soporte/recursos/FAQ + glosario) + contraportada navy.
+- BUGS RESUELTOS: (1) Google Fonts no cargaba en Chromium del skill → fuentes variables woff2 NO se incrustan en page.pdf (fallback Liberation Sans) → solución: TTF estáticas latin descargadas y embebidas como data-URI base64 (7 fuentes embebidas verificadas con PyMuPDF); (2) Paged.js timeout con data-URIs → --nopaged (paginación nativa Chromium, el doc no usa features de Paged.js); (3) página huérfana con solo el aviso → aviso movido a contraportada + glosario de 10 términos llenó la última página (~45%); (4) cover_validate sobre todo el documento (falsos positivos en divisores) → portada renombrada .portada (alcance cover_validate = solo portadas Report/Academic) y gap real línea↔texto corregido 32→42px.
+- QA: poster_validate PASS 0/0; pdf_qa.py 10 pasados, 2 warnings por diseño (asimetría portada Template 01 anclada a izquierda, línea corta p19); numeración pagination.md (portada sin nº, TOC "i", cuerpo 1-19, contraportada sin nº) estampada con PyMuPDF; metadatos Title/Author/Subject; 0 caracteres corruptos.
+- Entregables en download/manual-implementacion/: Manual_Implementacion_ConectaLT_2026-09-18.pdf (22 páginas, 7.8 MB, vectorial, texto seleccionable), manual-implementacion-conectalt.html (fuente editable), capturas/ (21 PNG reales), fonts/ (TTF para re-edición). Scripts reutilizables: scripts/build_fonts_ttf.py, scripts/manual_pagenum_meta.py.
+
+Stage Summary:
+- Manual de implementación entregado y descargable, con capturas reales de producción (escritorio + móvil, público + paneles) y datos verificados contra la API de conectalt.com al 18-sep.
+- Sin cambios en el repo del proyecto (ni commit ni push); el manual se genera desde esta sesión con scripts persistidos.
+- Pendiente del dueño (sin cambios): rotar NEXTAUTH_SECRET, revocar PATs usados, datos de anunciantes.
+
+---
+Task ID: manual-usuario-v2-pdf-2026-09-18
+Agent: Super Z (principal)
+Task: El dueño adjuntó el Manual de Usuario v1.0 (agosto 2026, 31 págs) y pidió: actualizarlo con todas las características nuevas, hacerlo más visual con capturas de pantalla reales, e incluir que ConectaLT fue realizado por Sebastián Quintana, CEO de la agencia de automatizaciones Cerotraba.
+
+Work Log:
+- Base documentada: PDF adjunto extractado (12 capítulos v1.0) + datos reales verificados en producción (33 locales: 13 licorerías/7 tascas/7 discotecas/6 licobares; ads API con anuncio de Cerotraba; guía editorial activa). Fuente de verdad: SESSION_HANDOFF/PROJECT_STATUS/worklog.
+- Ruta Creative Flow (skill pdf): pipeline reutilizado del manual anterior (fonts TTF data-URI Inter+Playfair, html2pdf-next.js --nopaged, A4 794×1123px). Identidad v1.0 preservada y elevada: azul noche + dorado/cian, Playfair Display para display.
+- CONTENIDO NUEVO v2.0: 17 capítulos renumerados + créditos. Correcciones a v1.0: verificación de edad por cookie 30 días (v1.0 decía sessionStorage, desactualizado), login Google-only (demo no disponible en producción), métricas 21→33 locales. Añadidos: Cap 02 Tecnología (Next 16.3.5, Neon, R2, GEO/llms.txt/17 bots IA, 42 rutas RBAC), Cap 03 Alcance/Escalabilidad (con barras 107→5 del incidente Vercel), carta digital, aforo tiempo real, Night Planner v2 (6 pasos, score), guías editoriales, carrusel multitarjeta, panel dueño completo (tabla 7 secciones), seguridad/legal 17-sep, FAQ actualizada, Cap créditos.
+- 20 CAPTURAS REALES reutilizadas de download/manual-implementacion/capturas/ (optimizadas PNG→JPEG q88, 7.3→2.1 MB), en marcos de navegador con barra URL + 2 móviles 390px.
+- Crédito Cerotraba en 3 puntos: tarjeta en portada con logo, hero en página de créditos con tabla de soporte, contraportada. Logo logo-cerotraba.png embebido data-URI.
+- FIXES de paginación (3 iteraciones con hoja de contacto + mapa de texto por página): 37→34→32→29 págs; eliminadas 7 páginas huérfanas (llamouts convertidos a párrafos, reorden shot-row antes de h3, break-before dirigido en cap12/cap15, teléfonos ampliados 196→222px + párrafo mobile-first).
+- QA: poster_validate (errores solo falsos positivos de @font-face), cover_validate (gap portada corregido 22→54px; resto falsos positivos de bordes h3 en cuerpo), pdf_qa.py 10 passed / 2 warnings cosméticos (raya a inicio de línea, tipografía ES aceptable), font.check 0 issues, sin páginas vacías, fuentes embebidas.
+- Numeración pagination.md (portada sin nº, TOC "i", cuerpo 1-26, contraportada sin nº) + metadatos con Author "Sebastián Quintana · Cerotraba". Scripts persistidos en scripts/manual_v2/ (setup, assemble, pagenum_meta, 7 partes HTML).
+
+Stage Summary:
+- Entregado download/manual-implementacion-v2/: Manual_Usuario_ConectaLT_v2_Septiembre2026.pdf (29 págs, 3.2 MB, vectorial, texto seleccionable, 20 capturas reales) + manual-usuario-conectalt-v2.html (fuente editable con fuentes embebidas) + capturas/ + fonts/.
+- v2.0 = v1.0 actualizado: todas las características ago-sep documentadas, diseño visual (marcos navegador, KPIs, tarjetas, callouts, barras comparativas) y crédito Cerotraba/Sebastián Quintana visible en portada, créditos y contraportada.
+- Sin cambios en el repo del proyecto; pendientes del dueño sin cambios (rotar NEXTAUTH_SECRET, revocar PATs, datos anunciantes).
+
+---
+Task ID: resumen-ejecutivo-v2-pdf-2026-09-18
+Agent: Super Z (principal)
+Task: Actualizar el Resumen Ejecutivo anterior con todas las características nuevas, rediseñarlo más visual con capturas de pantalla reales e incluir el crédito de que ConectaLT fue realizado por Sebastián Quintana, CEO de la agencia de automatizaciones Cerotraba. Cierre de sesión: "activa el protocolo, carga todo, revisa y guarda".
+
+Work Log:
+- Contexto recuperado (worklog, PROJECT_STATUS, SESSION_HANDOFF) y skill pdf cargado; datos re-verificados contra producción vía API: 33 locales activos (13 licorerías, 7 tascas, 7 discotecas, 6 licobares). Reseñas (116), promos activas (7) y eventos semanales (12) tomados del trabajo verificado del 18-sep (endpoints públicos requieren sesión).
+- Ruta Creative Flow reutilizando el pipeline probado del manual v2: fonts TTF data-URI Inter+Playfair, html2pdf-next.js --nopaged, A4 794×1123px, identidad azul noche + dorado/cian.
+- Setup scripts/resumen_v2/setup.py: download/resumen-ejecutivo-v2/ con capturas/ (21 JPEG q88, 2.1 MB), fonts/ y logo cerotraba.b64.
+- Contenido v2.0 (16 págs): portada con tarjeta de crédito Cerotraba/Sebastián Quintana + índice + 7 secciones (01 panorama con KPIs 33 locales/+6.000 eventos/116 reseñas/12 eventos; 02 novedades con NUEVO: Night Planner v2, carta digital, aforo tiempo real, cupones, guías editoriales, carrusel multitarjeta, mapa corregido, cookie 30d; 03 incidente Vercel 107→5 con barras y KPIs 102/0/-95%/7 días; 04 seguridad Next 16.3.5, 42 rutas RBAC, tabla pendientes del dueño; 05 SEO/GEO sitemap 37, llms.txt, 17 bots IA, Bing; 06 paneles dueño/admin + tabla RBAC por rol; 07 próximos pasos: agenda del dueño + métricas de anuncios + Fase 2 + driver Neon) + créditos (hero Cerotraba) + contraportada.
+- 14 capturas reales incrustadas en marcos de navegador con barra URL; crédito en 3 puntos: portada, página de créditos y contraportada.
+- FIXES de paginación (2 iteraciones con mapa de contacto PyMuPDF): 17→16 págs; eliminada página huérfana p04 (texto recortado + Figura 1 a 600px) y p14 medio vacía llenada con tabla RBAC por rol.
+- QA: poster_validate solo falsos positivos @font-face; pdf_qa.py PASS 12/12 (fuentes embebidas, sin páginas vacías, sin overflow, llenado adecuado, márgenes simétricos); font.check 0 issues; numeración pagination.md (portada sin nº, TOC "i", cuerpo 1-14, contraportada sin nº); metadatos con Author "Sebastián Quintana · Cerotraba"; acentos españoles verificados; crédito confirmado en 3 puntos (letter-spacing de contraportada solo separa al extraer, no es error).
+- Commit local de docs/entregables; SIN push (el dueño debe revocar el PAT del 17-sep primero; rotar NEXTAUTH_SECRET sigue pendiente).
+
+Stage Summary:
+- Entregado download/resumen-ejecutivo-v2/: Resumen_Ejecutivo_ConectaLT_v2_Septiembre2026.pdf (16 págs, 2.4 MB, A4 vectorial, texto seleccionable, 14 capturas reales) + resumen-ejecutivo-conectalt-v2.html (fuente editable) + capturas/ + fonts/.
+- v2.0 = resumen ejecutivo actualizado: todas las características ago-sep documentadas, diseño visual (KPIs, tarjetas NUEVO, marcos navegador, barras comparativas, tablas) y crédito Cerotraba/Sebastián Quintana visible en portada, créditos y contraportada.
+- Scripts reutilizables en scripts/resumen_v2/ (setup, assemble, pagenum_meta, contact_sheet + 6 partes HTML).
+- Sin cambios en el repo del proyecto. Pendientes del dueño sin cambios: rotar NEXTAUTH_SECRET, revocar PAT 17-sep, rotar Neon/R2 (media), confirmar Usage Vercel y sitemap Bing, datos comerciales (IG Africa Burguers, IG Licobar JJ, dirección Medusa).
