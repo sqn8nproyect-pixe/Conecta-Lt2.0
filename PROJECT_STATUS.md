@@ -3,13 +3,13 @@
 > **ESTE ES EL PRIMER ARCHIVO A LEER AL INICIAR UNA SESIÓN.**
 > Contiene el estado actual del proyecto. Para historial detallado ver `worklog.md`.
 
-**Última actualización:** 2026-09-17
+**Última actualización:** 2026-09-21
 **HEAD commit:** GitHub sincronizado con local el 17-sep (producción desplegada en `ca3e934`; commits posteriores = solo documentación)
 **Estado general:** ✅ Producción operativa (Vercel + Neon). Next.js **16.3.5** (CVEs parcheadas), cabeceras de seguridad activas, rutas diagnose-auth cerradas (solo ADMIN), RBAC requireRole en 42 rutas API.
 **SEO/GEO:** sitemap dinámico (37 URLs) + /llms.txt dinámico + robots.ts con 17 bots IA explícitos + JSON-LD (WebSite/Organization → LocalBusiness → Article). Bing Webmaster registrado vía import de Google Search Console.
 **Legal:** Privacidad/Términos/Quiénes Somos actualizados 17-sep (cookie 30d, R2, carta digital, publicidad).
 **UI:** Carrusel multitarjeta en producción; botón ✕ móvil siempre visible.
-**Local:** .env apunta a PG embebida :5433 (sin credenciales Neon — rotadas; el dueño pega DATABASE_URL real cuando haga falta E2E contra producción).
+**Local:** .env apunta a PG embebida :5433 (reinstalada 21-sep tras restore de snapshot; levantar con `bash scripts/preview-run.sh`; sin credenciales Neon — rotadas, el dueño pega la real cuando haga falta E2E). Incidente 21-sep: el restore retrocedió el repo al 17-sep; Resumen Ejecutivo v2 recuperado del commit dangling ecb9228 (f74f135); Manual v1/v2 de implementación perdidos del disco (nunca commiteados) y regenerables bajo pedido.
 ---
 
 ## 🔁 Protocolo de Sesión (LEER PRIMERO)

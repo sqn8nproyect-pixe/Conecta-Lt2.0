@@ -73,6 +73,8 @@ public/screenshots/etapa*-*.png
 # preview artifacts (sandbox-only; regenerate with: bash scripts/preview-run.sh)
 /download/preview-sprint-*/
 /scripts/preview-*
+# excepción: el runner de PG embebida es infraestructura documentada (sobreviva a restores)
+!/scripts/preview-run.sh
 /public/test-ads/
 /scripts/gen-test-ads.py
 /scripts/ad-variants/

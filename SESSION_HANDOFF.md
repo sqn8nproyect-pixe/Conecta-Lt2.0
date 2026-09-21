@@ -5,7 +5,7 @@
 > Historial: worklog.md (cola) + worklog-archivo-2026-09.md.
 
 **Fecha inicio sesión:** 2026-09-12
-**Última actividad:** 2026-09-17 — verificación de protocolo pedida por el dueño (todo verde)
+**Última actividad:** 2026-09-21 — boot con recovery: restore del sandbox retrocedió al 17-sep; Resumen Ejecutivo v2 rescatado del commit dangling ecb9228 (re-commit f74f135); Manual v1/v2 perdidos en disco (regenerables); PG embebida reinstalada + preview-run.sh recreado
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
@@ -28,6 +28,7 @@
 - REVOCAR el PAT usado el 17-sep (push de documentación ya completado) — github.com/settings/tokens
 
 **Gotchas activos:**
+- embedded-postgres beta.17: la clase va en `.default` y hay que requerir `dist/index.js` exacto (require de directorio falla con MODULE_NOT_FOUND fantasma). Levantar PG: `bash scripts/preview-run.sh`
 - `unset DATABASE_URL DIRECT_URL` antes de prisma CLI/node (el shell pisa `.env`). `.env` actual = PG embebida 127.0.0.1:5433. Standalone: build local con `bun run build` (ya setea BUILD_STANDALONE=1); correr: `set -a; source .env; set +a; NODE_ENV=production PORT=3100 bun .next/standalone/server.js`
 - El sandbox mata procesos background entre tool calls: server + test en la MISMA llamada bash (la PG embebida 5433 también muere — arrancarla y usarla en la misma llamada)
 - `bun -e` falla con Prisma (engines) — usar archivos `bun scripts/x.ts`
