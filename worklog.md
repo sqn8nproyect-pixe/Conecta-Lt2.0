@@ -172,3 +172,23 @@ Stage Summary:
 - Entregable crítico RECUPERADO: download/resumen-ejecutivo-v2/ completo (PDF + HTML + capturas + fuentes) — el dueño puede re-descargarlo.
 - Workspace de nuevo operativo: git limpio y commiteado, PG embebida local lista para previews, salud verificada.
 - Pendientes del dueño SIN CAMBIO: revocar PAT 17-sep, rotar NEXTAUTH_SECRET, rotar Neon/R2 (media), confirmar Usage Vercel y sitemap Bing, datos comerciales.
+
+---
+Task ID: whatsapp-float-2026-09-21
+Agent: Super Z (principal)
+Task: El dueño pidió un botón flotante de WhatsApp para que cualquier visitante pueda comunicarse por el número +58 422-0117206.
+
+Work Log:
+- Nuevo componente src/components/conecta/WhatsAppFloat.tsx (client): círculo verde con glifo oficial de WhatsApp (SVG inline), gradiente #2fe672→#128c4b, entrance con framer-motion (spring, delay 1.2s), onda sutil cada 4s (keyframe whatsapp-ripple en globals.css, respeta prefers-reduced-motion), tooltip desktop "¿Dudas? Escríbenos por WhatsApp" (hidden sm:block + group-hover, se oculta en táctil), aria-label/title, target _blank + rel noopener.
+- Link: https://wa.me/584220117206?text=<"Hola CONECTA-LT, quiero hacer una consulta."> — número centralizado en la constante WHATSAPP_NUMBER (un solo lugar si cambia).
+- Analítica: track WHATSAPP_CLICK sin businessSlug + metadata {source:'floating-button', path} vía trackAnalyticsEvent (fire-and-forget, patrón de use-analytics).
+- Montado en src/app/layout.tsx (fuera de QueryProvider) → aparece en TODAS las rutas: SPA (/), fichas SEO /local/[slug], /local, /editorial, /r/[code].
+- Z-index 40: sobre contenido, bajo navbar z-50, notificaciones z-60, modales z-70 y AgeGate z-100 (verificado: el botón queda detrás del gate hasta verificar edad).
+- QA: tsc --noEmit sin errores en archivos nuevos (errores preexistentes de event-labels.ts ignorados por build); eslint limpio; verificación visual con agent-browser (desktop 1280 + móvil 390): botón visible, href correcto, click abre api.whatsapp.com/send/?phone=584220117206 con mensaje pre-llenado, POST /api/analytics/track disparado.
+- NOTA TURBOPACK: el dev server (corriendo desde antes) no recompiló globals.css con `touch`; hizo falta un cambio real de contenido (apéndice + revert). Síntoma: clases nuevas del TSX compilaban pero el keyframe nuevo de globals.css no aparecía en el CSS servido.
+- NOTA HEADLESS: agent-browser emula (hover:none, pointer:coarse) → ningún tooltip hover del sitio es demostrable ahí; el group-hover del tooltip está dentro de @media (hover: hover) y funciona en dispositivos reales con mouse. Diseño del tooltip verificado inyectando el estado final por JS.
+
+Stage Summary:
+- Botón flotante de WhatsApp global en conectalt.com con el número del dueño (+58 422-0117206), mensaje pre-llenado, animación de onda, tooltip desktop y tracking WHATSAPP_CLICK source=floating-button.
+- Archivos: src/components/conecta/WhatsAppFloat.tsx (nuevo), src/app/layout.tsx (1 import + 1 montaje), src/app/globals.css (keyframe + clase + reduced-motion).
+- Commit local; SIN push (el dueño aún debe revocar el PAT del 17-sep).

@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryProvider } from "@/components/providers";
 import { SessionProvider } from "@/components/session-provider";
+import { WhatsAppFloat } from "@/components/conecta/WhatsAppFloat";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -143,6 +144,8 @@ export default function RootLayout({
         <QueryProvider>
           <SessionProvider>{children}</SessionProvider>
         </QueryProvider>
+        {/* Canal directo con el equipo CONECTA-LT — presente en todas las páginas */}
+        <WhatsAppFloat />
         <Toaster />
       </body>
     </html>
