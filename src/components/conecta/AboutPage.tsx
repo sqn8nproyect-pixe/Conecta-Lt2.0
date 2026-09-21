@@ -11,6 +11,7 @@
 // tipografía serif para títulos, font-mono para meta labels).
 // ─────────────────────────────────────────────────────────────
 
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -27,6 +28,9 @@ import {
   Newspaper,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { trackAnalyticsEvent } from '@/lib/api';
+import { waLink, CONTACT_WHATSAPP_DISPLAY } from '@/lib/contact';
+import { WhatsAppIcon } from '@/components/conecta/WhatsAppIcon';
 
 const features = [
   {
@@ -86,6 +90,14 @@ const compliance = [
 
 export function AboutPage() {
   const setView = useAppStore((s) => s.setView);
+
+  // Fire-and-forget: el tracking nunca interfiere con la navegación.
+  const handleWhatsAppClick = useCallback(() => {
+    trackAnalyticsEvent({
+      type: 'WHATSAPP_CLICK',
+      metadata: { source: 'about' },
+    });
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
@@ -196,6 +208,41 @@ export function AboutPage() {
               <p className="text-white/50 text-sm leading-relaxed">{c.text}</p>
             </motion.div>
           ))}
+        </div>
+      </motion.div>
+
+      {/* Contacto directo — canal oficial del equipo */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="mb-12"
+      >
+        <div className="glass-card p-6 sm:p-8 rounded-2xl border border-white/5 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="w-12 h-12 rounded-full bg-[#25d366]/10 flex items-center justify-center shrink-0">
+              <WhatsAppIcon className="h-6 w-6 text-[#25d366]" />
+            </div>
+            <div>
+              <h2 className="font-mono text-sm text-gold tracking-wider mb-1">
+                ¿Preguntas o sugerencias?
+              </h2>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Escríbenos directo por WhatsApp al{' '}
+                <span className="text-white font-semibold">{CONTACT_WHATSAPP_DISPLAY}</span> —
+                atendemos locales que quieran publicar su perfil y usuarios con dudas.
+              </p>
+            </div>
+          </div>
+          <a
+            href={waLink()}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleWhatsAppClick}
+            className="inline-flex items-center justify-center gap-2 shrink-0 h-12 px-6 rounded-2xl bg-gradient-to-br from-[#2fe672] to-[#128c4b] text-white text-xs font-bold tracking-wider shadow-lg shadow-emerald-500/25 transition-transform duration-300 hover:scale-105 active:scale-95"
+          >
+            <WhatsAppIcon className="h-4 w-4" /> CHATEAR AHORA
+          </a>
         </div>
       </motion.div>
 

@@ -192,3 +192,19 @@ Stage Summary:
 - Botón flotante de WhatsApp global en conectalt.com con el número del dueño (+58 422-0117206), mensaje pre-llenado, animación de onda, tooltip desktop y tracking WHATSAPP_CLICK source=floating-button.
 - Archivos: src/components/conecta/WhatsAppFloat.tsx (nuevo), src/app/layout.tsx (1 import + 1 montaje), src/app/globals.css (keyframe + clase + reduced-motion).
 - Commit local; SIN push (el dueño aún debe revocar el PAT del 17-sep).
+
+---
+Task ID: whatsapp-footer-about-2026-09-21
+Agent: Super Z (principal)
+Task: El dueño aceptó agregar el número de WhatsApp también al footer y a la página "Quiénes Somos".
+
+Work Log:
+- Refactor previo: creado src/lib/contact.ts como FUENTE ÚNICA del número (CONTACT_WHATSAPP_NUMBER, CONTACT_WHATSAPP_DISPLAY, CONTACT_WHATSAPP_MESSAGE y helper waLink()) y src/components/conecta/WhatsAppIcon.tsx (glifo SVG reutilizable). WhatsAppFloat.tsx refactorizado para consumir ambos (sin cambio de comportamiento).
+- Footer: enlace en la fila de links (Términos · [icono] +58 422-0117206) — discreto en reposo (white/40), verde #25d366 al hover; en móvil muestra solo "WhatsApp" (el número no cabe); whitespace-nowrap para evitar quiebre feo del número (bug v1 detectado en captura y corregido). Tracking WHATSAPP_CLICK source=footer.
+- AboutPage: nueva tarjeta de contacto glass-card antes del cierre ("¿Preguntas o sugerencias?"), icono en círculo verde suave, número en blanco semibold, CTA "CHATEAR AHORA" con gradiente verde; mencion explícita de que atiende a locales y usuarios. Tracking source=about. Animación de entrada coherente con el resto de la página.
+- QA: tsc sin errores en archivos tocados; eslint limpio; capturas desktop 1280 + móvil 390 del footer y de la tarjeta en Quiénes Somos; 3 enlaces wa.me conviven con el botón flotante sin solaparse; click del footer dispara POST /api/analytics/track (200).
+
+Stage Summary:
+- El número +58 422-0117206 está ahora en 4 puntos: botón flotante global, footer (todas las páginas), tarjeta en Quiénes Somos y (implícito) en los links wa.me — todos alimentados por src/lib/contact.ts; cambiar el número es editar UN archivo.
+- Archivos: src/lib/contact.ts y src/components/conecta/WhatsAppIcon.tsx (nuevos); Footer.tsx, AboutPage.tsx, WhatsAppFloat.tsx (modificados).
+- Commit local; SIN push (pendiente revocación del PAT por parte del dueño).

@@ -7,10 +7,22 @@
 // términos) implementadas como vistas del SPA. Click → setView.
 // ─────────────────────────────────────────────────────────────
 
+import { useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
+import { trackAnalyticsEvent } from '@/lib/api';
+import { waLink, CONTACT_WHATSAPP_DISPLAY } from '@/lib/contact';
+import { WhatsAppIcon } from '@/components/conecta/WhatsAppIcon';
 
 export function Footer() {
   const setView = useAppStore((s) => s.setView);
+
+  // Fire-and-forget: el tracking nunca interfiere con la navegación.
+  const handleWhatsAppClick = useCallback(() => {
+    trackAnalyticsEvent({
+      type: 'WHATSAPP_CLICK',
+      metadata: { source: 'footer' },
+    });
+  }, []);
 
   return (
     <footer className="mt-auto border-t border-white/5 bg-obsidian/80 backdrop-blur-sm relative z-10">
@@ -48,6 +60,20 @@ export function Footer() {
           >
             Términos
           </button>
+          <span className="text-white/20">·</span>
+          {/* Canal directo del equipo — verde solo al hover, discreto en reposo */}
+          <a
+            href={waLink()}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleWhatsAppClick}
+            aria-label={`Contactar a CONECTA-LT por WhatsApp al ${CONTACT_WHATSAPP_DISPLAY}`}
+            className="inline-flex items-center gap-1.5 text-white/40 hover:text-[#25d366] transition-colors"
+          >
+            <WhatsAppIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">{CONTACT_WHATSAPP_DISPLAY}</span>
+            <span className="sm:hidden whitespace-nowrap">WhatsApp</span>
+          </a>
           <span className="hidden sm:inline text-white/20">·</span>
           <span className="hidden sm:inline">Directorio de vida nocturna</span>
           <span className="hidden sm:inline text-white/20">·</span>
