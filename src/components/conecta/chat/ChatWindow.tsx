@@ -156,7 +156,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     queryKey: MESSAGES_QUERY_KEY(conversation.id),
     queryFn: () => fetchChatMessages(conversation.id),
     staleTime: 2_000,
-    refetchInterval: 3_000,
+    // Red de seguridad: 3s en modo polling; con Pusher activo la
+    // entrega es por eventos y el polling solo respalda cada 30s.
+    refetchInterval: isChatClientRealtimeEnabled() ? 30_000 : 3_000,
     retry: false,
   });
 
