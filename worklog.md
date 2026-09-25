@@ -286,3 +286,21 @@ Stage Summary:
 - Chat 1-a-1 FUNCIONAL punta a punta en local: Postgres fuente de verdad, polling como transporte activo, Pusher preparado para activarse SOLO con env vars (cero cambios de código).
 - SIN PUSH (protocolo): ir a producción requiere (a) decidir si se crea la cuenta Pusher y sus 6 env vars — opcional; (b) saber que la migración 20260925120000_chat correrá en Neon al deployar; (c) PAT del dueño o aprobación de push (main = deploy automático).
 - Moderación básica activa (reporte con 5 motivos + bloqueo bidireccional); retención de notas de voz pendiente de política del dueño (los medios viven en R2 bajo chat/{userId}/).
+
+---
+Task ID: chat-test-local-2026-09-26
+Agent: Super Z (principal)
+Task: "probemos el chat local" — re-levantar y probar el chat completo en local tras el restore del sandbox (la infraestructura de PG embebida había desaparecido).
+
+Work Log:
+- /home/z/preview-pg (paquete embedded-postgres + pg) NO existía tras el restore → recreado desde cero: bun add embedded-postgres pg, bun pm trust --all (binarios @embedded-postgres/linux-x64), start-pg.js nuevo con el contrato de preview-run.sh (TCP 127.0.0.1:5433, log "PG lista en 127.0.0.1:5433", base conectalt, usuario postgres/postgres). GOTCHA: la v18-beta del paquete exporta default → require('embedded-postgres').default; y la función construida con Function() debe llamarse (d) pasando el objeto, no ().
+- .env vuelto a truncar por el restore (apuntaba a un file:.db inexistente) → reconstruido: DATABASE_URL/DIRECT_URL postgresql://postgres:postgres@127.0.0.1:5433/conectalt + AUTH_SECRET dev-only. Documentado también en PROJECT_STATUS §9.
+- chat-db-setup.sh OK: 5/5 tablas de chat + seed ana/beto@test.local (scripts/seed-chat-test.ts).
+- E2E navegador (preview-run.sh + chat-e2e3.sh, una sola llamada): 5/5 PASS — ana envía, beto ve badge "Mensajes (1 no leídos)", lee, badge limpio, responde, ana recibe por polling. Console sin errores. Capturas e2e-shots/chat-{ana,beto}-conversacion.png y chat-ana-respuesta.png.
+- NUEVO scripts/chat-api-test.sh: prueba a nivel API con curl (login demo vía /api/auth/csrf + POST /api/auth/callback/demo): 12 PASS / 0 FAIL — 401 anónimo, sesiones, búsqueda usuarios, conversación DIRECT idempotente, POST mensaje 201, unreadCount 1→0 con markRead, texto 4100 chars → 400, bloqueo → 403, desbloqueo → 201. (v1 del script fallaba por un bug del helper jget: Function('d','…')() se invocaba sin pasar d → salida vacía → ids vacíos → 308 por doble slash; corregido).
+- Log del server confirma la secuencia de moderación (block 200 → msg 403 → unblock → msg 201). Los prisma:error "terminating connection" del log son solo ruido del SIGTERM al apagar la PG al final del E2E.
+
+Stage Summary:
+- Chat 1-a-1 revalidado PUNTA A PUNTA en local tras reconstruir la PG embebida: UI (badge, polling, moderación) + API (12/12) + BD (5 tablas). Todo $0, sin Pusher (transporte polling; Pusher queda listo para activarse con env vars).
+- Infraestructura recreada y documentada: /home/z/preview-pg (start-pg.js + start-pg data/), .env mínimo dev-only, scripts/chat-api-test.sh reutilizable.
+- SIN PUSH: el chat sigue solo en local; producción requiere push a main (deploy automático) + decidir Pusher o arrancar con polling.
