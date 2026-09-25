@@ -98,6 +98,12 @@ interface AppState {
   // and a dropdown with the latest entries.
   persistentNotifications: PersistentNotification[];
 
+  // Chat (Sprint 9) — total de mensajes no leídos en la bandeja de
+  // chat. Hydrated por `useChatBadgeSync` (Navbar, polling 15s) y
+  // invalidado por las mutaciones de chat. Alimenta el badge del
+  // nav item "Mensajes".
+  chatUnreadTotal: number;
+
   // Login contextual (Sprint 7B) — modal global que se abre cuando el
   // usuario intenta favoritar/reservar/canjear sin sesión. Guarda el
   // mensaje contextual y la intención pendiente para completarla tras
@@ -137,6 +143,9 @@ interface AppState {
 
   // Actions: persistent notifications (Etapa 7.A)
   setPersistentNotifications: (n: PersistentNotification[]) => void;
+
+  // Actions: chat (Sprint 9)
+  setChatUnreadTotal: (n: number) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -149,6 +158,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   reservations: [],
   notifications: [],
   persistentNotifications: [],
+  chatUnreadTotal: 0,
   loginPromptOpen: false,
   loginPromptMessage: null,
   pendingIntent: null,
@@ -197,6 +207,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       redeemedPromotionIds: [],
       reservations: [],
       persistentNotifications: [],
+      chatUnreadTotal: 0,
     });
   },
   setFavorites: (slugs) => set({ favorites: slugs }),
@@ -239,6 +250,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
 
   setPersistentNotifications: (n) => set({ persistentNotifications: n }),
+
+  setChatUnreadTotal: (n) => set({ chatUnreadTotal: Math.max(0, n) }),
 }));
 
 // ── Favorites selector (used by cards) ──────────────────────

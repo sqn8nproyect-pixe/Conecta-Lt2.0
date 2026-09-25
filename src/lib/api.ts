@@ -17,6 +17,9 @@ import type {
   BusinessStatus,
   BusinessViewCount,
   CapacityLevel,
+  ChatConversationDTO,
+  ChatMessageDTO,
+  ChatUserDTO,
   CouponRedemption,
   Establishment,
   OwnerBusiness,
@@ -1234,3 +1237,144 @@ export async function recordAdViews(ids: string[]): Promise<void> {
   }
 }
 
+
+// ─── Chat entre usuarios (Sprint 9) ─────────────────────────
+// Fuente de verdad: Postgres. Entrega en vivo: Pusher si está
+// configurado; si no, polling (React Query). DTOs en types.ts.
+
+export async function fetchChatConversations(): Promise<ChatConversationDTO[]> {
+  const res = await fetch('/api/chat/conversations');
+  if (res.status === 401) return [];
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as ChatConversationDTO[];
+}
+
+export async function openChatConversation(otherUserId: string): Promise<ChatConversationDTO> {
+  const res = await fetch('/api/chat/conversations', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ userId: otherUserId }),
+  });
+  const data = (await res.json().catch(() => ({}))) as
+    | ChatConversationDTO
+    | { error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as ChatConversationDTO;
+}
+
+export async function fetchChatMessages(
+  conversationId: string,
+  before?: string,
+): Promise<{ messages: ChatMessageDTO[]; hasMore: boolean }> {
+  const qs = before ? `?before=${encodeURIComponent(before)}` : '';
+  const res = await fetch(`/api/chat/conversations/${conversationId}/messages${qs}`);
+  if (res.status === 401) throw new Error('NOT_AUTHENTICATED');
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as { messages: ChatMessageDTO[]; hasMore: boolean };
+}
+
+export interface SendChatMessageInput {
+  kind?: 'TEXT' | 'VOICE' | 'IMAGE';
+  text?: string;
+  mediaUrl?: string;
+  mediaKey?: string;
+  durationMs?: number;
+}
+
+export async function sendChatMessage(
+  conversationId: string,
+  input: SendChatMessageInput,
+): Promise<ChatMessageDTO> {
+  const res = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const data = (await res.json().catch(() => ({}))) as
+    | ChatMessageDTO
+    | { error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as ChatMessageDTO;
+}
+
+export async function markChatRead(conversationId: string): Promise<void> {
+  await fetch(`/api/chat/conversations/${conversationId}/read`, { method: 'POST' });
+}
+
+export const CHAT_REPORT_REASONS = [
+  { value: 'SPAM', label: 'Spam' },
+  { value: 'ACOSO', label: 'Acoso' },
+  { value: 'CONTENIDO_INAPROPIADO', label: 'Contenido inapropiado' },
+  { value: 'ESTAFA', label: 'Estafa' },
+  { value: 'OTRO', label: 'Otro' },
+] as const;
+
+export async function reportChatConversation(
+  conversationId: string,
+  reason: string,
+  details?: string,
+  messageId?: string,
+): Promise<void> {
+  const res = await fetch(`/api/chat/conversations/${conversationId}/report`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ reason, details, messageId }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new Error(data.error ?? 'Error');
+}
+
+export async function fetchBlockedChatUsers(): Promise<ChatUserDTO[]> {
+  const res = await fetch('/api/chat/block');
+  if (res.status === 401) return [];
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as ChatUserDTO[];
+}
+
+export async function blockChatUser(userId: string): Promise<void> {
+  const res = await fetch('/api/chat/block', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new Error(data.error ?? 'Error');
+}
+
+export async function unblockChatUser(userId: string): Promise<void> {
+  const res = await fetch('/api/chat/block', {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new Error(data.error ?? 'Error');
+}
+
+export async function searchChatUsers(q: string): Promise<ChatUserDTO[]> {
+  const res = await fetch(`/api/chat/users?q=${encodeURIComponent(q)}`);
+  if (res.status === 401) return [];
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as ChatUserDTO[];
+}
+
+/** Presign de medios de chat (voz/imagen) — ruta dedicada, no la de dueños. */
+export async function chatUploadPresign(
+  kind: 'VOICE' | 'IMAGE',
+  fileType: string,
+): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
+  const res = await fetch('/api/chat/upload', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ kind, fileType }),
+  });
+  const data = (await res.json().catch(() => ({}))) as
+    | { uploadUrl: string; publicUrl: string; key: string }
+    | { error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as { uploadUrl: string; publicUrl: string; key: string };
+}

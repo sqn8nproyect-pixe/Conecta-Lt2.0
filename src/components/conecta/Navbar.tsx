@@ -8,6 +8,7 @@ import {
   CalendarX,
   CheckCheck,
   LogOut,
+  MessageCircle,
   Shield,
   Star,
   Ticket,
@@ -15,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { signOut } from 'next-auth/react';
 import { useAppStore } from '@/lib/store';
+import { useChatBadgeSync } from '@/lib/hooks/use-chat-badge-sync';
 import { useFavoritesSync } from '@/lib/hooks/use-favorites-sync';
 import { useRedemptionsSync } from '@/lib/hooks/use-redemptions-sync';
 import { useReservationsSync } from '@/lib/hooks/use-reservations-sync';
@@ -305,6 +307,30 @@ export function Navbar() {
   // invalidates on window focus so the user sees new notifications
   // without a manual refresh.
   useNotificationsSync();
+  useChatBadgeSync();
+
+  // Sprint 9 — nav item "Mensajes" con badge de no leídos (chat
+  // entre usuarios). Visible solo con sesión activa; mismo estilo
+  // gold-underline que Admin/Mis Locales.
+  const chatUnreadTotal = useAppStore((s) => s.chatUnreadTotal);
+  const messagesNavItem = () => (
+    <button
+      onClick={() => setView('messages')}
+      className={`inline-flex items-center gap-1 hover:text-gold transition-colors font-medium relative py-1 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-gold after:scale-x-0 hover:after:scale-x-100 after:transition-transform ${
+        view === 'messages'
+          ? 'text-gold after:scale-x-100'
+          : 'text-white/80'
+      }`}
+      aria-label={`Mensajes${chatUnreadTotal > 0 ? ` (${chatUnreadTotal} no leídos)` : ''}`}
+    >
+      <MessageCircle size={14} className="mr-0.5" /> Mensajes
+      {chatUnreadTotal > 0 && (
+        <span className="absolute -top-1 -right-3 min-w-[16px] h-4 px-1 rounded-full bg-gold text-obsidian text-[10px] font-bold flex items-center justify-center">
+          {chatUnreadTotal > 99 ? '99+' : chatUnreadTotal}
+        </span>
+      )}
+    </button>
+  );
 
   const navItem = (label: string, target: View) => (
     <button
@@ -389,6 +415,7 @@ export function Navbar() {
             {navItem('Directorio', 'home')}
             {navItem('Mapa', 'map')}
             {user && navItem('Mi Perfil', 'profile')}
+            {user && messagesNavItem()}
             {(user?.role === 'BUSINESS_OWNER' || isAdminEmail(user?.email)) && ownerNavItem()}
             {user && isAdminEmail(user.email) && adminNavItem()}
           </div>
@@ -428,6 +455,7 @@ export function Navbar() {
         {navItem('Directorio', 'home')}
         {navItem('Mapa', 'map')}
         {user && navItem('Mi Perfil', 'profile')}
+        {user && messagesNavItem()}
         {user?.role === 'BUSINESS_OWNER' || isAdminEmail(user?.email)
           ? ownerNavItem()
           : null}

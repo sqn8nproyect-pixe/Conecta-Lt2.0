@@ -268,7 +268,7 @@ export type BusinessStatus =
 //   enum ReviewStatus { PENDING, PUBLISHED, HIDDEN, FLAGGED }
 export type ReviewStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'FLAGGED';
 
-export type View = 'home' | 'map' | 'detail' | 'profile' | 'admin' | 'owner' | 'privacy' | 'terms' | 'about';
+export type View = 'home' | 'map' | 'detail' | 'profile' | 'admin' | 'owner' | 'messages' | 'privacy' | 'terms' | 'about';
 
 export type NotificationType = 'success' | 'info';
 
@@ -758,4 +758,42 @@ export interface PersistentNotification {
   message: string;
   read: boolean;
   createdAt: string; // ISO
+}
+
+// ── Chat entre usuarios (Sprint 9) ─────────────────────────────
+// DTOs que devuelve la API /api/chat/* (fechas en ISO string).
+// Espejan src/server/services/chat.service.ts.
+
+export type ChatMessageKind = 'TEXT' | 'VOICE' | 'IMAGE' | 'SYSTEM';
+
+export interface ChatUserDTO {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
+export interface ChatMessageDTO {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  senderName: string | null;
+  senderImage: string | null;
+  kind: ChatMessageKind;
+  text: string | null;
+  mediaUrl: string | null;
+  durationMs: number | null;
+  createdAt: string; // ISO
+}
+
+export interface ChatConversationDTO {
+  id: string;
+  type: 'DIRECT' | 'GROUP';
+  title: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  participants: ChatUserDTO[];
+  lastMessage: ChatMessageDTO | null;
+  unreadCount: number;
+  /** true = bloqueado en alguna dirección → no se puede enviar. */
+  blocked: boolean;
 }

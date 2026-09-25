@@ -5,36 +5,31 @@
 > Historial: worklog.md (cola) + worklog-archivo-2026-09.md.
 
 **Fecha inicio sesión:** 2026-09-12
-**Última actividad:** 2026-09-21 — boot con recovery: restore del sandbox retrocedió al 17-sep; Resumen Ejecutivo v2 rescatado del commit dangling ecb9228 (re-commit f74f135); Manual v1/v2 perdidos en disco (regenerables); PG embebida reinstalada + preview-run.sh recreado
+**Última actividad:** 2026-09-25 — CHAT F0+F1 implementado en local (Task ID: chat-f0-f1-implementacion-2026-09-25): 5 tablas + API /api/chat/* + vista "Mensajes" con badge + E2E ana↔beto PASS. SIN PUSH.
 **Chat:** continuación con resumen (contexto compactado) — ⚠️ los resúmenes NO son fuente de verdad: ver PROTOCOL.md §0–§1
 **Idioma:** SIEMPRE español con el dueño — regla permanente §3.9 del PROTOCOL.md (pedido del dueño)
 
-**Estado del workspace:** 🟢 SEGURO + GEO + LEGAL al día, TODO en producción. GitHub 100% sincronizado con local (17-sep, push de docs con PAT temporal).
-- **8.14 multitarjeta**: vivo (chunk a65c87fc739e3bc5.js, basis-auto).
-- **8.15 GEO** (`b58637b`): /llms.txt dinámico (33 locales + guías + "cómo citar", ISR 1h), robots.ts con 17 bots IA, JSON-LD WebSite+Organization, sitemap dinámico (37 URLs).
-- **8.16 legal** (`b4f9a52`): Privacidad/Términos/Quiénes Somos al día (cookie age-verified 30d, R2, carta digital + guías + PUBLICIDAD, 5→7 capas). Fecha: 17 sep 2026.
-- **8.17 seguridad** (`0e83825`): Next.js **16.3.5** (~35 CVEs cerradas), 6 cabeceras de seguridad, /api/diagnose-auth/* solo ADMIN (401 re-verificado hoy).
-- **SEO off-site**: Bing Webmaster registrado vía IMPORT de GSC; sitemap enviado pendiente de confirmar en panel.
-- Fix botón ✕ móvil pushado y verificado (d334660, CSS pointer-fine en producción).
-- **Verificación 2026-09-17**: / · /llms.txt · /sitemap.xml · /robots.txt · /api/ads → todos 200; CSP+XFO+HSTS presentes; working tree limpio; sin secrets trackeados.
+**Estado del workspace:** 🟢 Chat funcional punta a punta en local (polling; Pusher listo con env vars). Producción intacta (WhatsApp al día). Local AHEAD de origin con commits de chat + plan PDF.
+- **8.18 whatsapp**: en producción (flotante + footer + about, tracking WHATSAPP_CLICK).
+- **Chat F0+F1**: tablas+API+UI+E2E verificados en PG embebida; migración `20260925120000_chat` commiteada (corre en Neon solo al deployar).
+- **Plan de chat** (PDF 17 págs) entregado en download/.
 
-**Siguiente paso acordado:** métricas de anuncios (vistas/clics/CTR) y paquetes de venta cuando haya 2-3 anunciantes. Fase 2 seguridad cuando el dueño diga (rate limit reseñas/reservas, Zod, bun update libs transitivas, CSP completa report-only).
+**Siguiente paso acordado:** dueño decide (1) Pusher sí/no (opcional: sin credenciales el chat anda por polling); (2) autorizar push a main (= deploy + migración en Neon); (3) retención de notas de voz (sugerido 90d). Pendiente de seguridad: rotar NEXTAUTH_SECRET.
 
 **Pendientes del usuario (dueño):**
+- CHAT→PROD: decidir Pusher (6 env vars en Vercel, opcionales) + aprobar push (main = deploy automático) + retención de voz
 - Rotar NEXTAUTH_SECRET/AUTH_SECRET en Vercel + Redeploy (arrastrado desde 18-Ago)
 - (Recomendado) Rotar contraseña Neon y llaves R2 — expuestas en PROTOCOL.md v1 del historial git
+- REVOCAR PAT `ghp_FuRWb...` (ya no se necesita) y confirmar que `ghp_ixLT...` (17-sep) está revocado
 - Datos: IG Africa Burguers · IG Licobar JJ (@puntoencuentrolt) · dirección real de Medusa
-- Confirmar en Bing "Mapas del sitio" el sitemap; en unos días repetir "Solicitar indexación"
-- REVOCAR el PAT usado el 17-sep (push de documentación ya completado) — github.com/settings/tokens
 
 **Gotchas activos:**
-- embedded-postgres beta.17: la clase va en `.default` y hay que requerir `dist/index.js` exacto (require de directorio falla con MODULE_NOT_FOUND fantasma). Levantar PG: `bash scripts/preview-run.sh`
-- `unset DATABASE_URL DIRECT_URL` antes de prisma CLI/node (el shell pisa `.env`). `.env` actual = PG embebida 127.0.0.1:5433. Standalone: build local con `bun run build` (ya setea BUILD_STANDALONE=1); correr: `set -a; source .env; set +a; NODE_ENV=production PORT=3100 bun .next/standalone/server.js`
-- El sandbox mata procesos background entre tool calls: server + test en la MISMA llamada bash (la PG embebida 5433 también muere — arrancarla y usarla en la misma llamada)
-- `bun -e` falla con Prisma (engines) — usar archivos `bun scripts/x.ts`
-- AgeGate (cookie 30d) bloquea browser headless: aceptarlo antes de probar la SPA · `NEXT_PUBLIC_*` se hornean en build (cambiarlos en Vercel exige Redeploy)
-- Verificar despliegue SIN API GitHub: grepear chunks/_next de conectalt.com. MenuTab/OwnerDashboard NO van en HTML público → verificar CSS global; AboutPage/LegalPage sí van en chunk del home
-- Browser E2E: pausar autoplay con `mouseover` (mouseenter NO delega en React); flechas embla por sr-only "Next slide"; `find role … --name`; fill NO persiste en input date/time; Escape cierra Radix Dialog
-- Restore de snapshot borra archivos NO trackeados (`.env` perdido ×2) — RECOVERY.md paso 6
-- Preview local sin Neon: `bash scripts/preview-run.sh` (PG embebida, todo en UNA llamada) · Radix Tabs exige click real · npm audit: `npm i --package-lock-only --ignore-scripts` → auditar → borrar package-lock
-- Auth.js v5: fix `iss` de Google = `customFetch` en `src/lib/auth.ts` — NO reintroducir patch-openid-client.js (eliminado)
+- embedded-postgres beta.17: clase en `.default`, requerir `dist/index.js` exacto. Levantar PG: `bash scripts/preview-run.sh`
+- `unset DATABASE_URL DIRECT_URL` antes de prisma CLI; `.env` local = PG embebida 5433 + DIRECT_URL + AUTH_SECRET dev-only (reconstruido 25-sep tras restore)
+- El sandbox mata procesos background entre tool calls: PG + dev server + agent-browser SIEMPRE en la MISMA llamada
+- agent-browser: `wait --text` NO matchea placeholders/aria-labels (usar find role + reintentos); modal demo tarda >10s en dev; find text ambiguo con títulos iguales → `find role button --name`; AgeGate: cookie `age-verified=1`
+- `bun -e` falla con Prisma (engines) — usar `bun scripts/x.ts`
+- `NEXT_PUBLIC_*` se hornean en build (Pusher cliente requiere Redeploy al cambiarlas)
+- Restore de snapshot borra NO trackeados (`.env` perdido ×3) — RECOVERY.md paso 6; al restaurar: backup branch → reset a origin/main → rescatar worklog del backup
+- Preview local: `bash scripts/preview-run.sh` · Auth.js v5: fix `iss` Google = `customFetch` en `src/lib/auth.ts` (NO reintroducir patch-openid-client)
+- E2E chat: `bash scripts/preview-run.sh bash scripts/chat-e2e3.sh` (2 usuarios) y `chat-e2e-mobile.sh`; usuarios demo ana/beto@test.local

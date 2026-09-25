@@ -16,8 +16,11 @@ import { getR2Object } from '@/lib/r2';
 
 /** Prefijos de clave permitidos (defensa contra path traversal).
  *  `events/` = flyers personalizados de la portada fin de semana (8.10).
- *  `ads/`    = arte de anuncios del carrusel de publicidad (8.12). */
-const ALLOWED_PREFIXES = ['businesses/', 'promotions/', 'events/', 'ads/'];
+ *  `ads/`    = arte de anuncios del carrusel de publicidad (8.12).
+ *  `chat/`   = medios de chat (voz/imágenes, Sprint 9). Las claves son
+ *              UUID (no adivinables); el medio se sirve público igual
+ *              que hoy events/ads — aceptado en el plan de chat. */
+const ALLOWED_PREFIXES = ['businesses/', 'promotions/', 'events/', 'ads/', 'chat/'];
 
 /** Imágenes inmutables (keys contienen UUID) → caché agresiva. */
 const CACHE_HEADERS = {

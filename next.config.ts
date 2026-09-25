@@ -15,8 +15,9 @@ import type { NextConfig } from "next";
 //   - X-Content-Type-Options   → el navegador no "adivina" MIME.
 //   - Referrer-Policy          → no filtra URLs internas a terceros.
 //   - Permissions-Policy       → geolocalización solo misma página
-//                                (la usa el mapa), cámara/micrófono
-//                                cerrados.
+//                                (la usa el mapa); micrófono abierto
+//                                same-origin (notas de voz del chat,
+//                                Sprint 9); cámara cerrada.
 //   - COOP allow-popups        → aísla la ventana sin romper el
 //                                flujo OAuth con Google.
 //
@@ -37,7 +38,7 @@ const SECURITY_HEADERS = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(self), payment=()",
+    value: "camera=(), microphone=(self), geolocation=(self), payment=()",
   },
   {
     key: "Cross-Origin-Opener-Policy",

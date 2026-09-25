@@ -11,6 +11,7 @@ import { EstablishmentPage } from '@/components/conecta/EstablishmentPage';
 import { ProfilePage } from '@/components/conecta/ProfilePage';
 import { AdminDashboard } from '@/components/conecta/admin/AdminDashboard';
 import { OwnerDashboard } from '@/components/conecta/owner/OwnerDashboard';
+import MessagesPage from '@/components/conecta/chat/MessagesPage';
 import { AgeGate } from '@/components/conecta/AgeGate';
 import { LegalPage } from '@/components/conecta/LegalPage';
 import { AboutPage } from '@/components/conecta/AboutPage';
@@ -171,6 +172,7 @@ export default function Home() {
           {view === 'profile' && <ProfilePage key="profile" />}
           {view === 'admin' && <AdminDashboard key="admin" />}
           {view === 'owner' && <OwnerDashboard key="owner" />}
+          {view === 'messages' && <MessagesPage key="messages" />}
           {view === 'privacy' && <LegalPage key="privacy" kind="privacy" />}
           {view === 'terms' && <LegalPage key="terms" kind="terms" />}
           {view === 'about' && <AboutPage key="about" />}

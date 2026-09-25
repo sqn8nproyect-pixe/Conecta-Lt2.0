@@ -263,3 +263,26 @@ Stage Summary:
 - Assets HTML/PNG entregados en /home/z/my-project/download/plan-chat-assets/ (cover.html, arch_diagram.html, arch_diagram.png).
 - Veredicto del plan: VIABLE con 3 condiciones (100 conexiones simultáneas del free tier, moderación día 1, rate limiting sin Redis). Recomendación: Pusher Channels Sandbox + Postgres fuente de verdad + R2 reutilizado. 8 fases, 15-18 días, $0/mes inicial. Plan B "casi en vivo" documentado con upgrade path.
 - Scripts persistidos en scripts/plan_chat_pdf.py, scripts/merge_chat_plan.py, scripts/chat_plan_assets/ para iteraciones futuras.
+
+---
+Task ID: chat-f0-f1-implementacion-2026-09-25
+Agent: Super Z (principal)
+Task: "comensemos" — el dueño aprobó el plan de chat; ejecutar Fase 0 + Fase 1 (backend completo + UI base) con los defaults del plan cap. 11 (moderación básica, sin emails, nav "Mensajes"; retención de voz 90d queda pendiente de política).
+
+Work Log:
+- Heredado de tramo previo sin loggear: schema de 5 tablas + migración + pusher-js cliente, PERO con typo de sintaxis en ChatReport (fields: essageId]) y sin server SDK. Typo ya corregido en disco; prisma validate OK; prisma format (200 líneas cosméticas, diff semántico vacío salvo reorden de back-relations).
+- .env reconstruido mínimo: DIRECT_URL + AUTH_SECRET dev-only (el restore del sandbox lo había truncado a solo DATABASE_URL) — documentado en PROJECT_STATUS §9.
+- 5 tablas aplicadas a la PG embebida vía scripts/chat-db-setup.sh (db push): Conversation/Participant/Message/BlockedUser/ChatReport 5/5 verificadas; seed de 2 usuarios demo (scripts/seed-chat-test.ts: ana/beto@test.local).
+- SDK servidor pusher@5.3.4 instalado.
+- Backend: src/lib/rate-limit.ts (patrón del planner extraído a lib, key por userId); src/server/chat/pusher-server.ts (dual-mode: triggers no-op sin PUSHER_*); src/server/services/chat.service.ts (bandeja con no leídos por SQL/Prisma.join, abrir DIRECT idempotente con control de bloqueos bidireccional, paginación por cursor 30/pág, envío validado: texto 4000 chars, voz 120s, clave media forzada chat/{userId}/, transacción mensaje+lastMessageAt+lastReadAt, markRead, reportes con allowlist de 5 motivos, bloquear/desbloquear/listar, búsqueda de usuarios excluyendo bloqueados); 8 rutas /api/chat/* con requireUser + catch Response: conversations (GET/POST), [id]/messages (GET/POST rate 20/min), [id]/read, [id]/report (10/min), block (GET/POST/DELETE), users?q=, pusher/auth (503 si no configurado; 403 si no eres participante), upload (presign CHAT requireUser, MIME audio/imagen allowlist).
+- Infra media: Permissions-Policy microphone=(self) (next.config.ts, cámara sigue cerrada); prefijo chat/ añadido al proxy /api/images/[...key]; .env.example con PUSHER_APP_ID/KEY/SECRET/CLUSTER + NEXT_PUBLIC_PUSHER_KEY/CLUSTER.
+- Frontend: View 'messages' + MessagesPage (bandeja polling 10s, panel "Nuevo chat" con búsqueda debounced 300ms, inserción en cache al abrir); ChatWindow (polling 3s, envío optimista, markRead automático, menú reportar/bloquear, grabador de voz MediaRecorder con presign + PUT R2 y degradación con toast); src/lib/chat-realtime.ts (pusher-js lazy: subscribe private-user-{id} y private-convo-{id} solo si NEXT_PUBLIC_PUSHER_* horneadas); use-chat-badge-sync (15s → store.chatUnreadTotal); Navbar ítem "Mensajes" con badge en desktop y móvil; api.ts +14 fetchers; DTOs Chat* en types.ts; store con chatUnreadTotal (reset en logout).
+- eslint.config.mjs: scripts/** añadido a ignores (19 errores PREEXISTENTES de require() en scripts de mantenimiento, nunca compilados) → lint de la app 0 errores 0 warnings.
+- tsc: 0 errores en archivos nuevos/chat; quedan 6 preexistentes (Matchmaker, editorial, local/[slug]) ya documentados.
+- E2E agent-browser (scripts/chat-e2e3.sh + chat-e2e-mobile.sh): login demo ana → Mensajes → Nuevo chat → buscar beto → enviar → beto login → badge "Mensajes (1 no leídos)" → abre → lee → badge limpio → responde → ana recibe por polling. 5/5 PASS + móvil iPhone14: bottom nav, vista alternada, botón volver, historial visible. API anónima /api/chat/conversations → 401. Console sin errores. Capturas e2e-shots/chat-{ana,beto,movil}-*.png.
+- GOTCHAS nuevos: (1) agent-browser wait --text NO matchea placeholders ni aria-labels → usar find role + helper fill_retry con reintentos; (2) el modal demo puede tardar >10s en dev (compilación) → reintentos en el fill; (3) find text falla por ambigüedad cuando hay título y botón con el mismo texto → find role button --name; (4) el sandbox mata TODO proceso background entre llamadas → PG + dev server + browser SIEMPRE en una llamada (preview-run.sh ya lo documenta, reconfirmado con browser).
+
+Stage Summary:
+- Chat 1-a-1 FUNCIONAL punta a punta en local: Postgres fuente de verdad, polling como transporte activo, Pusher preparado para activarse SOLO con env vars (cero cambios de código).
+- SIN PUSH (protocolo): ir a producción requiere (a) decidir si se crea la cuenta Pusher y sus 6 env vars — opcional; (b) saber que la migración 20260925120000_chat correrá en Neon al deployar; (c) PAT del dueño o aprobación de push (main = deploy automático).
+- Moderación básica activa (reporte con 5 motivos + bloqueo bidireccional); retención de notas de voz pendiente de política del dueño (los medios viven en R2 bajo chat/{userId}/).
