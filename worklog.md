@@ -304,3 +304,21 @@ Stage Summary:
 - Chat 1-a-1 revalidado PUNTA A PUNTA en local tras reconstruir la PG embebida: UI (badge, polling, moderación) + API (12/12) + BD (5 tablas). Todo $0, sin Pusher (transporte polling; Pusher queda listo para activarse con env vars).
 - Infraestructura recreada y documentada: /home/z/preview-pg (start-pg.js + start-pg data/), .env mínimo dev-only, scripts/chat-api-test.sh reutilizable.
 - SIN PUSH: el chat sigue solo en local; producción requiere push a main (deploy automático) + decidir Pusher o arrancar con polling.
+
+---
+Task ID: chat-deploy-produccion-2026-09-26
+Agent: Super Z (principal)
+Task: El dueño entregó token de GitHub → publicar el chat a producción (push a main = deploy Vercel automático).
+
+Work Log:
+- Token validado (login sqn8nproyect-pixe, admin sobre Conecta-Lt2.0). Diff origin/main..HEAD auditado: 6 commits, sin .env ni secretos por nombre de archivo; .env confirmado gitignored.
+- REGRESIÓN detectada en pre-push: el auto-commit 2e77935 había BORRADO src/app/api/upload/presign/route.ts (subidas de dueños) y src/app/api/chat/upload/route.ts (medios de chat) — el sandbox las perdió del working tree y el auto-commit capturó la pérdida. Recuperadas con git checkout 2e77935^ -- <rutas>; contrato verificado con api.ts (chatUploadPresign) y r2.ts.
+- Migración: el build de Vercel NO ejecutaba prisma migrate deploy → las 5 tablas de chat no existirían en Neon y el badge (polling 15s) daría 500 a todos los logueados. Añadido `prisma migrate deploy` al buildCommand de vercel.json (usa DIRECT_URL no-pooler).
+- Push 1 RECHAZADO por GitHub PUSH PROTECTION: PAT real del dueño (sesión 21-sep) en .session/ESTADO-PROYECTO.md:23 dentro del auto-commit c93c90d — NUNCA permitir el secreto; se reescribieron los 6 commits no pusheados con filter-branch index-filter para excluir .session/ del historial, .session/ añadida a .gitignore (estado local con backups desde /tmp/session-backup), escaneo final: 0 tokens ghp_/github_pat_ en los 6 commits.
+- Push 2 OK: 36e3069..356ec4f main→main, SHA remoto verificado.
+- Producción verificada: /api/chat/conversations → 401 {"error":"No autenticado"} (ruta NUEVA viva, antes sería 404), /api/chat/users → 401, POST pusher/auth → 405 (solo POST), home 200. Deploy vivo = cadena build OK = migración aplicada en Neon. Nav "Mensajes" solo visible con sesión (por diseño, línea ~317 Navbar).
+
+Stage Summary:
+- CHAT EN PRODUCCIÓN en conectalt.com con transporte polling (3s conversación, 15s badge) — Pusher opcional a futuro con solo pegar 6 env vars en Vercel, cero cambios de código.
+- La migración de chat corre ahora automáticamente en cada deploy (vercel.json).
+- Push Protection funcionó: impidió publicar un PAT viejo del dueño; el dueño debe revocarlo de todas formas (ghp_FuRW…, 21-sep) junto con ghp_ixLT… (17-sep) y el token de HOY (usado 2×, ya cumplió su función), y rotar NEXTAUTH_SECRET (pendiente desde 18-ago).
