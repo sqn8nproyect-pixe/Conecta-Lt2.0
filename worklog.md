@@ -208,3 +208,37 @@ Stage Summary:
 - El número +58 422-0117206 está ahora en 4 puntos: botón flotante global, footer (todas las páginas), tarjeta en Quiénes Somos y (implícito) en los links wa.me — todos alimentados por src/lib/contact.ts; cambiar el número es editar UN archivo.
 - Archivos: src/lib/contact.ts y src/components/conecta/WhatsAppIcon.tsx (nuevos); Footer.tsx, AboutPage.tsx, WhatsAppFloat.tsx (modificados).
 - Commit local; SIN push (pendiente revocación del PAT por parte del dueño).
+- Commit local; SIN push (pendiente revocación del PAT por parte del dueño).
+
+---
+Task ID: whatsapp-deploy-produccion-2026-09-21
+Agent: Super Z (principal)
+Task: El dueño reportó "no está en producción" y entregó un token nuevo de GitHub para publicar.
+
+Work Log:
+- Diagnóstico: rama local main 6 commits ahead de origin/main; conectalt.com SIN wa.me (grep HTML = 0). Sin credenciales en el entorno (sin credential.helper, sin env vars, sin ~/.git-credentials) — por eso no se podía empujar hasta que el dueño aportara token.
+- Auditoría pre-push del diff origin/main..HEAD: código WhatsApp (WhatsAppFloat/WhatsAppIcon/contact.ts/layout/globals/Footer/AboutPage) + docs + scripts de los PDFs + 2 auto-commits del entorno (solo capturas e2e PNG). Verificación de archivos sensibles: 0 (.env/keys/tokens fuera del diff). OK para empujar.
+- Token nuevo validado vía API de GitHub: login sqn8nproyect-pixe (dueño), permiso admin sobre Conecta-Lt2.0. Push one-time con token en la URL (NO persistido en git config ni en archivos): 6eadbe2..36e3069 main→main; ls-remote confirma SHA remoto = SHA local (36e3069).
+- Deploy Vercel automático: wa.me/584220117206 visible en producción a los ~45s del push (2 ocurrencias en / [flotante+footer], 1 en /local). HTTP 200.
+- Verificación en vivo con navegador: botón flotante verde visible sobre el hero real; hrefs flotante y footer correctos (wa.me/584220117206?text=Hola%20CONECTA-LT...). Captura: e2e-shots/PRODUCCION-whatsapp-float.png.
+
+Stage Summary:
+- EN PRODUCCIÓN: botón flotante global + footer + tarjeta Quiénes Somos con +58 422-0117206 en conectalt.com. Tracking WHATSAPP_CLICK activo en los 3 puntos (floating-button / footer / about).
+- Token del dueño usado solo para este push y NO almacenado. PENDIENTE DEL DUEÑO: (1) revocar el PAT viejo ghp_ixLT... si aún está activo (deuda de seguridad del 17-sep); (2) revocar este token nuevo ghp_FuRW... cuando confirme que todo funciona o a su vencimiento de 7 días; (3) rotar NEXTAUTH_SECRET (sigue pendiente de sesiones anteriores).
+
+---
+Task ID: boot-sync-2026-09-25
+Agent: Super Z (principal)
+Task: Reanudación de sesión ("boot") — verificar estado del botón WhatsApp en producción y sincronizar el contenedor restaurado con el remoto.
+
+Work Log:
+- snapshot.sh + git log revelaron que el contenedor fue restaurado a un snapshot viejo: HEAD local ecb9228, trabajo WhatsApp como cambios sin commitear (los commits 2b8cc4e/cd4b670 no estaban en la copia local).
+- git fetch (público, sin auth): origin/main avanzó a 36e3069 — YA incluye los commits de WhatsApp (2b8cc4e flotante, cd4b670 footer+about), el Resumen Ejecutivo v2 recuperado (f74f135) y las capturas e2e. Divergencia confirmada (origin/main no es ancestro del HEAD viejo).
+- curl https://conectalt.com: HTTP 200 con 2 ocurrencias de wa.me/584220117206 (botón flotante con tooltip + footer) → el feature YA está en producción desde el deploy del 21-sep; no hizo falta pushear ni usar el PAT nuevo.
+- Sincronización sin pérdida: backup completo en rama local backup/local-restore-20260925 → git reset --hard main=origin/main → diff backup vs main: único contenido valioso era la entrada de worklog whatsapp-deploy-produccion-2026-09-21 (16 líneas), restaurada. El resto del backup son assets PDF v1 obsoletos.
+- GUARDAR: reconstruido .session/ESTADO-PROYECTO.md (faltaba tras el restore) + creado .session/checks.txt.
+
+Stage Summary:
+- main = origin/main = 36e3069, sincronizado y limpio. Backup local disponible en backup/local-restore-20260925.
+- WhatsApp flotante + footer + Quiénes Somos CONFIRMADO en producción (evidencia HTML 2026-09-25).
+- Token del dueño (ghp_FuRW...) NO fue necesario ni usado hoy; sigue pendiente que el dueño lo revocue junto con el PAT viejo ghp_ixLT... y rote NEXTAUTH_SECRET.
