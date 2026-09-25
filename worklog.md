@@ -242,3 +242,24 @@ Stage Summary:
 - main = origin/main = 36e3069, sincronizado y limpio. Backup local disponible en backup/local-restore-20260925.
 - WhatsApp flotante + footer + Quiénes Somos CONFIRMADO en producción (evidencia HTML 2026-09-25).
 - Token del dueño (ghp_FuRW...) NO fue necesario ni usado hoy; sigue pendiente que el dueño lo revocue junto con el PAT viejo ghp_ixLT... y rote NEXTAUTH_SECRET.
+
+---
+Task ID: plan-chat-viabilidad-2026-09-25
+Agent: Super Z (principal)
+Task: El dueño pidió un plan de viabilidad para un chat entre usuarios de CONECTA-LT (preguntas por AskUserQuestion: usuarios entre sí / en vivo real / v1 completa).
+
+Work Log:
+- Investigación del código con agente Explore (muy exhaustiva): Auth.js v5 + roles + requireUser; Notification + notificationService reutilizables; presign R2 restringido a dueños (habría que abrir tipo CHAT); patrón polling 30s React Query; cero infra realtime; producción Vercel serverless (WS propio inviable); sin middleware ni Redis; rate limiter artesanal solo en planner.
+- PDF skill cargada completa (report.md + fonts.md + cover/palette/overflow/pagination/typography/charts/fill-engine/cover-backgrounds/geometry + charts _rules + playwright-css).
+- Paleta cascade seed 21 (familia dorada, a juego con la marca). Numeración de capítulos planificada (portada/índice sin numerar; contenido 1-11).
+- Diagrama de arquitectura con Playwright+CSS (3 capas, fondos pálidos + bordes saturados, 2x) → scripts/chat_plan_assets/arch_diagram.png; compactado a aspecto 1:1 para embebido legible.
+- Cuerpo ReportLab (scripts/plan_chat_pdf.py): TocDocTemplate + multiBuild, 11 capítulos, 9 tablas, 3 callouts de métricas, esquema Prisma en 3 bloques, FreeSerif + install_font_fallback; arreglos de layout: figura reordenada, código dividido, página huérfana final eliminada, F7 renombrado, celdas "—" vaciadas.
+- Portada Template 01 HUD (cover.html, fondo claro, línea ancla dorada 2U) validada con poster_validate + cover_validate (fix: span anidado del hero eliminado por falso positivo); render html2poster.js --width 794px.
+- Fusión pypdf con normalización A4 (umbral 0.5pt tras error de QA de tamaño de página) + meta.brand.
+- QA final pdf_qa.py: 11 checks OK, 0 errores, 2 warnings restantes = falsos positivos del stat-row anidado (simétrico y centrado). pages.clean 0; font.check 0 issues; toc real con enlaces (warning TOC_NOT_FOUND es limitación del detector con título "Índice").
+
+Stage Summary:
+- ENTREGADO: /home/z/my-project/download/Plan_Chat_CONECTA-LT_Viabilidad.pdf (17 páginas, ~467 KB, vectorial).
+- Assets HTML/PNG entregados en /home/z/my-project/download/plan-chat-assets/ (cover.html, arch_diagram.html, arch_diagram.png).
+- Veredicto del plan: VIABLE con 3 condiciones (100 conexiones simultáneas del free tier, moderación día 1, rate limiting sin Redis). Recomendación: Pusher Channels Sandbox + Postgres fuente de verdad + R2 reutilizado. 8 fases, 15-18 días, $0/mes inicial. Plan B "casi en vivo" documentado con upgrade path.
+- Scripts persistidos en scripts/plan_chat_pdf.py, scripts/merge_chat_plan.py, scripts/chat_plan_assets/ para iteraciones futuras.

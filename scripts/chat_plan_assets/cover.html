@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  @page { size: 794px 1123px; margin: 0; }
+  :root {
+    /* Cascade palette (palette.cascade --seed 21) */
+    --page-bg: #f2f1f0;
+    --card-bg: #ecebe8;
+    --header-fill: #675e45;
+    --border: #c2beb0;
+    --icon: #a08f5e;
+    --accent: #96771c;
+    --text-primary: #22211f;
+    --text-muted: #87857d;
+    --c-bg: #f2f1f0;
+    --c-accent: #96771c;
+    --c-text: #22211f;
+    --c-muted: #87857d;
+    --c-mid: #675e45;
+    --c-surface: #ecebe8;
+  }
+  html, body {
+    margin: 0; padding: 0;
+    width: 794px; height: 1123px;
+    background: var(--c-bg);
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    color: var(--c-text);
+  }
+  @media screen {
+    html { height: auto; display: flex; justify-content: center; min-height: 100vh; background: var(--c-bg); }
+    body { transform-origin: top center; scale: min(1, calc(100vw / 794), calc(100vh / 1123)); margin: 0 auto; box-shadow: 0 0 60px rgba(0,0,0,0.18); }
+  }
+  .cover {
+    width: 794px; height: 1123px; position: relative; box-sizing: border-box;
+    border: none; outline: none; box-shadow: none;
+  }
+  /* Layer 1: rejilla de fondo (2-4% de opacidad) */
+  .cover-layer-1 {
+    position: absolute; inset: 0; overflow: hidden; z-index: 1;
+    background-image:
+      linear-gradient(rgba(103, 94, 69, 0.045) 0.5px, transparent 0.5px),
+      linear-gradient(90deg, rgba(103, 94, 69, 0.045) 0.5px, transparent 0.5px);
+    background-size: 66px 66px;
+  }
+  /* Layer 2: linea ancla vertical ultra gruesa (6pt = 8px), x = 0.12W */
+  .cover-layer-2 { position: absolute; inset: 0; z-index: 2; }
+  .anchor-line {
+    position: absolute;
+    left: 95px; top: 112px; bottom: 112px;
+    width: 8px;
+    background: var(--c-accent);
+  }
+  /* Layer 3: contenido (x = borde derecho de la linea + 2U) */
+  .cover-layer-3 { position: absolute; inset: 0; z-index: 3; }
+  .kicker {
+    position: absolute; left: 185px; top: 168px;
+    font-size: 16pt; font-weight: 400;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--c-text); opacity: 0.6;
+    max-width: 520px;
+  }
+  .hero {
+    position: absolute; left: 185px; top: 300px;
+    font-size: 54pt; font-weight: 900; line-height: 1.15;
+    color: var(--c-text);
+    max-width: 540px;
+  }
+  .hero .thin { font-weight: 300; }
+  .summary {
+    position: absolute; left: 185px; top: 585px;
+    font-size: 16.5pt; font-weight: 400; line-height: 1.6;
+    color: var(--c-text); opacity: 0.85;
+    max-width: 470px;
+  }
+  .meta {
+    position: absolute; left: 185px; top: 852px;
+    font-size: 17pt; line-height: 1.55;
+    color: var(--c-text);
+  }
+  .meta .m2 { font-size: 15pt; color: var(--c-muted); }
+  .meta .accent-dot { color: var(--c-accent); font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-layer-1"></div>
+    <div class="cover-layer-2">
+      <div class="anchor-line"></div>
+    </div>
+    <div class="cover-layer-3">
+      <div class="kicker">Plan de implementaci&oacute;n &middot; Estudio de viabilidad</div>
+      <div class="hero">Chat<br>CONECTA-LT</div>
+      <div class="summary">
+        Chat en vivo real entre usuarios registrados: conversaciones 1-a-1, grupos y notas de voz
+        sobre la infraestructura actual de la plataforma, con Pusher Channels como &uacute;nico
+        servicio nuevo y costo inicial de cero d&oacute;lares al mes.
+      </div>
+      <div class="meta">
+        <div>Preparado para el equipo CONECTA-LT</div>
+        <div class="m2">Septiembre 2026 &middot; Versi&oacute;n 1.0 &middot; <span class="accent-dot">conectalt.com</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
