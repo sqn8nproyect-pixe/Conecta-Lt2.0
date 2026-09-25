@@ -103,6 +103,13 @@ model User {
   proposedBusinesses  Business[]  @relation("ProposedOwner")
   proposals         BusinessProposal[] @relation("ProposalAuthor")
   couponRedemptions CouponRedemption[]
+
+  // Chat entre usuarios (Sprint 9)
+  chatParticipants Participant[]
+  chatMessages     Message[]
+  blockedUsers     BlockedUser[] @relation("Blocker")
+  blockedByUsers   BlockedUser[] @relation("Blocked")
+  chatReportsFiled ChatReport[]  @relation("ChatReporter")
 }
 
 // ── NextAuth Prisma Adapter (Etapa 2) ───────────────────────
@@ -695,4 +702,115 @@ model Advertisement {
   updatedAt DateTime  @updatedAt
 
   @@index([active, sortOrder])
+}
+
+// ── CHAT ENTRE USUARIOS (Sprint 9) ──────────────────────────
+// Mensajería 1-a-1 (DIRECT) y grupos (GROUP, v1.1) con notas de
+// voz e imágenes. PostgreSQL es la fuente de verdad; la entrega
+// en vivo es dual:
+//   - Pusher Channels (private-convo-{id} / private-user-{id})
+//     cuando PUSHER_* está configurado (src/server/chat/pusher-server.ts)
+//   - Fallback: polling del cliente (React Query refetchInterval)
+// Los medios (voz/imagen) se suben a R2 vía presign tipo CHAT.
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum MessageKind {
+  TEXT
+  VOICE
+  IMAGE
+  SYSTEM
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  type          ConversationType @default(DIRECT)
+  title         String? // solo GROUP
+  createdBy     String
+  lastMessageAt DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  participants Participant[]
+  messages     Message[]
+  reports      ChatReport[]
+
+  @@index([lastMessageAt])
+}
+
+model Participant {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  // Cursor de lectura para el contador de no leídos: un mensaje
+  // cuenta como "no leído" si createdAt > lastReadAt y no lo envié yo.
+  lastReadAt     DateTime     @default(now())
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User?        @relation(fields: [senderId], references: [id])
+  senderId       String? // null = SYSTEM (v1.1: eventos de grupo)
+  kind           MessageKind  @default(TEXT)
+  text           String?      @db.Text
+  // VOICE / IMAGE: ruta interna del proxy /api/images/chat/…
+  // (nunca URL externa) + clave R2 para purga.
+  mediaUrl       String?
+  mediaKey       String?
+  durationMs     Int? // VOICE: duración en ms (tope 120_000)
+  createdAt      DateTime     @default(now())
+
+  reports ChatReport[]
+
+  @@index([conversationId, createdAt])
+}
+
+// ── Moderación básica de chat (nivel "básico" del plan) ─────
+// Bloqueo mutuo (cada usuario controla su experiencia) +
+// reportes que quedan en cola para el admin (revisión en v1.1).
+
+model BlockedUser {
+  id        String   @id @default(cuid())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model ChatReport {
+  id             String       @id @default(cuid())
+  reporter       User         @relation("ChatReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId     String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  message        Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  messageId      String?
+  reportedUserId String? // autor del mensaje reportado o el otro participante
+  // SPAM | ACOSO | CONTENIDO_INAPROPIADO | ESTAFA | OTRO
+  // (String con allowlist en el servicio, igual que Notification.type)
+  reason         String
+  details        String?
+  status         String       @default("OPEN") // OPEN | RESOLVED | DISMISSED
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([status, createdAt])
+  @@index([reporterId])
 }
