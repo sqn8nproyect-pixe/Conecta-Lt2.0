@@ -78,3 +78,6 @@ public/screenshots/etapa*-*.png
 /public/test-ads/
 /scripts/gen-test-ads.py
 /scripts/ad-variants/
+
+# Estado de sesión local (puede contener datos sensibles del sandbox)
+.session/
