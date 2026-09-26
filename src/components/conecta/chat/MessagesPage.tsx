@@ -12,8 +12,9 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, MessageCircle, Plus, Search, X } from 'lucide-react';
+import { Loader2, MessageCircle, Plus, Search, Trash2, X } from 'lucide-react';
 import {
+  deleteChatConversation,
   fetchChatConversations,
   openChatConversation,
   searchChatUsers,
@@ -62,13 +63,37 @@ function ConversationList({
   activeId,
   isLoading,
   onSelect,
+  onDeleted,
 }: {
   conversations: ChatConversationDTO[];
   activeId: string | null;
   isLoading: boolean;
   onSelect: (convo: ChatConversationDTO) => void;
+  onDeleted: (id: string) => void;
 }) {
   const me = useAppStore((s) => s.user);
+  const addNotification = useAppStore((s) => s.addNotification);
+  const queryClient = useQueryClient();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // "Eliminar conversación": soft-delete para mí (la bandeja del otro
+  // no cambia; si me escribe de nuevo, reaparece).
+  const deleteMutation = useMutation({
+    mutationFn: (conversationId: string) => deleteChatConversation(conversationId),
+    onSuccess: (_data, conversationId) => {
+      queryClient.setQueryData<ChatConversationDTO[]>(
+        CHAT_CONVERSATIONS_QUERY_KEY,
+        (prev) => (prev ? prev.filter((c) => c.id !== conversationId) : prev),
+      );
+      setConfirmDeleteId(null);
+      onDeleted(conversationId);
+      void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
+    },
+    onError: (e: Error) => {
+      setConfirmDeleteId(null);
+      addNotification(e.message, 'info');
+    },
+  });
 
   if (isLoading && conversations.length === 0) {
     return (
@@ -102,10 +127,10 @@ function ConversationList({
                 ? '📷 Imagen'
                 : c.lastMessage?.text ?? 'Sin mensajes aún';
         return (
-          <li key={c.id}>
+          <li key={c.id} className="group relative">
             <button
               onClick={() => onSelect(c)}
-              className={`w-full flex items-center gap-3 px-3 sm:px-4 py-3 text-left transition-colors ${
+              className={`w-full flex items-center gap-3 pl-3 sm:pl-4 pr-11 py-3 text-left transition-colors ${
                 activeId === c.id ? 'bg-gold/10' : 'hover:bg-white/5'
               }`}
               aria-current={activeId === c.id ? 'true' : undefined}
@@ -130,6 +155,37 @@ function ConversationList({
                 </div>
               </div>
             </button>
+            <button
+              onClick={() => setConfirmDeleteId((v) => (v === c.id ? null : c.id))}
+              className="absolute right-2 top-3.5 p-1.5 rounded-full text-white/30 hover:text-red-400 hover:bg-white/10 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+              aria-label="Eliminar conversación"
+              aria-expanded={confirmDeleteId === c.id}
+            >
+              <Trash2 size={14} />
+            </button>
+            {confirmDeleteId === c.id && (
+              <div className="pl-3 sm:pl-4 pr-11 pb-3 pt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-white/60">
+                <span className="flex-1 min-w-[14rem]">
+                  ¿Eliminar la conversación con {name}? Desaparece de tu bandeja; si te
+                  escribe de nuevo, reaparece.
+                </span>
+                <span className="flex gap-2">
+                  <button
+                    onClick={() => deleteMutation.mutate(c.id)}
+                    disabled={deleteMutation.isPending}
+                    className="px-2.5 py-1 rounded-full bg-red-500/90 text-white font-medium hover:bg-red-500 disabled:opacity-50 transition-colors"
+                  >
+                    {deleteMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="px-2.5 py-1 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </span>
+              </div>
+            )}
           </li>
         );
       })}
@@ -307,6 +363,7 @@ export default function MessagesPage() {
               isLoading={isLoading}
               activeId={activeId}
               onSelect={(c) => setActiveId(c.id)}
+              onDeleted={(id) => setActiveId((prev) => (prev === id ? null : prev))}
             />
           </div>
         </section>

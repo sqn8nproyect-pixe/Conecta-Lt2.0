@@ -1317,6 +1317,25 @@ export async function deleteChatMessage(
   return data as ChatMessageDTO;
 }
 
+/** "Eliminar conversación": participante → solo su bandeja
+ *  (reaparece si le escriben de nuevo); MODERATOR/ADMIN pueden
+ *  eliminarla para todos (scope 'everyone', moderación). */
+export async function deleteChatConversation(
+  conversationId: string,
+  scope: 'self' | 'everyone' = 'self',
+): Promise<{ ok: true; scope: 'self' | 'everyone' }> {
+  const res = await fetch(`/api/chat/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scope }),
+  });
+  const data = (await res.json().catch(() => ({}))) as
+    | { ok: true; scope: 'self' | 'everyone' }
+    | { error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as { ok: true; scope: 'self' | 'everyone' };
+}
+
 export const CHAT_REPORT_REASONS = [
   { value: 'SPAM', label: 'Spam' },
   { value: 'ACOSO', label: 'Acoso' },

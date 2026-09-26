@@ -55,11 +55,21 @@ export function useChatBadgeSync() {
     }
     let cancelled = false;
     let cleanup: (() => void) | undefined;
-    void subscribeUserChannel(userId, () => {
-      void queryClient.invalidateQueries({
-        queryKey: CHAT_CONVERSATIONS_QUERY_KEY,
-      });
-    }).then((fn) => {
+    void subscribeUserChannel(
+      userId,
+      () => {
+        void queryClient.invalidateQueries({
+          queryKey: CHAT_CONVERSATIONS_QUERY_KEY,
+        });
+      },
+      // convo:deleted (moderación para todos): refresca la MISMA query
+      // → la conversación eliminada sale de bandeja y badge al instante.
+      () => {
+        void queryClient.invalidateQueries({
+          queryKey: CHAT_CONVERSATIONS_QUERY_KEY,
+        });
+      },
+    ).then((fn) => {
       if (cancelled) fn();
       else cleanup = fn;
     });

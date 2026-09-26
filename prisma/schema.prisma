@@ -751,6 +751,12 @@ model Participant {
   // cuenta como "no leído" si createdAt > lastReadAt y no lo envié yo.
   lastReadAt     DateTime     @default(now())
   joinedAt       DateTime     @default(now())
+  // "Eliminar conversación" (v1.1): soft-delete POR PARTICIPANTE.
+  // Un participante la oculta de SU bandeja (reaparece si le escriben
+  // de nuevo); ADMIN/MODERATOR pueden ocultarla para todos. La fila
+  // y los mensajes persisten (auditoría, mismo enfoque que Message).
+  deletedAt      DateTime?
+  deletedBy      String? // quien la eliminó (≠ yo ⇒ moderación)
 
   @@unique([conversationId, userId])
   @@index([userId])

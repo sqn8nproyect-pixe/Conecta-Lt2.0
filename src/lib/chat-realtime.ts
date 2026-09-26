@@ -44,6 +44,7 @@ async function getPusherClient(): Promise<import('pusher-js').default | null> {
 export async function subscribeUserChannel(
   userId: string,
   onConvoUpdated: (payload: { conversationId: string }) => void,
+  onConvoDeleted?: (payload: { conversationId: string }) => void,
 ): Promise<() => void> {
   const client = await getPusherClient();
   if (!client) return () => {};
@@ -51,6 +52,13 @@ export async function subscribeUserChannel(
   channel.bind('convo:update', (data: { conversationId: string }) =>
     onConvoUpdated(data),
   );
+  // Moderación eliminó una conversación para todos → la bandeja del
+  // suscriptor la quita al instante.
+  if (onConvoDeleted) {
+    channel.bind('convo:deleted', (data: { conversationId: string }) =>
+      onConvoDeleted(data),
+    );
+  }
   return () => {
     client.unsubscribe(`private-user-${userId}`);
   };

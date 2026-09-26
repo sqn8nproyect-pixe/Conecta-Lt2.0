@@ -18,6 +18,7 @@ import {
   blockChatUser,
   CHAT_REPORT_REASONS,
   chatUploadPresign,
+  deleteChatConversation,
   deleteChatMessage,
   fetchChatMessages,
   markChatRead,
@@ -146,6 +147,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmConvoDelete, setConfirmConvoDelete] = useState<'self' | 'everyone' | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<string>('SPAM');
   const [reportDetails, setReportDetails] = useState('');
@@ -363,6 +365,20 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     onError: (e: Error) => addNotification(e.message, 'info'),
   });
 
+  // "Eliminar conversación": 'self' la quita solo de mi bandeja;
+  // 'everyone' (moderación) la oculta para todos en vivo.
+  const deleteConvoMutation = useMutation({
+    mutationFn: (scope: 'self' | 'everyone') => deleteChatConversation(conversation.id, scope),
+    onSuccess: () => {
+      setConfirmConvoDelete(null);
+      setMenuOpen(false);
+      void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
+      onBack();
+      addNotification('Conversación eliminada.', 'success');
+    },
+    onError: (e: Error) => addNotification(e.message, 'info'),
+  });
+
   const loadOlder = async () => {
     const oldest = older.messages[0]?.createdAt ?? data?.messages[0]?.createdAt;
     if (!oldest) return;
@@ -429,6 +445,28 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
               >
                 <Ban size={14} /> {conversation.blocked ? 'Desbloquear' : 'Bloquear'} usuario
               </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setConfirmConvoDelete('self');
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/10 transition-colors"
+                role="menuitem"
+              >
+                <Trash2 size={14} /> Eliminar conversación
+              </button>
+              {canModerate && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setConfirmConvoDelete('everyone');
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/10 transition-colors"
+                  role="menuitem"
+                >
+                  <Trash2 size={14} /> Eliminar para todos (moderación)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -474,6 +512,32 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
               className="text-xs px-4 py-2 rounded-full bg-gold text-obsidian font-semibold hover:bg-gold/90 disabled:opacity-50"
             >
               {reportMutation.isPending ? 'Enviando…' : 'Enviar reporte'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmación de eliminar conversación */}
+      {confirmConvoDelete && (
+        <div className="p-4 border-b border-white/10 bg-red-500/5 space-y-2">
+          <p className="text-sm text-white/80">
+            {confirmConvoDelete === 'everyone'
+              ? '¿Eliminar esta conversación para TODOS los participantes? (moderación)'
+              : '¿Eliminar esta conversación? Solo desaparece de tu bandeja; si te escriben de nuevo, reaparece.'}
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setConfirmConvoDelete(null)}
+              className="text-xs px-3 py-2 rounded-full border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => deleteConvoMutation.mutate(confirmConvoDelete)}
+              disabled={deleteConvoMutation.isPending}
+              className="text-xs px-4 py-2 rounded-full bg-red-500/90 text-white font-semibold hover:bg-red-500 disabled:opacity-50 transition-colors"
+            >
+              {deleteConvoMutation.isPending ? 'Eliminando…' : 'Eliminar'}
             </button>
           </div>
         </div>

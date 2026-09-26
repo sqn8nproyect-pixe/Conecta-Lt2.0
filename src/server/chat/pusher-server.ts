@@ -64,6 +64,7 @@ export const CHAT_EVENTS = {
   MESSAGE_READ: 'message:read',
   MESSAGE_DELETED: 'message:deleted',
   CONVO_UPDATED: 'convo:update',
+  CONVO_DELETED: 'convo:deleted',
 } as const;
 
 export const chatChannelNames = {

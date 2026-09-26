@@ -166,7 +166,7 @@ export const chatService = {
    */
   listConversations: async (userId: string): Promise<ChatConversationDTO[]> => {
     const convos = await db.conversation.findMany({
-      where: { participants: { some: { userId } } },
+      where: { participants: { some: { userId, deletedAt: null } } },
       include: {
         participants: { include: { user: { select: { id: true, name: true, image: true } } } },
         messages: { orderBy: { createdAt: 'desc' as const }, take: 1, include: { sender: { select: { name: true, image: true } } } },
@@ -287,6 +287,13 @@ export const chatService = {
           createdBy: userId,
           participants: { create: [{ userId }, { userId: otherUserId }] },
         },
+      });
+    } else {
+      // Re-apertura explícita: si la había eliminado de mi bandeja,
+      // vuelve a aparecer (el usuario la está buscando de nuevo).
+      await db.participant.updateMany({
+        where: { conversationId: convo.id, userId, deletedAt: { not: null } },
+        data: { deletedAt: null, deletedBy: null },
       });
     }
 
@@ -459,6 +466,12 @@ export const chatService = {
         where: { conversationId_userId: { conversationId, userId } },
         data: { lastReadAt: new Date() },
       }),
+      // "Eliminar conversación": un mensaje nuevo devuelve la conversa-
+      // ción a la bandeja de quien la había ocultado (estándar WhatsApp).
+      db.participant.updateMany({
+        where: { conversationId, deletedAt: { not: null } },
+        data: { deletedAt: null, deletedBy: null },
+      }),
     ]);
 
     const dto = toMessageDTO(message, message.sender);
@@ -559,6 +572,69 @@ export const chatService = {
     }
 
     return dto;
+  },
+
+  /**
+   * "Eliminar conversación" (v1.1). Reglas:
+   *  - scope 'self': un participante la oculta SOLO de su bandeja
+   *    (soft-delete por participante). El otro la conserva y, si le
+   *    escribe de nuevo, le reaparece (sendMessage lo des-hace).
+   *  - scope 'everyone': solo MODERATOR/ADMIN (aunque no participen);
+   *    oculta para todos con aviso en vivo (convo:deleted por los
+   *    canales personales de cada participante).
+   *  - 404 si la conversación no existe, o si no participo con scope
+   *    'self' (no revelar conversaciones ajenas); 403 si piden
+   *    'everyone' sin rol de moderación.
+   * Soft: la fila, participantes y mensajes persisten (auditoría).
+   */
+  deleteConversation: async (
+    actor: { id: string; role: string },
+    conversationId: string,
+    scope: 'self' | 'everyone' = 'self',
+  ): Promise<{ ok: true; scope: 'self' | 'everyone' }> => {
+    const isModerator = actor.role === 'ADMIN' || actor.role === 'MODERATOR';
+
+    const exists = await db.conversation.findUnique({
+      where: { id: conversationId },
+      select: { participants: { select: { userId: true } } },
+    });
+    if (!exists) {
+      throw new Response(JSON.stringify({ error: 'Conversación no encontrada' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    if (scope === 'everyone') {
+      if (!isModerator) {
+        throw new Response(
+          JSON.stringify({ error: 'Solo la moderación puede eliminar para todos' }),
+          { status: 403, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      // Moderación: ocultar para TODOS los participantes de una vez.
+      await db.participant.updateMany({
+        where: { conversationId },
+        data: { deletedAt: new Date(), deletedBy: actor.id },
+      });
+      // En vivo: cada participante (incluido yo, p.ej. otra pestaña)
+      // la quita de su bandeja al instante vía su canal personal.
+      void triggerChatEvent(
+        exists.participants.map((p) => chatChannelNames.user(p.userId)),
+        CHAT_EVENTS.CONVO_DELETED,
+        { conversationId },
+      );
+      return { ok: true, scope: 'everyone' };
+    }
+
+    // scope 'self': solo mi copia; 404 si no participo.
+    await assertParticipant(conversationId, actor.id);
+    await db.participant.update({
+      where: { conversationId_userId: { conversationId, userId: actor.id } },
+      data: { deletedAt: new Date(), deletedBy: actor.id },
+    });
+    // Sin evento Pusher: la bandeja del otro NO cambia.
+    return { ok: true, scope: 'self' };
   },
 
   /** Marca mi lectura (lastReadAt = ahora) y avisa por Pusher. */
