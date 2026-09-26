@@ -55,6 +55,10 @@ export interface ChatMessageDTO {
   mediaUrl: string | null;
   durationMs: number | null;
   createdAt: string;
+  /** true = eliminado (autor o moderación): contenido NUNCA se sirve. */
+  deleted?: boolean;
+  /** true = lo eliminó moderación/admin, no el autor. */
+  moderated?: boolean;
 }
 
 export interface ChatConversationDTO {
@@ -82,9 +86,29 @@ function toMessageDTO(
     mediaUrl: string | null;
     durationMs: number | null;
     createdAt: Date;
+    deletedAt?: Date | null;
+    deletedBy?: string | null;
   },
   sender?: { name: string | null; image: string | null } | null,
 ): ChatMessageDTO {
+  // Soft-delete: redactar TODO el contenido a nivel de servidor. La fila
+  // solo aporta identidad (quién/cuándo) para la tumba en la UI.
+  if (m.deletedAt) {
+    return {
+      id: m.id,
+      conversationId: m.conversationId,
+      senderId: m.senderId,
+      senderName: sender?.name ?? null,
+      senderImage: sender?.image ?? null,
+      kind: m.kind as ChatMessageKind,
+      text: null,
+      mediaUrl: null,
+      durationMs: null,
+      createdAt: m.createdAt.toISOString(),
+      deleted: true,
+      moderated: Boolean(m.deletedBy && m.senderId && m.deletedBy !== m.senderId),
+    };
+  }
   return {
     id: m.id,
     conversationId: m.conversationId,
@@ -450,6 +474,87 @@ export const chatService = {
         otherParticipantIds.map(chatChannelNames.user),
         CHAT_EVENTS.CONVO_UPDATED,
         { conversationId, message: dto },
+      );
+    }
+
+    return dto;
+  },
+
+  /**
+   * Soft-delete de un mensaje (v1.1). Reglas:
+   *  - El AUTOR puede eliminar su propio mensaje.
+   *  - MODERATOR/ADMIN pueden eliminar cualquiera (moderación).
+   *  - Nadie más (404 si no participa, 403 si no es suyo).
+   * Contenido redactado en todas las lecturas (toMessageDTO); la fila
+   * queda para auditoría. Avisa por Pusher para desaparecer en vivo.
+   */
+  deleteMessage: async (
+    actor: { id: string; role: string },
+    conversationId: string,
+    messageId: string,
+  ): Promise<ChatMessageDTO> => {
+    // 404 si no soy participante (no revelar conversaciones ajenas).
+    // El admin/moderador puede moderar aunque no participe.
+    const isModerator = actor.role === 'ADMIN' || actor.role === 'MODERATOR';
+    if (!isModerator) {
+      await assertParticipant(conversationId, actor.id);
+    }
+
+    const msg = await db.message.findFirst({
+      where: { id: messageId, conversationId },
+      select: { id: true, senderId: true, deletedAt: true, deletedBy: true },
+    });
+    if (!msg) {
+      throw new Response(JSON.stringify({ error: 'Mensaje no encontrado' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    // Mensajes SYSTEM (senderId null): solo moderación.
+    if (msg.senderId !== actor.id && !isModerator) {
+      throw new Response(JSON.stringify({ error: 'Solo puedes eliminar tus propios mensajes' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    // Idempotente: ya eliminado → devolver la tumba tal cual.
+    if (msg.deletedAt) {
+      const existing = await db.message.findUnique({
+        where: { id: messageId },
+        include: { sender: { select: { name: true, image: true } } },
+      });
+      return toMessageDTO(existing!, existing?.sender);
+    }
+
+    const now = new Date();
+    const updated = await db.message.update({
+      where: { id: messageId },
+      data: { deletedAt: now, deletedBy: actor.id },
+      include: { sender: { select: { name: true, image: true } } },
+    });
+    const dto = toMessageDTO(updated, updated.sender);
+
+    // En vivo: tumba instantánea en la conversación abierta + refresco
+    // de bandeja para el resto de participantes (preview redactado).
+    void triggerChatEvent(chatChannelNames.convo(conversationId), CHAT_EVENTS.MESSAGE_DELETED, {
+      id: dto.id,
+      conversationId,
+      deleted: true,
+    });
+    const participants = await db.conversation.findUnique({
+      where: { id: conversationId },
+      select: { participants: { select: { userId: true } } },
+    });
+    const otherParticipantIds = (participants?.participants ?? [])
+      .map((p) => p.userId)
+      .filter((id) => id !== actor.id);
+    if (otherParticipantIds.length > 0) {
+      void triggerChatEvent(
+        otherParticipantIds.map(chatChannelNames.user),
+        CHAT_EVENTS.CONVO_UPDATED,
+        { conversationId },
       );
     }
 

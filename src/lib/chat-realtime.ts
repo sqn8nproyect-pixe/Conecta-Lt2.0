@@ -58,13 +58,14 @@ export async function subscribeUserChannel(
 
 /**
  * Se suscribe a una conversación abierta (private-convo-{id}) para
- * recibir mensajes en vivo + lecturas. No-op sin Pusher.
+ * recibir mensajes en vivo + lecturas + borrados. No-op sin Pusher.
  */
 export async function subscribeConversationChannel(
   conversationId: string,
   handlers: {
     onMessage: (message: ChatMessageDTO) => void;
     onRead: (payload: { userId: string; lastReadAt: string }) => void;
+    onMessageDeleted?: (payload: { id: string; conversationId: string; deleted?: boolean }) => void;
   },
 ): Promise<() => void> {
   const client = await getPusherClient();
@@ -73,6 +74,9 @@ export async function subscribeConversationChannel(
   const channel: Channel = client.subscribe(name);
   channel.bind('message:new', handlers.onMessage);
   channel.bind('message:read', handlers.onRead);
+  if (handlers.onMessageDeleted) {
+    channel.bind('message:deleted', handlers.onMessageDeleted);
+  }
   return () => {
     client.unsubscribe(name);
   };

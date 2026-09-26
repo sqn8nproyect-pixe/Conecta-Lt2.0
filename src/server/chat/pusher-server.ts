@@ -62,6 +62,7 @@ export async function triggerChatEvent(
 export const CHAT_EVENTS = {
   MESSAGE_NEW: 'message:new',
   MESSAGE_READ: 'message:read',
+  MESSAGE_DELETED: 'message:deleted',
   CONVO_UPDATED: 'convo:update',
 } as const;
 

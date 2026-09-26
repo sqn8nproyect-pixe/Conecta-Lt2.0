@@ -13,11 +13,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Ban, Flag, Loader2, Mic, MoreVertical, Send, Square } from 'lucide-react';
+import { ArrowLeft, Ban, Flag, Loader2, Mic, MoreVertical, Send, Square, Trash2 } from 'lucide-react';
 import {
   blockChatUser,
   CHAT_REPORT_REASONS,
   chatUploadPresign,
+  deleteChatMessage,
   fetchChatMessages,
   markChatRead,
   reportChatConversation,
@@ -135,6 +136,8 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   const other = conversation.participants.find((p) => p.id !== me?.id);
   const otherName = other?.name ?? 'Usuario';
+  // Moderación (v1.1): ADMIN/MODERATOR pueden eliminar cualquier mensaje.
+  const canModerate = me?.role === 'ADMIN' || me?.role === 'MODERATOR';
 
   const [draft, setDraft] = useState('');
   const [older, setOlder] = useState<{ messages: ChatMessageDTO[]; hasMore: boolean }>({
@@ -142,6 +145,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     hasMore: false,
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<string>('SPAM');
   const [reportDetails, setReportDetails] = useState('');
@@ -217,6 +221,22 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
       },
       onRead: () => {
+        void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
+      },
+      onMessageDeleted: ({ id }) => {
+        // Tumba instantánea (el contenido ya no está en el cache).
+        const tomb = (m: ChatMessageDTO): ChatMessageDTO => ({
+          ...m,
+          text: null,
+          mediaUrl: null,
+          durationMs: null,
+          deleted: true,
+        });
+        queryClient.setQueryData<{ messages: ChatMessageDTO[]; hasMore: boolean }>(
+          MESSAGES_QUERY_KEY(conversation.id),
+          (prev) => (prev ? { ...prev, messages: prev.messages.map(tomb) } : prev),
+        );
+        setOlder((prev) => ({ ...prev, messages: prev.messages.map(tomb) }));
         void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
       },
     }).then((fn) => {
@@ -321,6 +341,23 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         conversation.blocked ? 'Usuario desbloqueado.' : 'Usuario bloqueado. No podrá enviarte mensajes.',
         'success',
       );
+      void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
+    },
+    onError: (e: Error) => addNotification(e.message, 'info'),
+  });
+
+  // Eliminar mi mensaje (o moderación si canModerate). El servidor
+  // devuelve el DTO redactado → sustituyo en cache (tumba) al instante.
+  const deleteMutation = useMutation({
+    mutationFn: (messageId: string) => deleteChatMessage(conversation.id, messageId),
+    onSuccess: (dto) => {
+      const swap = (m: ChatMessageDTO): ChatMessageDTO => (m.id === dto.id ? dto : m);
+      queryClient.setQueryData<{ messages: ChatMessageDTO[]; hasMore: boolean }>(
+        MESSAGES_QUERY_KEY(conversation.id),
+        (prev) => (prev ? { ...prev, messages: prev.messages.map(swap) } : prev),
+      );
+      setOlder((prev) => ({ ...prev, messages: prev.messages.map(swap) }));
+      setConfirmDeleteId(null);
       void queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_QUERY_KEY });
     },
     onError: (e: Error) => addNotification(e.message, 'info'),
@@ -473,33 +510,82 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         )}
         {messages.map((m) => {
           const mine = m.senderId === me?.id;
+          // Autor puede eliminar el suyo; moderación cualquiera no borrado.
+          const canDelete = !m.deleted && (mine || canModerate);
           return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[78%] sm:max-w-[65%] rounded-2xl px-3.5 py-2 text-sm ${
-                  mine
-                    ? 'bg-gold text-obsidian rounded-br-md'
-                    : 'bg-white/10 text-white rounded-bl-md'
-                }`}
-              >
-                {m.kind === 'TEXT' && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
-                {m.kind === 'VOICE' && (
-                  <div className="flex items-center gap-2">
-                    <Mic size={14} aria-hidden />
-                    <audio controls src={m.mediaUrl ?? ''} className="max-w-[200px] h-8" preload="none" />
-                    {typeof m.durationMs === 'number' && (
-                      <span className="text-xs opacity-70">
-                        {Math.round(m.durationMs / 1000)}s
-                      </span>
-                    )}
-                  </div>
+            <div key={m.id} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+              <div className={`group flex items-center gap-1.5 ${mine ? 'flex-row-reverse' : ''}`}>
+                {canDelete && (
+                  <button
+                    onClick={() => setConfirmDeleteId((v) => (v === m.id ? null : m.id))}
+                    className="p-1 rounded-full text-white/30 hover:text-red-400 hover:bg-white/10 transition-colors opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 shrink-0"
+                    aria-label="Eliminar mensaje"
+                    aria-expanded={confirmDeleteId === m.id}
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 )}
-                <span
-                  className={`block text-[10px] mt-0.5 ${mine ? 'text-obsidian/60 text-right' : 'text-white/40'}`}
+                <div
+                  className={`max-w-[78%] sm:max-w-[65%] rounded-2xl px-3.5 py-2 text-sm ${
+                    m.deleted
+                      ? 'bg-white/5 text-white/45 italic rounded-br-md'
+                      : mine
+                        ? 'bg-gold text-obsidian rounded-br-md'
+                        : 'bg-white/10 text-white rounded-bl-md'
+                  }`}
                 >
-                  {formatTime(m.createdAt)}
-                </span>
+                  {m.deleted ? (
+                    <p className="italic">
+                      {m.moderated ? 'Mensaje eliminado por moderación' : 'Mensaje eliminado'}
+                    </p>
+                  ) : (
+                    <>
+                      {m.kind === 'TEXT' && (
+                        <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                      )}
+                      {m.kind === 'VOICE' && (
+                        <div className="flex items-center gap-2">
+                          <Mic size={14} aria-hidden />
+                          <audio
+                            controls
+                            src={m.mediaUrl ?? ''}
+                            className="max-w-[200px] h-8"
+                            preload="none"
+                          />
+                          {typeof m.durationMs === 'number' && (
+                            <span className="text-xs opacity-70">
+                              {Math.round(m.durationMs / 1000)}s
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <span
+                        className={`block text-[10px] mt-0.5 ${mine ? 'text-obsidian/60 text-right' : 'text-white/40'}`}
+                      >
+                        {formatTime(m.createdAt)}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
+              {confirmDeleteId === m.id && (
+                <div className="mt-1 flex items-center gap-2 text-xs text-white/60">
+                  <span>¿Eliminar este mensaje?</span>
+                  <button
+                    onClick={() => deleteMutation.mutate(m.id)}
+                    disabled={deleteMutation.isPending}
+                    className="px-2.5 py-1 rounded-full bg-red-500/90 text-white font-medium hover:bg-red-500 disabled:opacity-50 transition-colors"
+                  >
+                    {deleteMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="px-2.5 py-1 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

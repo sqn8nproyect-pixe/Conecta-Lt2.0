@@ -783,6 +783,10 @@ export interface ChatMessageDTO {
   mediaUrl: string | null;
   durationMs: number | null;
   createdAt: string; // ISO
+  /** true = eliminado (autor o moderación): contenido redactado. */
+  deleted?: boolean;
+  /** true = lo eliminó moderación/admin, no el autor. */
+  moderated?: boolean;
 }
 
 export interface ChatConversationDTO {

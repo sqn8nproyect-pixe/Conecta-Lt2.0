@@ -94,11 +94,13 @@ function ConversationList({
         const other = c.participants.find((p) => p.id !== me?.id);
         const name = other?.name ?? c.title ?? 'Usuario';
         const preview =
-          c.lastMessage?.kind === 'VOICE'
-            ? '🎤 Nota de voz'
-            : c.lastMessage?.kind === 'IMAGE'
-              ? '📷 Imagen'
-              : c.lastMessage?.text ?? 'Sin mensajes aún';
+          c.lastMessage?.deleted
+            ? 'Mensaje eliminado'
+            : c.lastMessage?.kind === 'VOICE'
+              ? '🎤 Nota de voz'
+              : c.lastMessage?.kind === 'IMAGE'
+                ? '📷 Imagen'
+                : c.lastMessage?.text ?? 'Sin mensajes aún';
         return (
           <li key={c.id}>
             <button

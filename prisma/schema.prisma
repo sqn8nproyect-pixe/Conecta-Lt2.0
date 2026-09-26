@@ -770,6 +770,11 @@ model Message {
   mediaKey       String?
   durationMs     Int? // VOICE: duración en ms (tope 120_000)
   createdAt      DateTime     @default(now())
+  // Soft-delete (v1.1): el autor o un moderador/admin pueden eliminar.
+  // El contenido se redacta a nivel de API (text/mediaUrl/durationMs
+  // nunca vuelven a servirse) y la fila persiste para auditoría.
+  deletedAt      DateTime?
+  deletedBy      String? // userId de quien eliminó (≠ senderId ⇒ moderación)
 
   reports ChatReport[]
 

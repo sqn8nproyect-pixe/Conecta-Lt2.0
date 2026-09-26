@@ -1303,6 +1303,20 @@ export async function markChatRead(conversationId: string): Promise<void> {
   await fetch(`/api/chat/conversations/${conversationId}/read`, { method: 'POST' });
 }
 
+/** Soft-delete: autor borra el suyo; MODERATOR/ADMIN borran cualquiera. */
+export async function deleteChatMessage(
+  conversationId: string,
+  messageId: string,
+): Promise<ChatMessageDTO> {
+  const res = await fetch(
+    `/api/chat/conversations/${conversationId}/messages/${messageId}`,
+    { method: 'DELETE' },
+  );
+  const data = (await res.json().catch(() => ({}))) as ChatMessageDTO | { error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Error');
+  return data as ChatMessageDTO;
+}
+
 export const CHAT_REPORT_REASONS = [
   { value: 'SPAM', label: 'Spam' },
   { value: 'ACOSO', label: 'Acoso' },
