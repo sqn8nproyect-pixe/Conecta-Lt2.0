@@ -322,3 +322,61 @@ Stage Summary:
 - CHAT EN PRODUCCIÓN en conectalt.com con transporte polling (3s conversación, 15s badge) — Pusher opcional a futuro con solo pegar 6 env vars en Vercel, cero cambios de código.
 - La migración de chat corre ahora automáticamente en cada deploy (vercel.json).
 - Push Protection funcionó: impidió publicar un PAT viejo del dueño; el dueño debe revocarlo de todas formas (ghp_FuRW…, 21-sep) junto con ghp_ixLT… (17-sep) y el token de HOY (usado 2×, ya cumplió su función), y rotar NEXTAUTH_SECRET (pendiente desde 18-ago).
+
+---
+Task ID: pusher-activacion-prep-2026-09-26
+Agent: Super Z (principal)
+Task: "activemos pusher" — dejar el código 100% listo y guiar la activación (solo faltan las credenciales del dueño).
+
+Work Log:
+- Auditoría del cableado dual-mode: pusher-server.ts (trigger no-op sin env) y chat-realtime.ts (lazy import, authEndpoint /api/chat/pusher/auth) completos; chat.service dispara message:new + convo:update + message:read; auth route valida membresía (private-user-{miId} / private-convo-{id} participante) con rate limit 60/min.
+- GAP encontrado y corregido: subscribeUserChannel existía pero NADIE la usaba — los eventos convo:update del servidor no tenían receptor (badge y bandeja dependían solo de polling 10s/15s).
+- Fix 1 (use-chat-badge-sync.ts): con sesión activa + NEXT_PUBLIC_PUSHER_* horneadas, suscribe private-user-{session.user.id} y cada convo:update invalida ['chat','conversations'] — misma query key del badge Y de MessagesPage → una suscripción refresca badge + bandeja al instante. Manejo de cancelación (cancelled flag) para el async cleanup.
+- Fix 2 (ChatWindow.tsx): refetchInterval ahora isChatClientRealtimeEnabled() ? 30_000 : 3_000 — con Pusher la entrega es por eventos y el polling queda como red de seguridad lenta (antes: 3s incondicional = 20 req/min por chat abierto de más).
+- tsc 0 errores en archivos tocados, eslint limpio. Push 356ec4f..9b1eea7 → deploy en curso.
+- .env.example ya documenta las 6 variables (4 server PUSHER_* + 2 NEXT_PUBLIC_PUSHER_*).
+
+Stage Summary:
+- Código realtime COMPLETO en producción (commit 9b1eea7): conversación abierta en vivo, badge+bandeja por eventos, polling de respaldo degradado. Todo no-op hasta que existan las env vars — activar = crear app Pusher + 6 env vars en Vercel (NEXT_PUBLIC_* requieren REDEPLOY por ser build-time) + Redeploy.
+- Pendiente del dueño: crear cuenta Pusher (cluster recomendado us2) y pegar las 6 variables; opcional: pegarme app_id/key/secret/cluster para validarlos con un trigger de prueba antes de tocar Vercel.
+- Token de hoy aún NO revocado (funcionó en este push) — recordatorio vigente: revocar ghp_O0KM… + ghp_FuRW… + ghp_ixLT… y rotar NEXTAUTH_SECRET.
+
+---
+Task ID: pusher-activacion-final-2026-09-26
+Agent: Super Z (principal)
+Task: El dueño pasó el token API de Vercel + credenciales Pusher para que yo subiera las variables y activara realtime en producción.
+
+Work Log:
+- Datos recibidos: Vercel token (team-scoped: /v2/user 404 pero /v9/projects OK, team_xnrW6XmHDSfNWTNJcxF4QzVI) y Pusher app_id=2197600, key=1e1cb5…, cluster=sa1 (¡NO us2 como sugerí — el dueño creó la app en sa1; se usó sa1 en las 6 variables para que coincida!).
+- scripts/vercel-chat-env.sh (de prep anterior) corregido en frío: (1) /v2/user eliminado del paso 1 (tokens de team dan 404), (2) env vars a target production+preview, (3) aceptar HTTP 201 (la API responde 201 Created, no 200), (4) gitSource deploy usa "name":"conecta-lt2-0" (la API exige name, no project/id).
+- Validación Pusher con trigger REAL aceptado por Channels (canal test-conectalt) antes de tocar Vercel → credenciales correctas.
+- 6 env vars creadas por API (upsert, encrypted, production+preview): PUSHER_APP_ID/KEY/SECRET/CLUSTER + NEXT_PUBLIC_PUSHER_KEY/CLUSTER.
+- Redeploy lanzado por API: dpl_F7oBUyzHPxsWyL1PcypsP4WzoUVM sobre commit 9b1eea7 (origin/main exacto). READY en ~1 min. Aliases: conectalt.com, www, conecta-lt2-0.vercel.app.
+- Verificación en vivo (scripts/verify-live.py): home 200; clave Pusher HORNEADA en bundle /_next/static/immutable/chunks/3gb42tik6u9jb.js (NEXT_PUBLIC_* compiladas ✓); GET pusher/auth → 405, POST → 401, chat/users → 401, chat/conversations → 401. RESULTADO: TODO OK.
+- Higiene repo local: auto-commits locales (26bf43f BORRA rutas upload, 06a4f9a) NO están en GitHub (origin/main=9b1eea7 limpio). Restauradas las 2 rutas localmente con git checkout 9b1eea7 -- . NO pushear main local (contiene auto-commit destructivo).
+- Scripts nuevos: vercel-watch.py (poll deployment hasta READY, vuelca logs en ERROR), verify-live.py (bundle + endpoints).
+
+Stage Summary:
+- PUSHER ACTIVO EN PRODUCCIÓN: entrega de mensajes en vivo (evento), badge+bandeja instantáneos vía private-user-{id}, polling de respaldo 30s (conversación abierta) / 15s→eventos (badge). Credenciales sa1 validadas con trigger real.
+- Verificación 100% pasiva (sin datos de prueba en la DB de prod). Test visual pendiente para el dueño: 2 sesiones, enviar mensaje, badge al instante.
+- SEGUIMIENTO CRÍTICO: revocar YA el token Vercel (vcp_1upa…, token full-account de team pegado en chat) en vercel.com/account/tokens; revocar también ghp_O0KM… (hoy), ghp_FuRW…, ghp_ixLT…; rotar NEXTAUTH_SECRET; opcional rotar secret Pusher (quedó expuesto en chat).
+
+---
+Task ID: rotacion-auth-secret-2026-09-26
+Agent: Super Z (principal)
+Task: "dale" — rotar NEXTAUTH_SECRET (deuda de seguridad desde el incidente 18-ago).
+
+Work Log:
+- Contexto del incidente (PROJECT_STATUS.md): el 10-ago se filtraron al repo público los secretos reales via worklog.md; Neon y Google se rotaron entonces, NEXTAUTH_SECRET quedó pendiente (commits viejos aún accesibles por SHA en GitHub).
+- scripts/rotate-auth-secret.sh creado: genera secret (openssl rand -base64 32, NUNCA impreso ni persistido) → upsert AUTH_SECRET + NEXTAUTH_SECRET (production+preview, encrypted) → redeploy gitSource main → espera READY → verificación.
+- Bug 1 del script: parse del deployment id leía process.argv en vez de stdin (el deploy SÍ se creó; arreglado con Edit).
+- Bug 2 de consulta: listar deployments es GET /v6/deployments (GET /v13 da "Invalid API version"; /v13 es solo POST para crear).
+- Deploy de rotación dpl_tjoBuNfgDuzFpAUvNWMk4xjxWtmr: READY, aliasAssigned=true, sirviendo conectalt.com + www (sha 9b1eea7).
+- Prueba documental: vars updatedAt 22:41:12Z → deploy creado 22:41:14Z (snapshot con el valor nuevo garantizado).
+- Verificación: home 200; /api/auth/session 200 (null anónimo); csrf OK; login demo ana → 302 ?error=CredentialsSignin porque ana@test.local NO existe en la DB de prod (el proveedor demo exige haber entrado con Google una vez; en dev los sembró el seed). No es fallo de la rotación.
+- El valor del secret no quedó en chat, ni en archivos, ni en logs del repo.
+
+Stage Summary:
+- SECRET DE SESIÓN ROTADO EN PRODUCCIÓN: las cookies viejas (incluida cualquier sesión forjada con el secret filtrado) ya NO decryptan → ventana de ataque cerrada. Efecto visible: re-login general para todos los usuarios.
+- Deuda de seguridad del dueño restante: revocar token Vercel vcp_1upa… (último uso ya hecho) + revocar ghp_O0KM…/ghp_FuRW…/ghp_ixLT… (github.com/settings/tokens). Opcional/media: rotar Neon y R2.
+- Verificación funcional final del login real corresponde al dueño (Google) — sesiones nuevas se emiten con el secret nuevo.
