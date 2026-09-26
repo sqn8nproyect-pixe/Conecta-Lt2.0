@@ -751,10 +751,11 @@ model Participant {
   // cuenta como "no leído" si createdAt > lastReadAt y no lo envié yo.
   lastReadAt     DateTime     @default(now())
   joinedAt       DateTime     @default(now())
-  // "Eliminar conversación" (v1.1): soft-delete POR PARTICIPANTE.
-  // Un participante la oculta de SU bandeja (reaparece si le escriben
-  // de nuevo); ADMIN/MODERATOR pueden ocultarla para todos. La fila
-  // y los mensajes persisten (auditoría, mismo enfoque que Message).
+  // LEGADO v1.1: soft-delete POR PARTICIPANTE ("solo mi bandeja").
+  // Desde v2 "Eliminar conversación" es TOTAL (purga mensajes +
+  // participantes + conversación, salvo reportes); estas columnas se
+  // conservan solo para filas históricas ya ocultas (sendMessage /
+  // openDirect siguen des-ocultándolas si llega actividad).
   deletedAt      DateTime?
   deletedBy      String? // quien la eliminó (≠ yo ⇒ moderación)
 

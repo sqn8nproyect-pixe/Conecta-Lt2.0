@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# chat-delete-convo-e2e.sh — E2E de "eliminar conversación" (correr
+# chat-delete-convo-e2e.sh — E2E de "eliminar conversación" v2 (correr
 # DENTRO de preview-run.sh: bash scripts/preview-run.sh bash scripts/chat-delete-convo-e2e.sh).
-# Cubre: permisos (401/403/404), self-delete (sale de MI bandeja, la del otro intacta,
-# mensajes persisten), reaparición por mensaje nuevo y por re-apertura, moderación
-# 'everyone' (sale para ambos), idempotencia.
+# Semántica v2 — ELIMINACIÓN TOTAL: al eliminar, la conversación
+# desaparece de la bandeja de AMBOS, los mensajes se PURGAN (sin
+# tumbas), NADA reaparece (ni por mensaje nuevo ni por re-apertura:
+# un chat nuevo crea una conversación NUEVA y vacía), y la fila se
+# borra salvo que tenga reportes (evidencia de moderación = cáscara
+# sin participantes). Moderación (ADMIN/MODERATOR) puede eliminar
+# conversaciones ajenas.
 set -u
 cd "$(dirname "$0")/.."
 set -a; [ -f .env ] && . ./.env; set +a
@@ -98,6 +102,20 @@ inbox_has() {
   curl -s -b "$1" "$B/api/chat/conversations" | rg -q "\"id\":\"$2\""
 }
 
+# dbcount TABLA COLUMNA VALOR → imprime el número de filas
+dbcount() {
+  node << EOF
+const { Client } = require('/home/z/preview-pg/node_modules/pg');
+(async () => {
+  const c = new Client({ connectionString: process.env.DATABASE_URL });
+  await c.connect();
+  const r = await c.query('SELECT count(*)::int AS n FROM "$1" WHERE "$2" = \$1::text', ['$3']);
+  console.log(r.rows[0].n);
+  await c.end();
+})().catch((e) => { console.error('DBCOUNT:', e.message); process.exit(1); });
+EOF
+}
+
 hdr "1. Sesiones demo (owner=ADMIN via allowlist, ana/beto=USER)"
 login_demo "$JA" "ana@test.local"  && ok "sesión ana"  || bad "sesión ana"
 login_demo "$JB" "beto@test.local" && ok "sesión beto" || bad "sesión beto"
@@ -109,12 +127,15 @@ ROLE_ANA=$(curl -s -b "$JA" "$B/api/auth/session" | jget '.user.role')
 
 BETO_ID=$(curl -s -b "$JA" "$B/api/chat/users?q=beto" | jget '.[0].id')
 ANA_ID=$(curl -s -b "$JA" "$B/api/auth/session" | jget '.user.id')
+
 hdr "2. Preparar conversación + mensajes"
 CONV=$(curl -s -b "$JA" -X POST "$B/api/chat/conversations" -H 'content-type: application/json' -d "{\"userId\":\"$BETO_ID\"}")
 CID=$(echo "$CONV" | jget .id)
 [ -n "$CID" ] && ok "conversación $CID" || bad "conversación"
 M1=$(curl -s -b "$JA" -X POST "$B/api/chat/conversations/$CID/messages" -H 'content-type: application/json' -d '{"kind":"TEXT","text":"hola beto"}' | jget .id)
-[ -n "$M1" ] && ok "mensaje creado" || bad "mensaje"
+[ -n "$M1" ] && ok "mensaje 1 (ana)" || bad "mensaje 1"
+M2=$(curl -s -b "$JB" -X POST "$B/api/chat/conversations/$CID/messages" -H 'content-type: application/json' -d '{"kind":"TEXT","text":"que tal ana"}' | jget .id)
+[ -n "$M2" ] && ok "mensaje 2 (beto)" || bad "mensaje 2"
 
 # conversación "ajena": participante SOLO ana (insert directo, para 404 de no-participante)
 CID_AJENA=$(node << 'EOF'
@@ -135,55 +156,64 @@ hdr "3. Permisos"
 C=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$B/api/chat/conversations/$CID")
 [ "$C" = "401" ] && ok "anónimo DELETE → 401" || bad "anónimo DELETE → $C"
 
-C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" -X DELETE "$B/api/chat/conversations/$CID" -H 'content-type: application/json' -d '{"scope":"everyone"}')
-[ "$C" = "403" ] && ok "beto (USER) scope everyone → 403" || bad "beto everyone → $C"
-
-C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JA" -X DELETE "$B/api/chat/conversations/$CID" -H 'content-type: application/json' -d '{"scope":"everyone"}')
-[ "$C" = "403" ] && ok "ana (MODERATOR en DB, sin allowlist) scope everyone → 403" || bad "ana everyone → $C"
-
 C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" -X DELETE "$B/api/chat/conversations/$CID_AJENA")
-[ "$C" = "404" ] && ok "beto no-participante (self) → 404" || bad "no-participante → $C"
+[ "$C" = "404" ] && ok "beto no-participante → 404 (no revelación)" || bad "no-participante → $C"
 
 C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" -X DELETE "$B/api/chat/conversations/noexiste")
 [ "$C" = "404" ] && ok "conversación inexistente → 404" || bad "inexistente → $C"
 
-hdr "4. Self-delete de beto (solo su bandeja)"
-DEL=$(curl -s -b "$JB" -X DELETE "$B/api/chat/conversations/$CID" -H 'content-type: application/json' -d '{"scope":"self"}')
-S=$(echo "$DEL" | jget .scope)
-[ "$S" = "self" ] && ok "DELETE beto → 200 scope=self" || bad "DELETE beto: $DEL"
+hdr "4. Eliminación TOTAL por participante (beto borra → sale para AMBOS)"
+DEL=$(curl -s -b "$JB" -X DELETE "$B/api/chat/conversations/$CID")
+OKF=$(echo "$DEL" | jget .ok)
+[ "$OKF" = "true" ] && ok "DELETE beto → 200 ok=true" || bad "DELETE beto: $DEL"
 
-inbox_has "$JB" "$CID" && bad "beto aún la ve en su bandeja" || ok "conversación FUERA de la bandeja de beto"
-inbox_has "$JA" "$CID" && ok "ana la conserva intacta" || bad "ana la perdió (¡mal!)"
+inbox_has "$JB" "$CID" && bad "beto aún la ve en su bandeja" || ok "fuera de la bandeja de beto"
+inbox_has "$JA" "$CID" && bad "ana TODAVÍA la ve (debió salir también)" || ok "fuera de la bandeja de ana (sale para ambos)"
 
-SEE=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" "$B/api/chat/conversations/$CID/messages")
-[ "$SEE" = "200" ] && ok "soft: mensajes persisten (GET 200 para beto)" || bad "GET mensajes tras delete → $SEE"
+C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" "$B/api/chat/conversations/$CID/messages")
+[ "$C" = "404" ] && ok "GET mensajes beto → 404 (conversación inexistente)" || bad "GET mensajes beto → $C"
+C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JA" "$B/api/chat/conversations/$CID/messages")
+[ "$C" = "404" ] && ok "GET mensajes ana → 404" || bad "GET mensajes ana → $C"
 
-hdr "5. Reaparición por mensaje nuevo"
-C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" -X DELETE "$B/api/chat/conversations/$CID" -H 'content-type: application/json' -d '{"scope":"self"}')
-[ "$C" = "200" ] && ok "re-delete idempotente → 200" || bad "re-delete → $C"
-curl -s -o /dev/null -b "$JA" -X POST "$B/api/chat/conversations/$CID/messages" -H 'content-type: application/json' -d '{"kind":"TEXT","text":"otra vez por aqui"}'
-inbox_has "$JB" "$CID" && ok "mensaje nuevo de ana → reaparece en bandeja de beto" || bad "NO reapareció con mensaje nuevo"
+NM=$(dbcount Message conversationId "$CID"); [ "$NM" = "0" ] && ok "MENSAJES PURGADOS de la BD (0 filas)" || bad "mensajes en BD: $NM"
+NP=$(dbcount Participant conversationId "$CID"); [ "$NP" = "0" ] && ok "PARTICIPANTES fuera (0 filas)" || bad "participantes en BD: $NP"
+NC=$(dbcount Conversation id "$CID"); [ "$NC" = "0" ] && ok "FILA de conversación eliminada (0 filas)" || bad "conversación en BD: $NC"
 
-hdr "6. Reaparición por re-apertura explícita"
-curl -s -o /dev/null -b "$JB" -X DELETE "$B/api/chat/conversations/$CID" -H 'content-type: application/json' -d '{"scope":"self"}'
-inbox_has "$JB" "$CID" && bad "beto aún la ve (pre-reapertura)" || ok "fuera de nuevo tras self-delete"
-RE=$(curl -s -b "$JB" -X POST "$B/api/chat/conversations" -H 'content-type: application/json' -d "{\"userId\":\"$ANA_ID\"}" | jget .id)
-[ "$RE" = "$CID" ] && ok "re-apertura devuelve la MISMA conversación" || bad "re-apertura: $RE vs $CID"
-inbox_has "$JB" "$CID" && ok "re-apertura → reaparece en bandeja de beto" || bad "re-apertura no la devolvió a la bandeja"
+C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JB" -X DELETE "$B/api/chat/conversations/$CID")
+[ "$C" = "404" ] && ok "re-DELETE → 404 (ya no existe; sin idempotencia falsa)" || bad "re-DELETE → $C"
 
-hdr "7. Moderación: owner (ADMIN allowlist) elimina para TODOS"
-DEL=$(curl -s -b "$JC" -X DELETE "$B/api/chat/conversations/$CID" -H 'content-type: application/json' -d '{"scope":"everyone"}')
-S=$(echo "$DEL" | jget .scope)
-[ "$S" = "everyone" ] && ok "DELETE owner → 200 scope=everyone" || bad "DELETE everyone: $DEL"
-inbox_has "$JA" "$CID" && bad "ana aún la ve" || ok "fuera de la bandeja de ana"
-inbox_has "$JB" "$CID" && bad "beto aún la ve" || ok "fuera de la bandeja de beto"
+hdr "5. Chat nuevo ana↔beto = conversación NUEVA y VACÍA (sin historial)"
+CID2=$(curl -s -b "$JA" -X POST "$B/api/chat/conversations" -H 'content-type: application/json' -d "{\"userId\":\"$BETO_ID\"}" | jget .id)
+[ -n "$CID2" ] && [ "$CID2" != "$CID" ] && ok "nueva conversación $CID2 (ID distinto del eliminado)" || bad "re-apertura: $CID2 vs $CID"
+HIST=$(curl -s -b "$JB" "$B/api/chat/conversations/$CID2/messages" | jget '.messages.length' 2>/dev/null)
+[ "$HIST" = "0" ] && ok "SIN historial: 0 mensajes (lo viejo NO vuelve)" || bad "historial: $HIST"
+inbox_has "$JA" "$CID2" && ok "aparece en bandeja de ana" || bad "ana no la ve"
+inbox_has "$JB" "$CID2" && ok "aparece en bandeja de beto" || bad "beto no la ve"
 
-hdr "8. Reaparición tras everyone (mensaje nuevo)"
-curl -s -o /dev/null -b "$JA" -X POST "$B/api/chat/conversations/$CID/messages" -H 'content-type: application/json' -d '{"kind":"TEXT","text":"revivimos"}'
-inbox_has "$JA" "$CID" && ok "ana vuelve a verla" || bad "ana no la ve"
-inbox_has "$JB" "$CID" && ok "beto vuelve a verla" || bad "beto no la ve"
+hdr "6. Moderación: owner (ADMIN, NO participante) elimina CID2 para siempre"
+C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JC" -X DELETE "$B/api/chat/conversations/$CID2")
+[ "$C" = "200" ] && ok "DELETE owner (no participante) → 200" || bad "DELETE owner → $C"
+inbox_has "$JA" "$CID2" && bad "ana aún la ve" || ok "fuera de la bandeja de ana"
+inbox_has "$JB" "$CID2" && bad "beto aún la ve" || ok "fuera de la bandeja de beto"
+NM2=$(dbcount Message conversationId "$CID2"); [ "$NM2" = "0" ] && ok "mensajes de CID2 purgados" || bad "mensajes CID2: $NM2"
 
-hdr "9. La conversación ajena de ana no se tocó"
+hdr "7. Reporte previo ⇒ queda cáscara (evidencia de moderación), sin historial"
+CID3=$(curl -s -b "$JA" -X POST "$B/api/chat/conversations" -H 'content-type: application/json' -d "{\"userId\":\"$BETO_ID\"}" | jget .id)
+curl -s -o /dev/null -b "$JA" -X POST "$B/api/chat/conversations/$CID3/messages" -H 'content-type: application/json' -d '{"kind":"TEXT","text":"voy a reportar esto"}'
+REP=$(curl -s -o /dev/null -w "%{http_code}" -b "$JA" -X POST "$B/api/chat/conversations/$CID3/report" -H 'content-type: application/json' -d '{"reason":"OTRO","details":"prueba e2e"}')
+[ "$REP" = "200" ] && ok "reporte creado sobre CID3" || bad "reporte → $REP"
+C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JA" -X DELETE "$B/api/chat/conversations/$CID3")
+[ "$C" = "200" ] && ok "ana elimina CID3 (con reporte) → 200" || bad "DELETE CID3 → $C"
+NR=$(dbcount ChatReport conversationId "$CID3"); [ "$NR" = "1" ] && ok "REPORTE conservado (evidencia para moderación)" || bad "reportes: $NR"
+NM3=$(dbcount Message conversationId "$CID3"); [ "$NM3" = "0" ] && ok "mensajes de CID3 purgados igualmente" || bad "mensajes CID3: $NM3"
+NC3=$(dbcount Conversation id "$CID3"); [ "$NC3" = "1" ] && ok "cáscara sin participantes (invisible en bandejas)" || bad "cáscara: $NC3"
+NP3=$(dbcount Participant conversationId "$CID3"); [ "$NP3" = "0" ] && ok "0 participantes en la cáscara" || bad "participantes cáscara: $NP3"
+C=$(curl -s -o /dev/null -w "%{http_code}" -b "$JA" "$B/api/chat/conversations/$CID3/messages")
+[ "$C" = "404" ] && ok "cáscara inabrable: GET mensajes → 404" || bad "GET mensajes cáscara → $C"
+CID4=$(curl -s -b "$JA" -X POST "$B/api/chat/conversations" -H 'content-type: application/json' -d "{\"userId\":\"$BETO_ID\"}" | jget .id)
+[ -n "$CID4" ] && [ "$CID4" != "$CID3" ] && ok "chat nuevo tras cáscara → conversación fresca $CID4" || bad "re-uso de cáscara: $CID4"
+
+hdr "8. La conversación ajena de ana no se tocó"
 inbox_has "$JA" "$CID_AJENA" && ok "conversación ajena intacta" || bad "conversación ajena desapareció"
 
 echo

@@ -1,7 +1,8 @@
-// DELETE /api/chat/conversations/[id] — "Eliminar conversación".
-// Participante: la oculta SOLO de su bandeja (scope 'self'; reaparece
-// si le escriben de nuevo). MODERATOR/ADMIN: scope 'everyone' la
-// oculta para todos (moderación, con aviso en vivo).
+// DELETE /api/chat/conversations/[id] — "Eliminar conversación" (v2,
+// eliminación TOTAL): cualquier participante la borra PARA TODOS con
+// purga definitiva de los mensajes (la plataforma no conserva nada de
+// ella). ADMIN/MODERATOR puede además eliminar conversaciones ajenas
+// (moderación). En vivo: convo:deleted a los canales personales.
 
 import { NextResponse } from 'next/server';
 import { getCurrentUserWithRole } from '@/server/auth';
@@ -9,7 +10,7 @@ import { chatService } from '@/server/services/chat.service';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -19,14 +20,11 @@ export async function DELETE(
     }
     const { id } = await params;
 
-    // Eliminar conversación es aún más raro que borrar un mensaje.
+    // Eliminar una conversación entera es una acción poco frecuente.
     const rl = rateLimit(`chat-del-conv:${user.id}`, 20);
     if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
-    const body = (await request.json().catch(() => ({}))) as { scope?: string };
-    const scope = body.scope === 'everyone' ? 'everyone' : 'self';
-
-    const result = await chatService.deleteConversation(user, id, scope);
+    const result = await chatService.deleteConversation(user, id);
     return NextResponse.json(result);
   } catch (e) {
     if (e instanceof Response) return e;

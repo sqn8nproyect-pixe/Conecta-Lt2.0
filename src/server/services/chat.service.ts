@@ -575,23 +575,27 @@ export const chatService = {
   },
 
   /**
-   * "Eliminar conversación" (v1.1). Reglas:
-   *  - scope 'self': un participante la oculta SOLO de su bandeja
-   *    (soft-delete por participante). El otro la conserva y, si le
-   *    escribe de nuevo, le reaparece (sendMessage lo des-hace).
-   *  - scope 'everyone': solo MODERATOR/ADMIN (aunque no participen);
-   *    oculta para todos con aviso en vivo (convo:deleted por los
-   *    canales personales de cada participante).
-   *  - 404 si la conversación no existe, o si no participo con scope
-   *    'self' (no revelar conversaciones ajenas); 403 si piden
-   *    'everyone' sin rol de moderación.
-   * Soft: la fila, participantes y mensajes persisten (auditoría).
+   * "Eliminar conversación" (v2 — eliminación TOTAL). La plataforma
+   * NO conserva nada de la conversación eliminada:
+   *  - Los MENSAJES se purgan definitivamente (deleteMany, sin tumbas).
+   *  - Sale de la bandeja de TODOS los participantes: nada reaparece,
+   *    ni por mensaje nuevo ni por re-apertura (no queda participante
+   *    al que re-ocultar; un chat nuevo entre esos usuarios crea una
+   *    conversación NUEVA y vacía).
+   *  - La fila Conversation se elimina; si tiene reportes (ChatReport
+   *    la referencia como evidencia de moderación) queda una cáscara
+   *    sin participantes: invisible en cualquier bandeja, inabrable y
+   *    sin historial.
+   * Permisos: cualquier PARTICIPANTE puede eliminar (y afecta a ambos,
+   * por diseño del producto). ADMIN/MODERATOR puede además eliminar
+   * conversaciones ajenas (moderación). Otros → 404 (no revelar).
+   * En vivo: evento convo:deleted a los canales personales de TODOS
+   * los participantes (Pusher; no-op si no está configurado).
    */
   deleteConversation: async (
     actor: { id: string; role: string },
     conversationId: string,
-    scope: 'self' | 'everyone' = 'self',
-  ): Promise<{ ok: true; scope: 'self' | 'everyone' }> => {
+  ): Promise<{ ok: true }> => {
     const isModerator = actor.role === 'ADMIN' || actor.role === 'MODERATOR';
 
     const exists = await db.conversation.findUnique({
@@ -605,36 +609,30 @@ export const chatService = {
       });
     }
 
-    if (scope === 'everyone') {
-      if (!isModerator) {
-        throw new Response(
-          JSON.stringify({ error: 'Solo la moderación puede eliminar para todos' }),
-          { status: 403, headers: { 'content-type': 'application/json' } },
-        );
-      }
-      // Moderación: ocultar para TODOS los participantes de una vez.
-      await db.participant.updateMany({
-        where: { conversationId },
-        data: { deletedAt: new Date(), deletedBy: actor.id },
-      });
-      // En vivo: cada participante (incluido yo, p.ej. otra pestaña)
-      // la quita de su bandeja al instante vía su canal personal.
-      void triggerChatEvent(
-        exists.participants.map((p) => chatChannelNames.user(p.userId)),
-        CHAT_EVENTS.CONVO_DELETED,
-        { conversationId },
-      );
-      return { ok: true, scope: 'everyone' };
+    if (!isModerator) {
+      // 404 (no 403): no revelar la existencia de conversaciones ajenas.
+      await assertParticipant(conversationId, actor.id);
     }
 
-    // scope 'self': solo mi copia; 404 si no participo.
-    await assertParticipant(conversationId, actor.id);
-    await db.participant.update({
-      where: { conversationId_userId: { conversationId, userId: actor.id } },
-      data: { deletedAt: new Date(), deletedBy: actor.id },
+    // Purga total en una transacción: mensajes fuera, participantes
+    // fuera y la fila también (salvo que haya reportes que guardar).
+    await db.$transaction(async (tx) => {
+      await tx.message.deleteMany({ where: { conversationId } });
+      await tx.participant.deleteMany({ where: { conversationId } });
+      const reports = await tx.chatReport.count({ where: { conversationId } });
+      if (reports === 0) {
+        await tx.conversation.delete({ where: { id: conversationId } });
+      }
     });
-    // Sin evento Pusher: la bandeja del otro NO cambia.
-    return { ok: true, scope: 'self' };
+
+    // En vivo: cada participante (incluido yo, p.ej. otra pestaña)
+    // la quita de su bandeja al instante vía su canal personal.
+    void triggerChatEvent(
+      exists.participants.map((p) => chatChannelNames.user(p.userId)),
+      CHAT_EVENTS.CONVO_DELETED,
+      { conversationId },
+    );
+    return { ok: true };
   },
 
   /** Marca mi lectura (lastReadAt = ahora) y avisa por Pusher. */

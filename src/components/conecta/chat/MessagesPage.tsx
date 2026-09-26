@@ -76,8 +76,8 @@ function ConversationList({
   const queryClient = useQueryClient();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // "Eliminar conversación": soft-delete para mí (la bandeja del otro
-  // no cambia; si me escribe de nuevo, reaparece).
+  // "Eliminar conversación" (v2): borrado TOTAL — desaparece de la
+  // bandeja de AMBOS y los mensajes se purgan definitivamente.
   const deleteMutation = useMutation({
     mutationFn: (conversationId: string) => deleteChatConversation(conversationId),
     onSuccess: (_data, conversationId) => {
@@ -166,8 +166,8 @@ function ConversationList({
             {confirmDeleteId === c.id && (
               <div className="pl-3 sm:pl-4 pr-11 pb-3 pt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-white/60">
                 <span className="flex-1 min-w-[14rem]">
-                  ¿Eliminar la conversación con {name}? Desaparece de tu bandeja; si te
-                  escribe de nuevo, reaparece.
+                  ¿Eliminar la conversación con {name}? Se borrará para los
+                  dos y los mensajes desaparecerán definitivamente.
                 </span>
                 <span className="flex gap-2">
                   <button
