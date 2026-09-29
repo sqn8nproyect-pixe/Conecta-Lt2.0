@@ -9,9 +9,10 @@
 //
 // Contenido:
 //   - Política de Privacidad (cumple con Google OAuth disclosure
-//     requirements + Ley venezolana de protección de datos)
+//     requirements + Ley venezolana de protección de datos; incluye
+//     sección de mensajería interna/chat)
 //   - Términos de Uso (incluye disclaimer de alcohol, menores,
-//     responsabilidad del usuario)
+//     responsabilidad del usuario y reglas de uso del chat)
 //
 // Estilo: consistente con el sitio (glass-card, gold accents,
 // tipografía serif para títulos, font-mono para meta labels).
@@ -63,7 +64,7 @@ export function LegalPage({ kind }: LegalPageProps) {
           </div>
         </div>
         <div className="text-xs text-white/40 font-mono">
-          Última actualización: 17 de septiembre de 2026
+          Última actualización: 29 de septiembre de 2026
         </div>
       </motion.div>
 
@@ -212,6 +213,17 @@ function PrivacyContent() {
             / lleno) para ayudar a otros usuarios.
           </li>
           <li>
+            <strong className="text-white">Mensajes del chat:</strong> el
+            contenido de los mensajes que envías a otros usuarios por la
+            mensajería interna, junto con los identificadores de quien envía y
+            de quien recibe, y la fecha y hora de cada mensaje.
+          </li>
+          <li>
+            <strong className="text-white">Reportes de conversaciones:</strong>{' '}
+            cuando reportas un chat a moderación, guardamos el motivo del
+            reporte y la referencia de la conversación reportada.
+          </li>
+          <li>
             <strong className="text-white">Datos de navegación:</strong> eventos
             analíticos anónimos (apertura del Night Planner, vistas de comercios,
             clics en WhatsApp, búsquedas), métricas de rendimiento y el conteo
@@ -242,6 +254,15 @@ function PrivacyContent() {
           <li>Procesar y gestionar tus reservas en comercios afiliados.</li>
           <li>Mostrar tus favoritos y reseñas en tu perfil.</li>
           <li>Personalizar tus recomendaciones del Night Planner.</li>
+          <li>
+            Entregar tus mensajes del chat al destinatario —en tiempo real
+            cuando esté conectado— y mostrarlos en la bandeja de ambos
+            participantes.
+          </li>
+          <li>
+            Gestionar los reportes de conversaciones y aplicar las medidas de
+            moderación previstas en los Términos de Uso.
+          </li>
           <li>Mejorar el servicio mediante análisis agregados y anónimos.</li>
           <li>Enviar notificaciones in-app sobre reservas, promociones o novedades.</li>
           <li>Cumplir con obligaciones legales aplicables en Venezuela.</li>
@@ -298,7 +319,15 @@ function PrivacyContent() {
           </li>
           <li>
             <strong className="text-white">Neon:</strong> proveedor de base de
-            datos PostgreSQL administrada.
+            datos PostgreSQL administrada, donde se almacena el contenido de
+            tus conversaciones.
+          </li>
+          <li>
+            <strong className="text-white">Pusher:</strong> canal de
+            transmisión en tiempo real que entrega los mensajes del chat al
+            destinatario mientras tiene la app abierta. Actúa como conducto
+            momentáneo: el contenido permanente de tus conversaciones vive en
+            nuestra base de datos, no en Pusher.
           </li>
           <li>
             <strong className="text-white">Cloudflare:</strong> almacenamiento de
@@ -398,7 +427,50 @@ function PrivacyContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          9. Retención de datos
+          9. Mensajería interna entre usuarios (chat)
+        </h2>
+        <p className="mb-3">
+          La mensajería interna permite conversaciones privadas entre usuarios
+          registrados. Estas son las reglas de privacidad específicas del
+          chat:
+        </p>
+        <ul className="list-disc pl-6 space-y-2 text-sm">
+          <li>
+            <strong className="text-white">Visibilidad restringida:</strong>{' '}
+            una conversación solo es visible para sus dos participantes. No es
+            pública y no aparece en perfiles ni en buscadores.
+          </li>
+          <li>
+            <strong className="text-white">Tú controlas tus conversaciones:</strong>{' '}
+            puedes eliminar mensajes individuales (quedarán como &quot;mensaje
+            eliminado&quot; para ambos) o eliminar la conversación completa.
+          </li>
+          <li>
+            <strong className="text-white">Eliminación total y definitiva:</strong>{' '}
+            al eliminar una conversación, esta desaparece de la bandeja de
+            ambos participantes y todos sus mensajes se purgan de nuestra base
+            de datos de forma irreversible. Nada reaparece: si vuelven a
+            escribirse, se crea una conversación nueva y vacía sin historial.
+          </li>
+          <li>
+            <strong className="text-white">Excepción por reportes:</strong> si
+            una conversación fue reportada a moderación, conservamos únicamente
+            la referencia del reporte como evidencia; la conversación queda
+            inaccesible, sin participantes y sin mensajes legibles.
+          </li>
+          <li>
+            <strong className="text-white">Acceso de moderación:</strong> los
+            administradores y moderadores solo intervienen ante un reporte o
+            una infracción de los Términos de Uso (por ejemplo, acoso o
+            contenido ilegal); no leemos tus conversaciones con fines
+            comerciales ni publicitarios.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="font-serif text-xl text-gold font-bold mb-3">
+          10. Retención de datos
         </h2>
         <p>
           Conservamos tus datos mientras tu cuenta esté activa. Si solicitas
@@ -407,11 +479,17 @@ function PrivacyContent() {
           conservar cierta información por un periodo más largo (por ejemplo,
           registros de reservas para fines contables o fiscales).
         </p>
+        <p>
+          Los mensajes del chat se conservan mientras la conversación exista.
+          Cuando un participante elimina la conversación, sus mensajes se
+          purgan de forma definitiva e inmediata para ambos participantes,
+          conforme a la sección 9.
+        </p>
       </section>
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          10. Menores de edad
+          11. Menores de edad
         </h2>
         <p>
           El servicio está dirigido exclusivamente a personas mayores de 18
@@ -423,7 +501,7 @@ function PrivacyContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          11. Cambios a esta política
+          12. Cambios a esta política
         </h2>
         <p>
           Podemos actualizar esta Política de Privacidad cuando sea necesario.
@@ -436,7 +514,7 @@ function PrivacyContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          12. Contacto
+          13. Contacto
         </h2>
         <p>
           Si tienes preguntas sobre esta Política de Privacidad o sobre tus
@@ -497,6 +575,10 @@ function TermsContent() {
           <li>Promociones y cupones de descuento.</li>
           <li>Reseñas y calificaciones de usuarios.</li>
           <li>Recomendador inteligente (Night Planner).</li>
+          <li>
+            Mensajería interna: chat directo y privado entre usuarios
+            registrados para coordinar planes sin salir de la plataforma.
+          </li>
           <li>Carta digital: los comercios publican su menú como imagen en su ficha.</li>
           <li>Guías editoriales semanales de planes y eventos en Los Teques.</li>
           <li>
@@ -577,8 +659,9 @@ function TermsContent() {
         </h2>
         <p className="mb-3">
           Eres responsable del contenido que publiques (reseñas, fotos,
-          comentarios). Al publicar, nos otorgas una licencia no exclusiva,
-          mundial y gratuita para mostrar ese contenido en relación con el
+          comentarios) y del que envíes por la mensajería interna (mensajes
+          del chat). Al publicar o enviar contenido, nos otorgas una licencia
+          no exclusiva, mundial y gratuita para mostrarlo en relación con el
           servicio. Te comprometes a:
         </p>
         <ul className="list-disc pl-6 space-y-2 text-sm">
@@ -601,7 +684,47 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          7. Panel de dueños (Owner Dashboard)
+          7. Mensajería interna (chat)
+        </h2>
+        <p className="mb-3">
+          El chat de CONECTA-LT es un espacio de comunicación{' '}
+          <strong className="text-white">privado entre usuarios registrados</strong>.{' '}
+          Al usarlo, aceptas las siguientes reglas:
+        </p>
+        <ul className="list-disc pl-6 space-y-2 text-sm">
+          <li>No acosar, hostigar, amenazar ni discriminar a otros usuarios.</li>
+          <li>No enviar spam, publicidad no solicitada ni cadenas de mensajes.</li>
+          <li>No compartir contenido ilegal, violento o sexualmente explícito, ni contenido que promueva el consumo irresponsable de alcohol.</li>
+          <li>No suplantar identidades ni hacerte pasar por otro usuario, comercio o integrante del equipo.</li>
+          <li>No usar el chat para estafas, phishing, esquemas piramidales ni solicitudes de dinero.</li>
+          <li>No compartir datos personales de terceros sin su consentimiento.</li>
+        </ul>
+        <p className="mt-3 mb-3">
+          <strong className="text-white">Moderación y reportes:</strong> puedes
+          reportar cualquier conversación desde la propia app. CONECTA-LT puede
+          revisar conversaciones reportadas, eliminarlas si infringen estos
+          términos y suspender las cuentas involucradas. Como medida de
+          protección, ante acoso u otro abuso podemos limitar la función de
+          mensajería de una cuenta.
+        </p>
+        <p className="mb-3">
+          <strong className="text-white">Eliminación definitiva:</strong>{' '}
+          cualquiera de los dos participantes puede eliminar la conversación en
+          cualquier momento. Al hacerlo, la conversación desaparece para ambos
+          y los mensajes se borran de forma permanente e irreversible; no
+          conservamos copias recuperables (salvo la referencia del reporte
+          cuando exista, según la Política de Privacidad).
+        </p>
+        <p className="text-sm text-white/60">
+          CONECTA-LT actúa como intermediario tecnológico de la mensajería: no
+          es parte de tus conversaciones y cada usuario es responsable de lo
+          que comunica por este medio.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="font-serif text-xl text-gold font-bold mb-3">
+          8. Panel de dueños (Owner Dashboard)
         </h2>
         <p className="mb-3">
           Los dueños de comercios afiliados pueden reclamar la gestión de su
@@ -619,7 +742,7 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          8. Propiedad intelectual
+          9. Propiedad intelectual
         </h2>
         <p className="mb-3">
           Todo el contenido del sitio (logos, textos, diseño, código,
@@ -637,7 +760,7 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          9. Exención de responsabilidad
+          10. Exención de responsabilidad
         </h2>
         <p className="mb-3">
           El servicio se proporciona &quot;tal cual&quot; sin garantías de ningún tipo.
@@ -657,7 +780,7 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          10. Consumo responsable de alcohol
+          11. Consumo responsable de alcohol
         </h2>
         <div className="glass-card border border-amber/30 bg-amber/5 rounded-2xl p-4 mb-4">
           <div className="text-amber font-bold mb-1">⚠ SI BEBES, NO CONDUZCAS</div>
@@ -678,20 +801,20 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          11. Suspensión y terminación de cuentas
+          12. Suspensión y terminación de cuentas
         </h2>
         <p>
           Nos reservamos el derecho de suspender o eliminar cuentas que
           infrinjan estos términos, sin previo aviso. Los motivos incluyen:
-          suplantación de identidad, fraude, spam, acoso, publicación de
-          contenido ilegal, evasión del AgeGate, o uso del servicio para fines
-          no autorizados.
+          suplantación de identidad, fraude, spam, acoso (incluido el abuso de
+          la mensajería interna), publicación de contenido ilegal, evasión del
+          AgeGate, o uso del servicio para fines no autorizados.
         </p>
       </section>
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          12. Limitación de responsabilidad
+          13. Limitación de responsabilidad
         </h2>
         <p>
           En ningún caso CONECTA-LT, sus propietarios, empleados o afiliados
@@ -703,7 +826,7 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          13. Ley aplicable y jurisdicción
+          14. Ley aplicable y jurisdicción
         </h2>
         <p>
           Estos términos se rigen por las leyes de la <strong className="text-white">
@@ -715,7 +838,7 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          14. Cambios a los términos
+          15. Cambios a los términos
         </h2>
         <p>
           Podemos modificar estos Términos de Uso en cualquier momento. Te
@@ -727,7 +850,7 @@ function TermsContent() {
 
       <section>
         <h2 className="font-serif text-xl text-gold font-bold mb-3">
-          15. Contacto
+          16. Contacto
         </h2>
         <p>Para consultas sobre estos Términos de Uso, contáctanos:</p>
         <div className="mt-3 glass-card border border-white/10 rounded-2xl p-4 text-sm">
