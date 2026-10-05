@@ -237,9 +237,12 @@ function PrivacyContent() {
             contacto del negocio).
           </li>
           <li>
-            <strong className="text-white">Datos técnicos:</strong> cookies de
-            sesión esenciales (no usamos cookies publicitarias ni de
-            terceros).
+            <strong className="text-white">Datos técnicos y medición:</strong>{' '}
+            cookies de sesión esenciales y una cookie de analítica{' '}
+            <code className="font-mono text-gold">_ga</code> (Google Analytics)
+            que distingue visitas de forma agregada para métricas de uso.{' '}
+            <strong className="text-white">No usamos cookies publicitarias</strong>{' '}
+            ni de seguimiento comercial.
           </li>
         </ul>
       </section>
@@ -299,7 +302,13 @@ function PrivacyContent() {
         <ul className="list-disc pl-6 space-y-2 text-sm">
           <li>
             <strong className="text-white">Google LLC:</strong> para autenticación
-            OAuth (nombre, email, foto de perfil).
+            OAuth (nombre, email, foto de perfil) y para{' '}
+            <strong className="text-white">Google Analytics</strong>: recibe el
+            identificador de la cookie{' '}
+            <code className="font-mono text-gold">_ga</code>, tu dirección IP
+            (anonimizada por defecto en GA4) y datos técnicos de navegación,
+            únicamente con fines de medición agregada. No recibimos de Google
+            datos que identifiquen personas.
           </li>
           <li>
             <strong className="text-white">Comercios afiliados:</strong> cuando
@@ -358,6 +367,14 @@ function PrivacyContent() {
           de que verificaste ser mayor de 18 años, para no repetirte la
           verificación en cada visita. Vence automáticamente a los 30 días y no
           contiene datos personales ni identificadores de seguimiento.
+        </p>
+        <p className="mb-3">
+          Usamos <strong className="text-white">Google Analytics 4</strong>{' '}
+          únicamente para métricas de uso del sitio: coloca la cookie{' '}
+          <code className="font-mono text-gold">_ga</code> (duración máxima 13
+          meses) que distingue visitas de forma agregada, sin publicidad ni
+          perfilado comercial. Puedes borrarla o bloquear JavaScript de
+          Google en tu navegador sin perder acceso a las funciones del sitio.
         </p>
         <p className="text-sm text-white/60">
           Puedes deshabilitar las cookies en tu navegador, pero el inicio de

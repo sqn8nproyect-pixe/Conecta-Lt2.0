@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
@@ -19,6 +20,12 @@ const geistMono = Geist_Mono({
 
 const siteUrl = "https://conectalt.com";
 const ogImage = "/images/hero.png";
+
+// ── Google Analytics (gtag.js) ──────────────────────────────
+// ID de medición público (no es un secreto: viaja en el HTML de
+// todas las páginas que usan GA). Se carga con afterInteractive
+// (equivalente async) para no bloquear la carga de la página.
+const GA_MEASUREMENT_ID = "G-F1VY2L3FN6";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -137,6 +144,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        {/* Google Analytics (gtag.js) — presente en todas las páginas */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: siteJsonLd }}
