@@ -375,6 +375,8 @@ function PrivacyContent() {
           meses) que distingue visitas de forma agregada, sin publicidad ni
           perfilado comercial. Puedes borrarla o bloquear JavaScript de
           Google en tu navegador sin perder acceso a las funciones del sitio.
+          La medición se entrega mediante Google Tag Manager, que únicamente
+          carga las etiquetas de medición descritas en esta política.
         </p>
         <p className="text-sm text-white/60">
           Puedes deshabilitar las cookies en tu navegador, pero el inicio de

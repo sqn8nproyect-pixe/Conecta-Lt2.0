@@ -27,6 +27,14 @@ const ogImage = "/images/hero.png";
 // (equivalente async) para no bloquear la carga de la página.
 const GA_MEASUREMENT_ID = "G-F1VY2L3FN6";
 
+// ── Google Tag Manager ──────────────────────────────────────
+// Contenedor GTM (ID público). Mientras el contenedor no tenga
+// etiquetas internas, no mide nada y convive con gtag.js. AVISO:
+// si se crea dentro de GTM una etiqueta GA4 con el mismo ID de
+// medición, HAY QUE quitar el gtag.js directo para no duplicar
+// el conteo de visitas.
+const GTM_CONTAINER_ID = "GTM-PRP5ZP49";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -144,6 +152,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        {/* Google Tag Manager (noscript) — SSR: cubre visitantes sin JavaScript */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        {/* Google Tag Manager (gtm.js) — presente en todas las páginas */}
+        <Script id="gtm-init" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${GTM_CONTAINER_ID}');`}
+        </Script>
         {/* Google Analytics (gtag.js) — presente en todas las páginas */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
