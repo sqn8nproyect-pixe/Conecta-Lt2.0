@@ -677,3 +677,21 @@ Work Log:
 Stage Summary:
 - Diagnóstico claro: el 27 móvil lo causan (1) imágenes PNG sin optimizar (~3.5MB, logo LCP 946KB) y (2) JS pesado/bloqueante. Plan propuesto P0: WebP+next/image en Navbar/Home/ads-API (LCP→~2.5s, CLS→0); P1: code-split chunk con 206KB unused + decidir si quitar GTM vacío (-116KB/-295ms); P2: 3 items de a11y.
 - Esperando OK del dueño para ejecutar P0.
+
+---
+Task ID: psi-fix-p0-2026-10-08
+Agent: Super Z (principal)
+Task: P0 de imágenes aprobado por el dueño → logo WebP + next/image en home + proxy R2 con sharp.
+
+Work Log:
+- Assets generados (scripts/gen-logo-assets.py, PIL): logo.webp 512² 15KB, logo-192.png 27KB, og-logo.jpg 29KB. logo.png original intacto.
+- Edits: layout.tsx (icons/shortcut/apple → logo-192.png; JSON-LD Organization logo → og-logo.jpg; og:image de redes se queda en hero.png 1344×768 que ya era razonable), Navbar/Footer/AgeGate (src → logo.webp + width/height), HomePage.tsx (hero → Image fill+priority+sizes 100vw; populares → fill sizes 176px; grid → fill sizes 1/2/3-col; onError imageFallback preservado), api/images/[...key]/route.ts (sharp: image/* → WebP máx 1600px q80, excepto gif/svg; si no reduce sirve original; immutable cache intacta; notas de voz audio/* passthrough).
+- Prisma client regenerado (sandbox fresco: 53 errores tsc sin regenerar → 41 tras prisma generate = LÍNEA BASE exacta, 0 nuevos). ESLint limpio en 6 archivos.
+- Pipeline sharp validado local: logo 946KB→38KB webp, hero 160KB→121KB.
+- Commit 13a8ea1 en feat/perf-images (9 archivos). scripts/push-main.sh recreado (token por argumento, nunca en disco).
+- BLOQUEO PUSH: no hay PAT vigente en disco (solo truncados en handoff, por diseño). Esperando PAT temporal del dueño.
+
+Stage Summary:
+- P0 COMPLETO EN RAMA feat/perf-images (13a8ea1), verificado, esperando solo push+deploy.
+- Esperado post-deploy: LCP 13.2s → ~2.5-3s; transfer home 4MB → ~1MB; CLS 0.264 → ~0 (dims explícitas + fill); ads 947KB → decenas de KB vía proxy.
+- Al pushear: push-main.sh <TOKEN> → luego verificar en vivo HTML (logo.webp, _next/image) → Lighthouse re-run → pedir revocación del PAT.
