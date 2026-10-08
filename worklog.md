@@ -847,3 +847,54 @@ Stage Summary:
 - Respuesta al dueño: el slug NO se regenera al renombrar (comportamiento estándar de URLs estables); seguirá pasando con cada rename salvo que se implemente migración de slug con 301.
 - Opciones presentadas: (A) dejar así, (B) implementar rename con slug nuevo + tabla FormerSlug + redirect 301 en local/[slug]/page.tsx (recomendado), fix puntual del caso Africa Burguers incluido en B.
 - Fix rápido adicional propuesto: mode:'insensitive' en búsqueda (bug real de UX).
+---
+Task ID: slug-rename-impl-2026-10-08
+Agent: Super Z (main)
+Task: Implementar B+fix de busqueda — renombre de local con slug nuevo + redirect permanente + busqueda case-insensitive
+
+Work Log:
+- Schema: Business.formerSlugs String[] @default([]) + migracion 20261008120000_business_former_slugs (ALTER TABLE ADD COLUMN text[] default vacio).
+- src/lib/slugify.ts compartido (mismo comportamiento que seed.ts).
+- business.service.ts: updateBusinessInfo regenera el slug cuando cambia el nombre (pickUniqueSlug valida contra slugs actuales E historicos de otros locales, excluye self; maneja rename A->B->A); archiva slug viejo en formerSlugs con dedupe. PATCH devuelve el slug nuevo.
+- assertBusinessOwnership resuelve tambien formerSlugs → el panel del dueño sigue funcionando sin recargar tras renombre (el dashboard guarda selectedSlug en estado).
+- local/[slug]/page.tsx: findRedirectTarget consulta formerSlugs; page y generateMetadata hacen permanentRedirect (308) al slug actual antes de notFound.
+- Busqueda: mode:'insensitive' en /api/businesses (name/description/specialty) y /api/admin/businesses (name/slug).
+- Validacion: tsc 43 errores antes = 43 despues (mismo ruido preexistente, 0 nuevos); build OK en sandbox y en CLON LIMPIO /tmp/conecta-clean (origin/main c8dca5c no tocaba mis 6 archivos; merge sin conflictos; bun install + build con /privacidad /terminos incluidas).
+- Git: sandbox divergido (auto-commits UUID) → commit 5f1e709 en clon limpio, push c8dca5c..5f1e709 con PAT (PAT vigente, recordar revocacion).
+- Deploy Vercel OK. Verificado en vivo: q=africa minuscula encuentra el local (fix activo); /local/tasca-el-patio sigue 200 (sin downtime); migracion formerSlugs aplicada en Neon via buildCommand.
+
+Stage Summary:
+- EN PRODUCCION (5f1e709): maquinaria de renombre con redirect 308 + busqueda insensitive.
+- PENDIENTE (1 paso, requiere owner): migrar el slug del caso puntual tasca-el-patio → africa-burguers. El sandbox NO tiene la URL de Neon (solo Vercel). Opciones entregadas al dueño: (1) Panel del local → Info → Guardar con el mismo nombre → el codigo nuevo migra solo; (2) DATABASE_URL=<neon> bun run scripts/rename-africa-burguers.ts (idempotente, con protecciones); (3) SQL directo en Neon console. Tras el rename, /local/tasca-el-patio redirige 308 en ≤1h (ISR cache).
+
+---
+Task ID: slug-rename-verify-2026-10-08
+Agent: Super Z (main)
+Task: Verificar la Opción A ejecutada por el dueño (re-save del panel para migrar tasca-el-patio → africa-burguers)
+
+Work Log:
+- GET /api/businesses/africa-burguers → 200 con slug:"africa-burguers" (migración automática ejecutada por el código nuevo al re-guardar el panel).
+- GET /api/businesses/tasca-el-patio → 404 (slug viejo liberado).
+- GET /local/africa-burguers → 200; title "Africa Burguers — Tasca en Los Teques | CONECTA-LT"; canonical y og:url apuntan a /local/africa-burguers.
+- GET /local/tasca-el-patio → 200 con cache age:1296s (ISR pre-render previo al rename). Redirect 308 se activará solo al revalidar la caché (≤1h del rename).
+
+Stage Summary:
+- Caso Africa Burguers RESUELTO: URL oficial /local/africa-burguers con SEO correcto.
+- Pendiente pasivo: 308 desde tasca-el-patio activa por ISR en ≤1h. Pendiente del dueño: revocar PAT ghp_LOJu...
+
+---
+Task ID: cierre-sesion-2026-10-08
+Agent: Super Z (main)
+Task: Protocolo de cierre (modo GUARDAR) — validar todo, dejar ÚNICAMENTE la auditoría SEO de páginas clave para la próxima iteración, luz verde para revocar PAT
+
+Work Log:
+- Verificación objetiva de producción (curl): / → 200; /local/africa-burguers → 200; /api/businesses?q=africa (minúscula) → encuentra (Africa Burguers, africa-burguers); /?local=africa-burguers → 200; robots.txt → 200; /local/tasca-el-patio → 200 con ISR cache age:1717s (308 pendiente de revalidación, auto en ≤1h); sitemap.xml aún lista tasca-el-patio (ISR 1h, auto-resuelve con africa-burguers al revalidar).
+- Snapshot.sh: origin/main = 5f1e709 (feature renombre+redirect+search, deployada y viva). Sandbox divergido por auto-commits UUID (artefacto conocido; repo = fuente de verdad).
+- Push FINAL de worklog (entradas slug-rename-impl + slug-rename-verify + esta) vía clon limpio → después de este push el dueño puede revocar el PAT.
+- ESTADO-PROYECTO.md actualizado: sesión cerrada, pendiente único = auditoría SEO de páginas clave.
+
+Stage Summary:
+- SESIÓN CERRADA. En producción (origin/main 5f1e709): renombre de locales con slug nuevo + redirect permanente 308 + búsqueda case-insensitive; caso Africa Burguers resuelto (URL oficial /local/africa-burguers, redirect 308 desde tasca-el-patio activándose por ISR).
+- PRÓXIMA ITERACIÓN (único pendiente técnico): auditoría SEO de páginas clave (home, AgeGate, legales, detalle de locales) — meta tags, OG/Twitter, sitemap, robots, canonical, favicon, JSON-LD.
+- Dueño: revocar PAT ghp_LOJu… (última vez usado en ESTE cierre; el próximo push requerirá un PAT nuevo).
+- Notas menores registradas (sin agenda): PSI oficial post-P1 pendiente del dueño; decisión GTM vacío; micro-opt fetchpriority=high en hero (~300ms).
