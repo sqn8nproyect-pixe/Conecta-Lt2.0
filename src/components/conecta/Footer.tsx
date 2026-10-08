@@ -30,8 +30,10 @@ export function Footer() {
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg overflow-hidden bg-white border border-gold/30 flex items-center justify-center shrink-0">
             <img
-              src="/images/logo.png"
+              src="/images/logo.webp"
               alt="Logo Conecta-LT"
+              width={512}
+              height={512}
               className="w-full h-full object-contain"
             />
           </div>

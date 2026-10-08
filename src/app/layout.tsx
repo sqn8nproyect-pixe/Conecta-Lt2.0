@@ -64,12 +64,14 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   icons: {
+    // logo-192.png (27KB) en vez de logo.png (946KB): el favicon se
+    // descarga en CADA visita — no cargar un PNG gigante como icono.
     icon: [
-      { url: "/images/logo.png", type: "image/png" },
+      { url: "/images/logo-192.png", type: "image/png", sizes: "192x192" },
       { url: "/favicon.svg", type: "image/svg+xml" },
     ],
-    shortcut: "/images/logo.png",
-    apple: "/images/logo.png",
+    shortcut: "/images/logo-192.png",
+    apple: "/images/logo-192.png",
   },
   openGraph: {
     title: "CONECTA-LT | Guía Nocturna de Los Teques",
@@ -137,7 +139,7 @@ const siteJsonLd = JSON.stringify({
       "@id": `${siteUrl}#organization`,
       name: "CONECTA-LT",
       url: siteUrl,
-      logo: `${siteUrl}/images/logo.png`,
+      logo: `${siteUrl}/images/og-logo.jpg`,
     },
   ],
 });

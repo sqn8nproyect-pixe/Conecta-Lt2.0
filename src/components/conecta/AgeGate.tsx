@@ -73,8 +73,10 @@ export function AgeGate({ onConfirm }: AgeGateProps) {
               </div>
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-2 ring-gold/40 shadow-lg bg-white">
                 <img
-                  src="/images/logo.png"
+                  src="/images/logo.webp"
                   alt="Logo de Conecta-LT"
+                  width={512}
+                  height={512}
                   className="w-full h-full object-contain"
                 />
               </div>

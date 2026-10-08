@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Star, Heart, Clock, Eye, TrendingUp, AlertTriangle, RefreshCw, CalendarDays, ArrowRight } from 'lucide-react';
@@ -218,10 +219,14 @@ export function HomePage() {
       <section className="relative min-h-[88vh] sm:h-[660px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black">
           {}
-          <img
+          <Image
             src="/images/hero.png"
             alt="Vida nocturna en Los Teques"
-            className="w-full h-full object-cover opacity-60 scale-105"
+            fill
+            priority
+            sizes="100vw"
+            quality={80}
+            className="object-cover opacity-60 scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-obsidian/85 to-obsidian" />
         </div>
@@ -324,12 +329,13 @@ export function HomePage() {
                       aria-label={`Ver ${item.business.name} — ${item.viewCount} vistas`}
                     >
                       <div className="relative h-32 w-44 overflow-hidden rounded-2xl">
-                        <img
+                        <Image
                           src={item.business.coverImage}
                           alt={item.business.name}
-                          loading="lazy"
+                          fill
+                          sizes="176px"
                           onError={imageFallback(item.business.category)}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
@@ -518,12 +524,13 @@ export function HomePage() {
                       aria-label={`Ver detalles de ${est.name}`}
                     >
                       <div className="relative h-56 sm:h-64 overflow-hidden">
-                        <img
+                        <Image
                           src={est.coverImage}
                           alt={est.name}
-                          loading="lazy"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           onError={imageFallback(est.category)}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 

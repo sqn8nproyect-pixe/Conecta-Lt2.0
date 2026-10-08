@@ -395,8 +395,10 @@ export function Navbar() {
         >
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-white border border-gold/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-gold shadow-md">
             <img
-              src="/images/logo.png"
+              src="/images/logo.webp"
               alt="Logo Conecta-LT"
+              width={512}
+              height={512}
               className="w-full h-full object-contain"
             />
           </div>
