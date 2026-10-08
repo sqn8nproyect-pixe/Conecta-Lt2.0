@@ -659,3 +659,21 @@ Stage Summary:
 - Repo local re-sincronizado con producción (patrón de los resets anteriores aplicado).
 - Pendientes del dueño (sin bloqueo de código): decisión GTM (etiqueta GA4 dentro de GTM → avisar para quitar gtag.js directo), revocar PAT ghp_lVD6…, prueba visual de legales del chat.
 - Nota: scripts genéricos push-main.sh / wait-deploy.sh perdidos en el reset → recrearlos al siguiente push.
+
+---
+Task ID: psi-review-2026-10-08
+Agent: Super Z (principal)
+Task: Dueño comparte reporte de PageSpeed Insights (móvil) de conectalt.com → revisarlo.
+
+Work Log:
+- PSI API pública sin cupo (quota diaria agotada) → Lighthouse 13.5.0 local con Chrome de Puppeteer (~/.cache/puppeteer/chrome/linux-153.0.8010.36). JSON en .session/psi/lh-mobile.json; parsers en scripts/psi-parse.py y scripts/psi-detail.py.
+- Resultados MÓVIL: Perf 27 · A11y 95 · BP 100 · SEO 100. FCP 1.4s OK; LCP 13.2s (score 0); TBT 2,310ms; CLS 0.264; SI 6.5s; TTI 13.4s. Sin CrUX (poco tráfico aún). Transfer total 4,054 KB / 43 requests.
+- Causa LCP: public/images/logo.png = 1254×1254 px, 946 KB PNG servido RAW (Navbar/Footer/AgeGate/layout). hero.png 1344×768 160 KB.
+- Causa peso: 44 tags <img> crudos en src/ (solo 3 archivos usan next/image). Home: licoreria.png 197KB, tasca-los-amigos 142KB, etc. + ads via /api/images/ads/ sin optimizar (947KB + 222KB).
+- Causa TBT: eval de chunks app (0g1… 1,466ms; 2wy… 1,615ms) + unused JS 401 KB (0y_6… 206KB sin usar) + gtag.js 874ms + gtm.js 295ms (GTM VACÍO = overhead puro ahora).
+- Causa CLS 0.264: un shift — el FOOTER se mueve (selector footer.mt-auto "CONECTA-LT © 2026"), típico de imágenes sin dimensiones que cargan tarde.
+- A11y 95: color-contrast, heading-order, label-content-name-mismatch. BP: solo sourcemaps.
+
+Stage Summary:
+- Diagnóstico claro: el 27 móvil lo causan (1) imágenes PNG sin optimizar (~3.5MB, logo LCP 946KB) y (2) JS pesado/bloqueante. Plan propuesto P0: WebP+next/image en Navbar/Home/ads-API (LCP→~2.5s, CLS→0); P1: code-split chunk con 206KB unused + decidir si quitar GTM vacío (-116KB/-295ms); P2: 3 items de a11y.
+- Esperando OK del dueño para ejecutar P0.
