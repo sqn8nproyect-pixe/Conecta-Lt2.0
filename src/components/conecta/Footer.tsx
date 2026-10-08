@@ -4,10 +4,12 @@
 // CONECTA-LT — Footer with legal links
 //
 // Footer del sitio con links a las páginas legales (privacidad,
-// términos) implementadas como vistas del SPA. Click → setView.
+// términos). Desde la auditoría SEO 2026-10-08 las legales son
+// rutas reales (/privacidad, /terminos) → <Link> crawlable.
 // ─────────────────────────────────────────────────────────────
 
 import { useCallback } from 'react';
+import Link from 'next/link';
 import { useAppStore } from '@/lib/store';
 import { trackAnalyticsEvent } from '@/lib/api';
 import { waLink, CONTACT_WHATSAPP_DISPLAY } from '@/lib/contact';
@@ -49,19 +51,21 @@ export function Footer() {
             Quiénes Somos
           </button>
           <span className="text-white/20">·</span>
-          <button
-            onClick={() => setView('privacy')}
+          {/* Rutas legales reales: crawlables/indexables (auditoría SEO 2026-10-08).
+              Mismo aspecto que los botones; Next las precarga con <Link>. */}
+          <Link
+            href="/privacidad"
             className="text-white/40 hover:text-gold transition-colors"
           >
             Privacidad
-          </button>
+          </Link>
           <span className="text-white/20">·</span>
-          <button
-            onClick={() => setView('terms')}
+          <Link
+            href="/terminos"
             className="text-white/40 hover:text-gold transition-colors"
           >
             Términos
-          </button>
+          </Link>
           <span className="text-white/20">·</span>
           {/* Canal directo del equipo — verde solo al hover, discreto en reposo */}
           <a

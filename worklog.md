@@ -749,3 +749,66 @@ Work Log:
 Stage Summary:
 - Plan P1 propuesto al dueño: (0) reanclar a 19ae251; (1) LCP: quitar opacity:0 framer-motion del hero (LCP 7.4s→~2s, +10-14 pts); (2) CLS: reservar altura de secciones async (+5-7 pts); (3) cerotraba.png→webp (-120KB); (4) experimental.inlineCss (-880ms CSS bloqueante); (5) browserslist moderno (-14KB); (6) decisión GTM vacío.
 - Proyección honesta: 58 → ~72-80.
+
+---
+Task ID: p1-exec-2026-10-08
+Agent: Super Z (principal)
+Task: Ejecutar plan P1 aprobado (LCP/CLS/imágenes/CSS/JS) y pushearlo a main.
+
+Work Log:
+- Paso 0: repo re-anclado a 19ae251 (perf-p1) preservando worklog/scripts/.session — el P0 queda en el linaje.
+- P1.1 LCP: hero quitado de framer-motion (badge/h1/p/CTA → tags planos + .hero-rise CSS con stagger 0.05-0.2s; keyframes en globals.css, respeta prefers-reduced-motion). Root motion.div → initial={false} (conserva exit de AnimatePresence en cambios de vista). El subtítulo (elemento LCP) ya NO llega con opacity:0.
+- P1.2 CLS: eliminado el early-return del spinner min-h-[60vh] (causa del salto del footer, CLS 0.264). Ahora: layout completo siempre; grid con 6 skeletons de la MISMA estructura (h-56/h-64 cover + bloque texto); populares reserva fila durante popularLoading (skeletons ya existían dentro); estado vacío solo con !isPending (antes aparecía en falso en SSR y durante fetch); hint slowLoad reubicado dentro del grid.
+- P1.3: logo-cerotraba.png 134KB → logo-cerotraba.webp 14KB (160px, q82, RGBA) + width={412} height={160} en Footer. Script: scripts/gen-cerotraba-webp.py.
+- P1.4: next.config.ts → experimental.inlineCss: true. Verificado en next start local: 1 <style> en HTML, CERO <link rel=stylesheet> render-blocking.
+- P1.5: package.json → browserslist moderno (chrome/and_chr/edge/firefox ≥95, safari/ios_saf ≥15.4, samsung ≥16). El chunk dedicado de polyfills core-js (14KB, 0r748*) ya no está en la ruta crítica de la home; queda el módulo 90056 inline de Turbopack (~3-5KB de guards) dentro del vendor 228KB — ganancia parcial, aceptable.
+- Verificación: prisma generate → tsc 41 errores = baseline exacto (0 nuevos; 0 en archivos tocados) → BUILD_STANDALONE=1 next build OK → next start local: hero-rise presente, hero sin opacity:0 (los 3 opacity:0 restantes son AgeGate/modales, fuera de scope), cerotraba.webp servido, chunks de la home SIN polyfills core-js.
+- Commit 34b8c93 y push atómico con guard de rama (symbolic-ref | grep perf-p1 && add && commit && push): 19ae251..34b8c93 HEAD→main fast-forward. ls-remote confirma origin/main=34b8c93. Contenido verificado en origin: hero-rise(4), inlineCss, cerotraba.webp(14,842 bytes), browserslist.
+- GOTCHA menor: cp -r .p1-keep/session .session copia DENTRO si .session existe → usar cp -r src/. dst/ o rsync.
+- Lighthouse local (post-P0, pre-P1): crashed con "Browser tab unexpectedly crashed" → resuelto con --disable-dev-shm-usage --disable-gpu; --chrome-path deprecado → env CHROME_PATH.
+
+Stage Summary:
+- P1 COMPLETO Y PUSHEADO (34b8c93 en origin/main). Espera Redeploy en Vercel por el dueño.
+- Esperado en PSI móvil: LCP 7.4s→~2s (hero pinta con HTML+CSS), CLS 0.264→<0.1 (sin swap de layout), CSS bloqueante 0, transferencia -120KB (cerotraba), -14KB polyfills. Proyección 58→~72-80.
+- La medición post-deploy debe hacerse con PSI (no Lighthouse local: entorno local es más severo, 32-33 vs 58).
+- Pendiente decisión dueño: GTM vacío (-75KB JS/visita). Pendiente revocar PAT ghp_LOJu… tras confirmar deploy.
+
+---
+Task ID: p1-verify-2026-10-08
+Agent: Super Z (principal)
+Task: Verificación post-deploy del P1 (34b8c93) — medición Lighthouse móvil contra producción.
+
+Work Log:
+- Deploy del P1 CONFIRMADO vivo en producción vía HTML live: hero-rise (2 matches), logo-cerotraba.webp (2), 0 <link stylesheet> bloqueantes, 1 <style> inline. El dueño redeployó (o auto-deploy de Vercel corrió).
+- PSI API 429 (cupo diario agotado de nuevo) → Lighthouse local (mismo motor, entorno más severo; Chrome headless con debugging port manual: chrome-launcher falla con "waiting for dynamic debugging port" → workaround: lanzar Chrome a mano con --remote-debugging-port=9333 --user-data-dir=/tmp/lh-profile y conectar con --port=9333 en EL MISMO comando bash; el proceso muere entre llamadas del tool).
+- Resultados móvil LOCAL post-P1: Score 60 (antes 33, +27) · FCP 1.6s · LCP 3.5s (antes 7.7s, -55%) · CLS 0 (antes 0.264, ELIMINADO) · TBT 1,860ms · SI 4.8s · Transfer 1,361KB (antes 1,605KB).
+- LCP element CAMBIÓ: antes <p> subtítulo hero con ELEMENT RENDER DELAY 2,333ms; ahora img.object-cover (hero, div>section>div.absolute>img) con render delay 66ms y TTFB 36ms. La causa raíz del LCP (opacity:0 framer-motion) quedó eliminada.
+- lcp-discovery: priorityHinted=false (el preload del hero no lleva fetchpriority=high; se monta cliente tras AgeGate — micro-optimización futura ~300ms).
+- Top transfer: chunk app 264KB · gtag.js 175KB · gtm.js 116KB (GTM vacío = decisión pendiente del dueño) · licoreria 96KB via _next/image · hero.png 52KB.
+- Proyección PSI (owner): 58 → ~72-80 razonable; con CLS=0 y LCP~3.5s posible acercarse a 80. Medición oficial con PSI del dueño (local es más severo: 60 local ≈ 75+ PSI histórico).
+
+Stage Summary:
+- P1 VERIFICADO EN PRODUCCIÓN: LCP -55%, CLS 0, score local +27 pts. Objetivos del plan cumplidos (LCP <4s ✅, CLS <0.1 ✅).
+- Pendiente dueño: correr PSI para score oficial; decidir GTM vacío (-116KB gtm.js + parte de gtag 175KB); revocar PAT ghp_LOJu… (ya no se necesita).
+- Siguiente en cola según dueño: revisión SEO de páginas clave (él la eligió antes de retomar el P1).
+
+---
+Task ID: seo-audit-fixes-2026-10-08
+Agent: Super Z (principal)
+Task: Auditoría SEO técnica (páginas clave) + fixes de riesgo bajo aprobados por el dueño.
+
+Work Log:
+- AUDITORÍA (producción): robots.txt OK (AI-bots, sitemap); sitemap 37 URLs (33 locales); home/local/venue/editorial/artículo con title+description+canonical+robots+OG/Twitter COMPLETOS; JSON-LD root (WebSite+Organization), venue (BarOrPub+BreadcrumbList con geo/horarios/rating/sameAs/hasMap), editorial (Article+Breadcrumb); llms.txt excelente; favicon múltiple OK; HSTS+XFO OK; trailing slash 308 OK; Lighthouse: SEO 100 / BP 100 / A11y 95.
+- HALLAZGO 1 (ALTO): páginas legales SIN ruta (vistas SPA setView('privacy'/'terms')) → 404 en /privacidad /terminos /legal/*; invisibles para Google y fuera del sitemap. Origen: comentario en LegalPage "restricción solo ruta /" (hoy obsoleta: existen /local /editorial /auth).
+- HALLAZGO 2 (MEDIO): 404 con robots meta CONFLICTIVOS ("noindex" auto de Next + "index, follow" heredado del layout); sin not-found.tsx propio.
+- HALLAZGO 3 (MEDIO): home con 2 H1 en SSR ("¿Eres mayor de 18 años?" del AgeGate + hero); Lighthouse falla heading-order.
+- HALLAZGO 4 (MEDIO): home SSR con CERO enlaces internos crawlables (nav 100% SPA; crawlers dependen del sitemap).
+- HALLAZGO 5 (BAJO, sin fix hoy): og:image de fichas = cover PNG crudo (~142KB); solo afecta compartidos sociales, no ranking. P2.
+- FIXES APLICADOS (rama seo-fix sobre 34b8c93): (1) rutas nuevas /privacidad /terminos (server, canonical/OG/title, reusan LegalPage con prop standalone; navegación con Link reales en standalone, SPA intacta para AgeGate); (2) not-found.tsx de marca con robots noindex (reemplaza al del layout → sin conflicto); (3) AgeGate h1→h2 (id aria-labelledby intacto; home queda con 1 H1); (4) Footer Privacidad/Términos button→Link; (5) sitemap +2 legales (priority 0.3, yearly).
+- GOTCHA: title template del layout añade " | CONECTA-LT" → los títulos de páginas nuevas SIN sufijo (primera versión duplicaba). GOTCHA: `next build | head` → SIGPIPE mata el build a mitad (prerender parcial); además next-server zombi sirviendo caché vieja en el puerto → pkill -f "next-server" y verificar HTML prerenderizado en .next/server/app/*.html.
+- VERIFICADO local (next start, puerto limpio): build exit=0; tsc 41 errores = baseline exacto (0 nuevos); eslint limpio; /privacidad y /terminos 200 con contenido legal SSR completo, canonical, título único, 1 H1, enlaces cruzados Link; 404 status 404 + title de marca + robots noindex coherente; home con 1 H1 y footer con href="/privacidad"/"/terminos"; sitemap.xml con las 2 URLs.
+
+Stage Summary:
+- SEO base era sólido (score 100 LH); los fixes tapan los 4 huecos reales: legales crawlables, 404 coherente, 1 H1, primeros enlaces internos crawlables de la home.
+- Commit listo en rama seo-fix; push atómico pendiente (PAT puede estar revocado — avisó el dueño que podía revocarlo).
+- Pendiente dueño: GTM vacío (-116KB), PAT revocación, og:image optimizada de fichas (P2), SSR de nav home (P2).

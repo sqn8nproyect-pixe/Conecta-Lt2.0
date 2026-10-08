@@ -96,12 +96,14 @@ export function AgeGate({ onConfirm }: AgeGateProps) {
                 <Wine size={12} /> BEBIDAS ALCOHÓLICAS
               </div>
 
-              <h1
+              {/* h2, no h1: el H1 de la página es el del hero de la home.
+                  Dos H1 en el SSR diluían la semántica (auditoría SEO 2026-10-08). */}
+              <h2
                 id="agegate-title"
                 className="font-serif text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight mb-3"
               >
                 ¿Eres mayor de <span className="text-gold">18 años</span>?
-              </h1>
+              </h2>
 
               <p
                 id="agegate-desc"

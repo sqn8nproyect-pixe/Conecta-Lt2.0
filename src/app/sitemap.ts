@@ -33,6 +33,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    // Páginas legales (rutas reales desde la auditoría SEO 2026-10-08).
+    // Antes eran vistas SPA sin URL → invisibles para crawlers.
+    {
+      url: `${SITE_URL}/privacidad`,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${SITE_URL}/terminos`,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ];
 
   try {

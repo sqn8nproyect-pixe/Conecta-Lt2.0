@@ -19,6 +19,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { ArrowLeft, Shield, FileText, Wine } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
@@ -26,9 +28,52 @@ type LegalKind = 'privacy' | 'terms';
 
 interface LegalPageProps {
   kind: LegalKind;
+  // Modo standalone: renderizado desde las rutas reales /privacidad y
+  // /terminos (SEO/crawlable). La navegación pasa a <Link> reales en
+  // lugar de setView (el store SPA no navega fuera de la home).
+  standalone?: boolean;
 }
 
-export function LegalPage({ kind }: LegalPageProps) {
+// Tarjeta de navegación de LegalPage: <Link> real (rutas /, /privacidad,
+// /terminos) en modo standalone, o botón SPA (setView) dentro de la home.
+function LegalNavCard({
+  href,
+  onClick,
+  icon,
+  meta,
+  label,
+  useLink = false,
+}: {
+  href: string;
+  onClick?: () => void;
+  icon: ReactNode;
+  meta: string;
+  label: string;
+  useLink?: boolean;
+}) {
+  const cls =
+    'flex-1 glass-card border border-white/10 rounded-2xl p-4 text-left hover:border-gold/30 transition-colors group';
+  const inner = (
+    <div className="flex items-center gap-3">
+      {icon}
+      <div>
+        <div className="text-[10px] tracking-[2px] font-mono text-gold/70">{meta}</div>
+        <div className="font-semibold text-white group-hover:text-gold transition-colors">{label}</div>
+      </div>
+    </div>
+  );
+  return useLink ? (
+    <Link href={href} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <button onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
+export function LegalPage({ kind, standalone = false }: LegalPageProps) {
   const setView = useAppStore((s) => s.setView);
 
   const isPrivacy = kind === 'privacy';
@@ -36,12 +81,21 @@ export function LegalPage({ kind }: LegalPageProps) {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
       {/* Back button */}
-      <button
-        onClick={() => setView('home')}
-        className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-gold transition-colors mb-8 font-mono tracking-wider"
-      >
-        <ArrowLeft size={16} /> VOLVER AL INICIO
-      </button>
+      {standalone ? (
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-gold transition-colors mb-8 font-mono tracking-wider"
+        >
+          <ArrowLeft size={16} /> VOLVER AL INICIO
+        </Link>
+      ) : (
+        <button
+          onClick={() => setView('home')}
+          className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-gold transition-colors mb-8 font-mono tracking-wider"
+        >
+          <ArrowLeft size={16} /> VOLVER AL INICIO
+        </button>
+      )}
 
       {/* Header */}
       <motion.div
@@ -80,57 +134,33 @@ export function LegalPage({ kind }: LegalPageProps) {
 
       {/* Footer navigation between legal pages */}
       <div className="mt-8 flex flex-col sm:flex-row gap-3">
-        {!isPrivacy ? (
-          <button
-            onClick={() => setView('privacy')}
-            className="flex-1 glass-card border border-white/10 rounded-2xl p-4 text-left hover:border-gold/30 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <Shield size={18} className="text-gold" />
-              <div>
-                <div className="text-[10px] tracking-[2px] font-mono text-gold/70">
-                  SIGUIENTE
-                </div>
-                <div className="font-semibold text-white group-hover:text-gold transition-colors">
-                  Política de Privacidad →
-                </div>
-              </div>
-            </div>
-          </button>
-        ) : (
-          <button
+        {isPrivacy ? (
+          <LegalNavCard
+            useLink={standalone}
+            href="/terminos"
             onClick={() => setView('terms')}
-            className="flex-1 glass-card border border-white/10 rounded-2xl p-4 text-left hover:border-gold/30 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <FileText size={18} className="text-gold" />
-              <div>
-                <div className="text-[10px] tracking-[2px] font-mono text-gold/70">
-                  SIGUIENTE
-                </div>
-                <div className="font-semibold text-white group-hover:text-gold transition-colors">
-                  Términos de Uso →
-                </div>
-              </div>
-            </div>
-          </button>
+            icon={<FileText size={18} className="text-gold" />}
+            meta="SIGUIENTE"
+            label="Términos de Uso →"
+          />
+        ) : (
+          <LegalNavCard
+            useLink={standalone}
+            href="/privacidad"
+            onClick={() => setView('privacy')}
+            icon={<Shield size={18} className="text-gold" />}
+            meta="SIGUIENTE"
+            label="Política de Privacidad →"
+          />
         )}
-        <button
+        <LegalNavCard
+          useLink={standalone}
+          href="/"
           onClick={() => setView('home')}
-          className="flex-1 glass-card border border-white/10 rounded-2xl p-4 text-left hover:border-gold/30 transition-colors group"
-        >
-          <div className="flex items-center gap-3">
-            <ArrowLeft size={18} className="text-gold" />
-            <div>
-              <div className="text-[10px] tracking-[2px] font-mono text-gold/70">
-                VOLVER
-              </div>
-              <div className="font-semibold text-white group-hover:text-gold transition-colors">
-                Volver al inicio
-              </div>
-            </div>
-          </div>
-        </button>
+          icon={<ArrowLeft size={18} className="text-gold" />}
+          meta="VOLVER"
+          label="Volver al inicio"
+        />
       </div>
     </div>
   );
