@@ -25,6 +25,7 @@ import type {
 } from '@/lib/types';
 import { db } from '@/lib/db';
 import { isAdminEmail } from '@/lib/admin-config';
+import { slugify } from '@/lib/slugify';
 import { isPromotionLive } from '@/server/repositories/promotion.repository';
 import { businessRepository } from '@/server/repositories/business.repository';
 import { analyticsRepository } from '@/server/repositories/analytics.repository';
@@ -602,13 +603,20 @@ const OWNER_VALID_PRICE_RANGES = new Set(['$', '$$', '$$$']);
 export async function assertBusinessOwnership(
   userId: string,
   businessIdOrSlug: string,
-): Promise<{ id: string; slug: string; name: string }> {
+): Promise<{ id: string; slug: string; name: string; formerSlugs: string[] }> {
   // Try slug first, fall back to id (so callers can pass either).
+  // `formerSlugs: { has }` keeps owner/dashboard URLs working right
+  // after a rename: the client still holds the old slug in state, and
+  // every subsequent owner call resolves through the slug history.
   const business = await db.business.findFirst({
     where: {
-      OR: [{ slug: businessIdOrSlug }, { id: businessIdOrSlug }],
+      OR: [
+        { slug: businessIdOrSlug },
+        { id: businessIdOrSlug },
+        { formerSlugs: { has: businessIdOrSlug } },
+      ],
     },
-    select: { id: true, slug: true, name: true, ownerId: true },
+    select: { id: true, slug: true, name: true, ownerId: true, formerSlugs: true },
   });
   if (!business) throw jsonError('Negocio no encontrado', 404);
 
@@ -627,7 +635,12 @@ export async function assertBusinessOwnership(
       throw jsonError('No tienes permisos para gestionar este local', 403);
     }
   }
-  return { id: business.id, slug: business.slug, name: business.name };
+  return {
+    id: business.id,
+    slug: business.slug,
+    name: business.name,
+    formerSlugs: business.formerSlugs,
+  };
 }
 
 /**
@@ -638,6 +651,31 @@ export async function assertBusinessOwnership(
  *     to clear it; a non-empty value must look like a phone number)
  *   - priceRange: must be `$` / `$$` / `$$$` when provided
  */
+/**
+ * Pick a unique public slug for a rename. Checks current slugs AND
+ * other businesses' slug history (formerSlugs), so two locals can
+ * never fight over the same URL — current or historical. The caller's
+ * own row is excluded (its own history may legitimately contain the
+ * candidate when a name bounces back and forth).
+ */
+async function pickUniqueSlug(
+  base: string,
+  selfId: string,
+): Promise<string> {
+  let candidate = base;
+  for (let i = 2; ; i++) {
+    const clash = await db.business.findFirst({
+      where: {
+        id: { not: selfId },
+        OR: [{ slug: candidate }, { formerSlugs: { has: candidate } }],
+      },
+      select: { id: true },
+    });
+    if (!clash) return candidate;
+    candidate = `${base}-${i}`;
+  }
+}
+
 export async function updateBusinessInfo(
   userId: string,
   businessSlug: string,
@@ -679,12 +717,40 @@ export async function updateBusinessInfo(
     throw jsonError('El nombre debe tener al menos 3 caracteres', 400);
   }
 
-  await businessRepository.updateBasicInfo(biz.id, data);
+  // ── Renombre con migración de slug ─────────────────────────
+  // Si el nombre cambió, el slug público se regenera para que la URL
+  // /local/<slug> siempre refleje la marca actual. El slug viejo pasa
+  // a formerSlugs (dedupe, sin incluir el slug nuevo) y la ficha
+  // pública redirige (308 permanente) desde él — ningún enlace
+  // externo (Google, WhatsApp, favoritos) se rompe.
+  let newSlug: string | null = null;
+  if (data.name !== undefined) {
+    const base = slugify(data.name);
+    if (base && base !== biz.slug) {
+      newSlug = await pickUniqueSlug(base, biz.id);
+    }
+  }
+
+  await businessRepository.updateBasicInfo(biz.id, {
+    ...data,
+    ...(newSlug
+      ? {
+          slug: newSlug,
+          formerSlugs: {
+            set: Array.from(
+              new Set([...biz.formerSlugs.filter((s) => s !== newSlug), biz.slug]),
+            ),
+          },
+        }
+      : {}),
+  });
+
   // If the name was updated, return the new name so the route can echo
-  // it back to the client (otherwise return the prior name).
+  // it back to the client (otherwise return the prior name). The new
+  // slug is echoed too so clients can re-point at the renamed URL.
   return {
     id: biz.id,
-    slug: biz.slug,
+    slug: newSlug ?? biz.slug,
     name: data.name !== undefined ? data.name : biz.name,
   };
 }

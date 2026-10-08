@@ -812,3 +812,38 @@ Stage Summary:
 - SEO base era sólido (score 100 LH); los fixes tapan los 4 huecos reales: legales crawlables, 404 coherente, 1 H1, primeros enlaces internos crawlables de la home.
 - Commit listo en rama seo-fix; push atómico pendiente (PAT puede estar revocado — avisó el dueño que podía revocarlo).
 - Pendiente dueño: GTM vacío (-116KB), PAT revocación, og:image optimizada de fichas (P2), SSR de nav home (P2).
+Task ID: seo-report-pdf-2026-10-08
+Agent: Super Z (principal)
+Task: Informe PDF de la auditoría SEO (skill pdf, ruta Report) para el dueño.
+
+Work Log:
+- Skill pdf cargada y cadena completa leída (report.md completo, cover.md, palette.md, overflow.md, pagination.md, typography.md, fill-engine.md, fonts.md).
+- Numeración Step 3.5: portada/índice sin número; capítulos 1-6 (Resumen, Alcance, Fortalezas, Hallazgos, Fixes, Recomendaciones).
+- Paleta: palette.cascade seed 8 (dorado/oliva #917521/#564e37, tier system) en formato reportlab + css.
+- Portada Template 01 (HUD, línea ancla dorada) via html2poster.js --width 794px; validada con poster_validate + cover_validate (falso positivo inicial por <span> anidado en el hero → hero a un solo color). Inter no disponible sin red → Liberation Sans explícita (weight 700).
+- Cuerpo ReportLab: TocDocTemplate + multiBuild, TOC clicable (bookmark keys), header/footer con número en arábigo (índice = i, cuerpo desde 1; notify ajusta doc.page-1), 3 tablas (Paragraph en todas las celdas, repeatRows, hAlign CENTER), fila de 4 callouts de métricas, CondPageBreak 25% antes de H1.
+- GOTCHAS: (1) trailing comma en story += styled_table(...), metió una list en el story → multiBuild "list has no isIndexing" (corregido); (2) cover 595.9x842.9pt vs A4 → umbral de normalize_page_to_a4 bajado a 0.5pt; (3) build con | head → SIGPIPE (lección previa reaplicada, no repetir).
+- QA: code.sanitize, meta.brand, font.check (0 issues), toc.check/toc_validate pass (warning TOC_NOT_FOUND = detector no reconoce "Índice" en español; entradas y números verificados por extract_text), pages.clean sin páginas en blanco, pdf_qa --skip-cover: PASS con 4 warnings del mismo falso positivo (los 4 callouts espejo 65/422-422/65 = grupo centrado, aceptado con justificación).
+- Inspección visual: portada y 2 páginas de cuerpo renderizadas a PNG — correctas.
+
+Stage Summary:
+- ENTREGADO: /home/z/my-project/download/Informe_SEO_conectalt_2026-10-08.pdf (8 páginas, ~134KB, vectorial, TOC clicable) + informe_portada_fuente.html.
+- Scripts recuperables en scripts/seo-report/ (cover.html, generate_body.py, merge.py).
+- Pendientes para próxima sesión: GSC (prioridad), GBP por local, cadencia editorial, og:image webp (P2), GTM decisión dueño, revocar PAT.
+
+---
+Task ID: slug-rename-diag-2026-10-08
+Agent: Super Z (main)
+Task: Diagnosticar por qué /local/tasca-el-patio muestra "Africa Burguers" (URL ≠ nombre tras edición de local)
+
+Work Log:
+- Reproducido en vivo: GET /api/businesses/tasca-el-patio → name="Africa Burguers", slug="tasca-el-patio", instagram="@elpatio" (dato residual de la marca vieja).
+- Causa raíz confirmada en código: slug se genera UNA vez con slugify(name) en el seed/creación; PATCH /api/owner/businesses/[slug] (updateBusinessInfo en business.service.ts:641) solo acepta name/description/address/phone/priceRange/coverImage/specialty/valueProposition — NUNCA regenera el slug. Diseño intencional: URLs estables.
+- Confirmado que TODAS las relaciones internas (hours, socials, images, menu, reservations, favorites, events) referencian por businessId (cuid), no por slug → cambiar slug es internamente seguro; solo enlaces externos se romperían (por eso se necesita redirect si se cambia).
+- BUG ADICIONAL encontrado: búsqueda /api/businesses?q= usa Prisma contains SIN mode:'insensitive' (route.ts:22-24) → case-sensitive en Postgres: q=africa devuelve 0 resultados, q=Africa encuentra el local. Usuarios escribiendo en minúscula no encuentran nada.
+- Búsqueda además es substring exacta: q="tasca el patio" (nombre viejo) → 0 resultados.
+
+Stage Summary:
+- Respuesta al dueño: el slug NO se regenera al renombrar (comportamiento estándar de URLs estables); seguirá pasando con cada rename salvo que se implemente migración de slug con 301.
+- Opciones presentadas: (A) dejar así, (B) implementar rename con slug nuevo + tabla FormerSlug + redirect 301 en local/[slug]/page.tsx (recomendado), fix puntual del caso Africa Burguers incluido en B.
+- Fix rápido adicional propuesto: mode:'insensitive' en búsqueda (bug real de UX).

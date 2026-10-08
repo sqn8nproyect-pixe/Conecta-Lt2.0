@@ -18,10 +18,13 @@ export async function GET(request: Request) {
   if (category) where.category = { name: category };
   if (priceRange) where.priceRange = priceRange;
   if (q) {
+    // mode:'insensitive' — Postgres contains is case-sensitive by
+    // default, so searching "africa" never matched "Africa Burguers".
+    // Users type lowercase; match accordingly.
     where.OR = [
-      { name: { contains: q } },
-      { description: { contains: q } },
-      { specialty: { contains: q } },
+      { name: { contains: q, mode: 'insensitive' } },
+      { description: { contains: q, mode: 'insensitive' } },
+      { specialty: { contains: q, mode: 'insensitive' } },
     ];
   }
 

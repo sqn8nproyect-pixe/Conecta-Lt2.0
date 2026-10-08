@@ -65,9 +65,11 @@ export async function GET(request: Request) {
     if (claimed === 'true') where.ownerId = { not: null };
     else if (claimed === 'false') where.ownerId = null;
     if (search) {
+      // mode:'insensitive' — same case-sensitivity fix as the public
+      // directory search (Postgres contains is case-sensitive).
       where.OR = [
-        { name: { contains: search } },
-        { slug: { contains: search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
       ];
     }
 

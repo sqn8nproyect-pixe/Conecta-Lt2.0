@@ -12,7 +12,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { MapPin, Clock, Phone, Instagram, Star, ArrowRight, Users } from 'lucide-react';
 import { db } from '@/lib/db';
@@ -62,6 +62,24 @@ async function getBusiness(slug: string) {
 
 type BusinessData = NonNullable<Awaited<ReturnType<typeof getBusiness>>>;
 
+// ── Redirect por renombre ────────────────────────────────────
+// Si el slug visitado es un slug viejo (formerSlugs), devolvemos el
+// slug ACTUAL del local para redirigir con 308 permanente. Así los
+// enlaces externos (Google ya indexado, WhatsApp, favoritos) siguen
+// funcionando después de que el dueño renombre su local.
+async function findRedirectTarget(slug: string): Promise<string | null> {
+  try {
+    const biz = await db.business.findFirst({
+      where: { formerSlugs: { has: slug }, status: 'ACTIVE' },
+      select: { slug: true },
+    });
+    return biz?.slug ?? null;
+  } catch (error) {
+    console.error('[local/[slug]] findRedirectTarget: DB no disponible', error);
+    return null;
+  }
+}
+
 // SSG: pre-genera las fichas en build. Si la DB no está
 // disponible en build, devolvemos [] y las fichas se generan
 // on-demand (dynamicParams=true por defecto) — el build no muere.
@@ -96,6 +114,10 @@ export async function generateMetadata({
   }
 
   if (!business || business.status !== 'ACTIVE') {
+    // Slug viejo de un local renombrado → deja que la página haga el
+    // redirect permanente; evita indexar el título "Local no encontrado".
+    const target = await findRedirectTarget(slug);
+    if (target) permanentRedirect(`/local/${target}`);
     return { title: 'Local no encontrado' };
   }
 
@@ -174,6 +196,10 @@ export default async function LocalPage({
   }
 
   if (!business || business.status !== 'ACTIVE') {
+    // Renombre: el slug visitado quedó en el historial del local →
+    // redirect 308 permanente a /local/<slug-actual> (SEO-safe).
+    const target = await findRedirectTarget(slug);
+    if (target) permanentRedirect(`/local/${target}`);
     notFound();
   }
 

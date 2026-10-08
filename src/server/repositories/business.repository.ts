@@ -186,6 +186,10 @@ export const businessRepository = {
       coverImage?: string | null;
       specialty?: string | null;
       valueProposition?: string | null;
+      // Rename-with-redirect support (service layer computes both):
+      // the regenerated public slug + the archived old one.
+      slug?: string;
+      formerSlugs?: { set: string[] };
     },
   ): Promise<{ id: string; name: string; slug: string }> => {
     return db.business.update({

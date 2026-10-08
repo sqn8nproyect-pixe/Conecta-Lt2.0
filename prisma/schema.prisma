@@ -202,6 +202,11 @@ model Business {
   id          String  @id @default(cuid())
   name        String
   slug        String  @unique
+  // Historial de slugs de renombres anteriores. Cuando un local cambia
+  // de nombre, el slug se regenera y el viejo se guarda aquí; la ficha
+  // pública /local/[slug] redirige (308 permanente) desde cualquier
+  // slug viejo al actual para que los enlaces externos no se rompan.
+  formerSlugs String[] @default([])
   description String
   address     String
   lat         Float
