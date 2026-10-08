@@ -695,3 +695,57 @@ Stage Summary:
 - P0 COMPLETO EN RAMA feat/perf-images (13a8ea1), verificado, esperando solo push+deploy.
 - Esperado post-deploy: LCP 13.2s → ~2.5-3s; transfer home 4MB → ~1MB; CLS 0.264 → ~0 (dims explícitas + fill); ads 947KB → decenas de KB vía proxy.
 - Al pushear: push-main.sh <TOKEN> → luego verificar en vivo HTML (logo.webp, _next/image) → Lighthouse re-run → pedir revocación del PAT.
+
+---
+Task ID: psi-fix-p0-deploy-2026-10-08
+Agent: Super Z (principal)
+Task: Push del P0 con PAT del dueño + troubleshooting del deploy.
+
+Work Log:
+- PAT del dueño validado (ls-remote OK). Primer push "exitoso" (ed2a403..0f2d37f) PERO el auto-checkpointer del sandbox cambió a main entre comandos → se pushearon solo scripts/worklog, NO el código (detectado verificando contenido de 0f2d37f: 0 matches de sharp/logo.webp; 13a8ea1 no era ancestro).
+- Lección: el checkpointer interfiere entre llamadas bash → flujo git crítico en UN solo comando.
+- Re-push atómico: checkout -B perf-push feat/perf-images + rebase origin/main (limpio, sin solapamiento de archivos) + push → 19ae251 en origin/main ✅.
+- Sin secretos en el árbol pusheado (git grep ghp_ = nada; push-main.sh recibe token por argumento).
+- Deploy NO apareció: 10 min de polls al HTML (logo.webp/logo-192 ausentes; favicon sigue logo.png). GitHub deployments API = 0 registros (Vercel no usa ese canal aquí; rate limit anónimo agotado; consulta autenticada OK).
+- Build local de producción EXITOSO (BUILD_STANDALONE=1 next build completo, prerender OK) → el código NO rompe el build. Problema del lado Vercel: webhook/GitHub App o deploy fallido/trabado invisible para mí (sin token Vercel).
+
+Stage Summary:
+- 19ae251 (P0 completo rebased) ESTÁ en origin/main. Código validado localmente de punta a punta.
+- BLOQUEADO el deploy: producción sigue en build anterior. Requiere acción del dueño en dashboard de Vercel (ver Deployments del commit 19ae251 / reconectar GitHub App / Redeploy).
+- PAT ghp_LOJu… usado 1×. Recordar revocación al cerrar el ciclo.
+
+---
+Task ID: psi-fix-p0-verificacion-2026-10-08
+Agent: Super Z (principal)
+Task: Verificación del deploy del P0 + medición Lighthouse después.
+
+Work Log:
+- Deploy confirmado tras Redeploy manual del dueño: favicon → logo-192.png, navbar con logo.webp (200, 15,046 bytes), preload de logo.webp.
+- Proxy ads verificado en vivo: /api/images/ads/a1eb7b16….png → HTTP 200, 38,144 bytes, image/webp (antes 947KB PNG = -96%).
+- Lighthouse móvil DESPUÉS (mismo motor): Perf 33 (antes 27) · FCP 1.1s (1.4) · LCP 7.7s (13.2, -42%) · TBT 2,160ms (2,310) · CLS 0.264 (igual) · SI 3.8s (6.5, -42%) · transfer 1,605KB (4,054KB, -60%).
+- GOTCHA parser: salida del CLI de Lighthouse NO tiene wrapper lighthouseResult (eso es PSI API) → lr = d directamente.
+- Análisis del resto: _next/image funciona (licoreria 197KB→96KB en w=750). El LCP 7.7s restante es estructural: la home se monta CLIENTE detrás del AgeGate → el hero (priority) no puede precargarse por SSR y llega tras hidratación (chunk 264KB + TBT 2.1s). CLS del footer igual motivo (montaje cliente).
+- Siguiente palanca (P1): reducir JS (chunk 43dvwtx5xn 264KB), decidir GTM vacío (-116KB/-295ms), y a medio plazo SSR de la home.
+
+Stage Summary:
+- P0 EN PRODUCCIÓN Y MEDIDO: LCP -42%, transferencia -60%, FCP/SI mucho mejores. Web: perceptiblemente más rápida ya.
+- Resto del margen es arquitectónico (SPA cliente tras AgeGate) → P1.
+- PAT ghp_LOJu… ya no hace falta (código pusheado y deployado) → dueño puede revocarlo YA.
+
+---
+Task ID: psi-p1-analysis-2026-10-08
+Agent: Super Z (principal)
+Task: Analizar captures PSI del dueño (score 58, ci8xni1d9) y armar plan P1 objetivo.
+
+Work Log:
+- Captures PSI leídos y ampliados (5 nuevas capturas claras del dueño): Score 58 (PSI, NO 33 como medía Lighthouse local), FCP 1.1s, TBT 200ms (verde), SI 3.5s, LCP 7.4s (rojo), CLS 0.264 (rojo).
+- Oportunidades PSI: (1) Solicitudes que bloquean renderizado 880ms → 3 CSS chunks (2ljrjdk91vr.css 32.5KB, 074 1.9KB, 44ioy7 3.7KB) + doc 38.1KB/1660ms; (2) Mejorar entrega de imágenes 181 KiB → logo-cerotraba.png 134.6KB servida cruda en Footer a 24px (Footer.tsx:94); (3) JavaScript antiguo 14 KiB → polyfills core-js en chunk 0r748ajynwvlz.js.
+- CLS: auditoría "Causantes de los cambios de diseño" = footer completo (0.264 = todo el CLS). Causa: secciones async (populares/grid) aparecen tras fetch → footer salta.
+- Lighthouse local contra prod (lh-mobile-lcp.json, score local 32, timing severo pero elementos fiables): LCP element = <p> subtítulo del hero "Explora los locales..." (path MAIN>SECTION>DIV>P), lcp-breakdown: TTFB 29ms + ELEMENT RENDER DELAY 2,333ms.
+- Causa raíz LCP confirmada: hero text está en SSR HTML pero con style="opacity:0" (framer-motion initial) → solo pinta tras hidratación+animación en JS. Verificado en HTML live: 3 elementos con opacity:0.
+- GOTCHA GIT CRÍTICO DESCUBIERTO: origin/main (GitHub) = 0f2d37f (línea SIN código P0); el checkpointer del sandbox movió main local a 7b06df2→431c9b5 (3 commits ahead) y el working tree muestra AgeGate con logo.png (código PRE-P0). PERO Vercel corre 19ae251 (verificado en HTML live: gate logo.webp + preload). El código P0 vive SOLO en commit 19ae251. Cualquier trabajo nuevo DEBE basarse en 19ae251 y pushearse atómicamente, o se revertiría el P0.
+- Chrome local: crash de tab resuelto con --disable-dev-shm-usage --disable-gpu; --chrome-path deprecado → usar env CHROME_PATH.
+
+Stage Summary:
+- Plan P1 propuesto al dueño: (0) reanclar a 19ae251; (1) LCP: quitar opacity:0 framer-motion del hero (LCP 7.4s→~2s, +10-14 pts); (2) CLS: reservar altura de secciones async (+5-7 pts); (3) cerotraba.png→webp (-120KB); (4) experimental.inlineCss (-880ms CSS bloqueante); (5) browserslist moderno (-14KB); (6) decisión GTM vacío.
+- Proyección honesta: 58 → ~72-80.

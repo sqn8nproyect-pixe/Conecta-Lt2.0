@@ -92,9 +92,15 @@ export function Footer() {
             className="inline-flex items-center gap-3 group"
           >
             <span className="font-mono tracking-wider">Desarrollado por</span>
+            {/* P1 perf: antes logo-cerotraba.png crudo (134KB) para mostrarse
+                a 24px de alto — PSI lo marcó como el 74% del ahorro de
+                "Mejorar la entrega de imágenes". webp 160px = 14KB (-89%) y
+                width/height explícitos evitan cualquier reflow. */}
             <img
-              src="/images/logo-cerotraba.png"
+              src="/images/logo-cerotraba.webp"
               alt="Agencia CeroTraba"
+              width={412}
+              height={160}
               className="h-6 w-auto object-contain opacity-60 group-hover:opacity-90 transition-opacity"
             />
           </a>

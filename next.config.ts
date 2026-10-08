@@ -56,6 +56,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // P1 perf: incrusta el CSS en el HTML del SSR — elimina los 3 requests
+  // render-blocking que PSI marcó (880ms, cadena crítica doc→CSS 348ms).
+  experimental: {
+    inlineCss: true,
+  },
   reactStrictMode: false,
   async headers() {
     return [

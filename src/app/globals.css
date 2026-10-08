@@ -713,3 +713,24 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 @media (prefers-reduced-motion: reduce) {
   .whatsapp-ripple { animation: none !important; opacity: 0; }
 }
+
+/* ============================================
+   CONECTA-LT — P1 perf: entrada del hero sin JS
+   El hero (badge, h1, subtítulo, buscador) se
+   animaba con framer-motion → SSR llegaba con
+   style="opacity:0" y el texto solo pintaba tras
+   hidratar (LCP 7.4s en 4G lenta). Con animation
+   CSS el texto pinta junto al HTML (~1-2s).
+   El ritmo del stagger se mantiene (delays).
+   Respeta prefers-reduced-motion.
+   ============================================ */
+@keyframes hero-rise-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-rise {
+  animation: hero-rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise { animation: none !important; }
+}

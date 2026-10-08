@@ -70,6 +70,7 @@ export function HomePage() {
   const {
     data: establishments = [],
     isLoading,
+    isPending,
     isError,
     refetch,
   } = useQuery({
@@ -182,35 +183,15 @@ export function HomePage() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] px-6">
-        <div className="flex flex-col items-center gap-3 text-white/40">
-          <div className="w-10 h-10 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
-          <div className="text-xs tracking-[4px] font-mono">CARGANDO…</div>
-          {slowLoad && (
-            <div className="mt-4 flex flex-col items-center gap-3">
-              <p className="text-xs text-white/40 max-w-xs text-center">
-                Está tardando más de lo habitual. Si la página no carga,
-                puedes reintentar.
-              </p>
-              <button
-                onClick={() => refetch()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 text-white/70 text-xs font-medium hover:bg-white/5 transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Reintentar
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // P1 perf (CLS): ya NO se reemplaza la página entera por un spinner
+  // min-h-[60vh] — ese swap era la causa del salto del footer (CLS 0.264).
+  // La home completa (hero + buscador + secciones) se renderiza siempre y
+  // el grid muestra skeletons del MISMO tamaño que las cards reales.
+  // El hint de carga lenta (slowLoad) vive ahora dentro del grid.
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.4 }}
@@ -232,42 +213,38 @@ export function HomePage() {
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs tracking-[3px] mb-6 font-semibold"
+          {/* P1 perf (LCP): entrada del hero con animación CSS pura en vez de
+              framer-motion. framer-motion llega con style="opacity:0" en el
+              SSR y solo pinta tras hidratar → LCP 7.4s en 4G lenta. Con CSS
+              el texto pinta con el HTML (~1-2s). Ritmo de stagger intacto. */}
+          <div
+            className="hero-rise inline-flex items-center gap-2 px-5 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs tracking-[3px] mb-6 font-semibold"
+            style={{ animationDelay: '0.05s' }}
           >
             <Sparkles size={13} className="animate-pulse" /> LOS TEQUES • MIRANDA
-          </motion.div>
+          </div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-[84px] leading-[0.95] font-serif font-black tracking-[-2px] sm:tracking-[-3.5px] mb-5 text-white"
+          <h1
+            className="hero-rise text-5xl sm:text-6xl md:text-7xl lg:text-[84px] leading-[0.95] font-serif font-black tracking-[-2px] sm:tracking-[-3.5px] mb-5 text-white"
+            style={{ animationDelay: '0.1s' }}
           >
             La vida nocturna,
             <br />
             <span className="text-gold">redescubierta.</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="text-base sm:text-lg md:text-xl text-white/80 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed"
+          <p
+            className="hero-rise text-base sm:text-lg md:text-xl text-white/80 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed"
+            style={{ animationDelay: '0.15s' }}
           >
             Explora los locales más selectos de la capital mirandina: licorerías,
             tascas, discotecas y licobares. Descubre ofertas únicas y planifica
             tu salida perfecta.
-          </motion.p>
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center"
+          <div
+            className="hero-rise max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center"
+            style={{ animationDelay: '0.2s' }}
           >
             <div className="relative w-full sm:flex-1">
               <Search
@@ -288,7 +265,7 @@ export function HomePage() {
             >
               <Sparkles size={16} /> PLANIFICAR NOCHE
             </button>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -297,8 +274,11 @@ export function HomePage() {
           panel admin → tab Publicidad). */}
       <AdCarousel />
 
-      {/* Etapa 6 — Populares esta semana (hidden entirely when empty). */}
-      {popular.length > 0 && (
+      {/* Etapa 6 — Populares esta semana (hidden cuando NO hay datos).
+          P1 perf (CLS): se reserva la fila (header + skeletons) mientras
+          popularLoading — antes la sección entera aparecía al llegar el
+          fetch y empujaba todo lo de abajo (footer → CLS). */}
+      {(popular.length > 0 || popularLoading) && (
         <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-8 pb-4">
           <div className="flex items-center gap-3 mb-4">
             <TrendingUp className="text-gold" size={20} />
@@ -494,8 +474,48 @@ export function HomePage() {
           </div>
         </div>
 
+        {/* P1 perf (CLS): hint de carga lenta vive dentro del layout
+            completo (antes el swap al spinner min-h-[60vh] movía el footer). */}
+        {isLoading && slowLoad && (
+          <div className="mb-8 flex flex-col items-center gap-3 text-center">
+            <p className="text-xs text-white/40 max-w-xs">
+              Está tardando más de lo habitual. Si la página no carga, puedes
+              reintentar.
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 text-white/70 text-xs font-medium hover:bg-white/5 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {isLoading ? (
+            // Skeletons con la MISMA estructura/altura que una card real
+            // (cover h-56 sm:h-64 + bloque de texto) — el grid no cambia de
+            // altura al llegar los datos → el footer no salta.
+            Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                className="glass-card rounded-3xl overflow-hidden"
+                aria-hidden="true"
+              >
+                <div className="h-56 sm:h-64 bg-white/5 animate-pulse" />
+                <div className="p-5 sm:p-6 space-y-3">
+                  <div className="h-6 w-2/3 bg-white/10 rounded animate-pulse" />
+                  <div className="h-3 w-1/2 bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-full bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-4/5 bg-white/5 rounded animate-pulse" />
+                  <div className="h-px bg-white/5" />
+                  <div className="h-3 w-1/3 bg-white/5 rounded animate-pulse" />
+                </div>
+              </div>
+            ))
+          ) : (
           <AnimatePresence mode="popLayout">
             {filtered.map((est: Establishment, index: number) => {
               const avg = est.avgRating;
@@ -619,9 +639,13 @@ export function HomePage() {
               );
             })}
           </AnimatePresence>
+          )}
         </div>
 
-        {filtered.length === 0 && (
+        {/* P1 perf: isPending (no SSR ni durante carga) — antes el estado
+            vacío aparecía en el SSR HTML con establishments=[] y también
+            durante el fetch, mostrando "No se encontraron" en falso. */}
+        {filtered.length === 0 && !isPending && (
           <div className="text-center py-20 text-white/40">
             No se encontraron locales con esos criterios.
           </div>
