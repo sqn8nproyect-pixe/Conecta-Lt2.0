@@ -380,3 +380,282 @@ Stage Summary:
 - SECRET DE SESIÓN ROTADO EN PRODUCCIÓN: las cookies viejas (incluida cualquier sesión forjada con el secret filtrado) ya NO decryptan → ventana de ataque cerrada. Efecto visible: re-login general para todos los usuarios.
 - Deuda de seguridad del dueño restante: revocar token Vercel vcp_1upa… (último uso ya hecho) + revocar ghp_O0KM…/ghp_FuRW…/ghp_ixLT… (github.com/settings/tokens). Opcional/media: rotar Neon y R2.
 - Verificación funcional final del login real corresponde al dueño (Google) — sesiones nuevas se emiten con el secret nuevo.
+
+---
+Task ID: chat-borrado-mensajes-2026-09-26
+Agent: Super Z (principal)
+Task: "b" — implementar borrado de mensajes en la app (soft-delete autor + moderación).
+
+Work Log:
+- Schema: Message.deletedAt/deletedBy (aditivo, nullable). Migración 20260926120000_message_soft_delete (2 ADD COLUMN).
+- chat.service.deleteMessage: autor borra lo suyo; ADMIN/MODERATOR cualquiera (incluso sin participar); SYSTEM solo moderación; idempotente; redacción total del contenido a nivel API (text/mediaUrl/durationMs = null en TODAS las lecturas via toMessageDTO); eventos message:deleted (canal convo) + convo:update (canales personales de los otros).
+- Ruta nueva DELETE /api/chat/conversations/[id]/messages/[messageId] (rate limit 30/min, getCurrentUserWithRole).
+- Cliente: deleteChatMessage (api.ts), ChatMessageDTO.deleted/moderated (types.ts), onMessageDeleted en chat-realtime (bind message:deleted).
+- UI ChatWindow: papelera (hover desktop / visible móvil) + confirmación inline; tumba "Mensaje eliminado" / "Mensaje eliminado por moderación"; bandeja con preview "Mensaje eliminado" (MessagesPage).
+- tsc 0 errores nuevos, eslint limpio. E2E local 19/19 PASS (chat-delete-e2e.sh vía preview-run.sh: permisos 401/403/404, soft-delete con redacción, idempotencia, tumba para el otro, bandeja redactada, mensaje permanente intacto).
+- GOTCHA descubierto: el filtro de tool-calls come la secuencia "[m" en los RESULTADOS mostrados al agente (colisión con ANSI reset) — las rutas [messageId] SIEMPRE estuvieron bien en disco; solo se veían mangleadas. Verificar con python/chr(91) ante dudas.
+- GOTCHA PG local: migrate deploy falla (P3009) porque event_submission (ALTER TYPE ADD VALUE) no puede correr en la tx de Prisma sobre la PG embebida fresca, y el enum BusinessEventStatus nunca tuvo migración (en Neon lo crea db-bootstrap al arranque). Local se resuelve con db push + fix-local-migrations.sh. La migración nueva se validó LITERALMENTE sobre PG real (drop + re-run del SQL).
+- INFRA recreada tras restore del sandbox: /home/z/preview-pg (rebuild-preview-pg.sh) + .env local (PG 5433 + AUTH_SECRET dev).
+- Commits listos en CLON LIMPIO /tmp/conecta-clean (para evitar los auto-commits UUID del sandbox en main local): 589b4db feat(chat) + d80a3a9 chore(ops), base 9b1eea7 (origin/main exacto). Diff 18 archivos, 919 inserciones, 0 secretos. Pendiente: push feat/chat-message-delete:main con PAT temporal del dueño → deploy auto → migrate deploy añade las columnas en Neon.
+
+Stage Summary:
+- Borrado de mensajes COMPLETO y probado localmente (soft-delete con redacción a nivel API, realtime, moderación admin). Solo falta push con PAT para que la migración corra en Neon y quede en producción.
+- El main LOCAL del sandbox NO se pushea (contiene auto-commits destructivos: 26bf43f borra rutas de upload). El push saldrá del clon limpio.
+
+---
+Task ID: push-borrado-preparado-2026-09-26
+Agent: Super Z (principal)
+Task: Dueño informa que el PAT de GitHub sigue sin revocar → dejar el push del borrado listo para ejecutar en cuanto pegue el token completo.
+
+Work Log:
+- Estado verificado: feature de borrado ya implementada y probada (E2E 19/19); commits limpios 589b4db (feat) + d80a3a9 (chore) en clon /tmp/conecta-clean, rama feat/chat-message-delete, base 9b1eea7 = origin/main exacto.
+- Re-auditoría pre-push del diff 9b1eea7..HEAD: 18 archivos; 0 .env/.session/.pem; 4 matches de patrón de secretos son SOLO prefijos truncados en worklog.md (recordatorios de revocación, ya publicados antes sin bloqueo de Push Protection).
+- Rutas de upload intactas en HEAD del clon limpio (presign + chat/upload).
+- Ruta del endpoint DELETE probada matemáticamente: directorio real = [messageId] (len=11, codes 91/109/101); el "essageId]" es solo artefacto del filtro de tool-calls que se come la secuencia [m en el output mostrado.
+- scripts/push-delete-feature.sh creado: valida PAT contra API (login sqn8nproyect-pixe), pushea feat/chat-message-delete:main usando el token SOLO en memoria, limpia stderr por si acaso, verifica SHA remoto = local. Nunca imprime ni persiste el token.
+- PAT completo NO está en disco (protocolo: nunca se persiste) → se pidió al dueño pegarlo de nuevo en el chat.
+
+Stage Summary:
+- Push bloqueado SOLO por falta del valor completo del PAT; todo lo demás audizado y listo. Al pegarlo: bash scripts/push-delete-feature.sh ghp_... → push → auto-deploy → prisma migrate deploy añade deletedAt/deletedBy en Neon → verificación en vivo → recordar revocar el PAT.
+
+---
+Task ID: push-borrado-intento-1-2026-09-26
+Agent: Super Z (principal)
+Task: Dueño pegó PAT completo → ejecutar push del borrado (scripts/push-delete-feature.sh).
+
+Work Log:
+- Validación API OK (login sqn8nproyect-pixe), pero git push → 403 "Permission denied".
+- Diagnóstico con headers de API: x-oauth-scopes VACÍO → el token clásico se creó sin marcar scope repo (sirve para leer repo público, NO para push). Permisos del usuario sobre el repo: admin/push true (el problema es solo el scope del token).
+- Nada persistido con el token: script lo toma como arg, log de error limpiado. Push NO salió; origin/main sigue en 9b1eea7.
+
+Stage Summary:
+- Pendiente: dueño crea token NUEVO marcando scope "repo" (o mínimo public_repo; los scopes no se pueden añadir a un token existente) → pega → re-ejecutar push-delete-feature.sh.
+
+---
+Task ID: push-borrado-final-2026-09-26
+Agent: Super Z (principal)
+Task: PAT con scope repo recibido → push del borrado a producción.
+
+Work Log:
+- PAT nuevo validado: x-oauth-scopes=repo ✓ (el anterior tenía scope vacío → 403).
+- scripts/push-delete-feature.sh: PUSH OK d80a3a9 → origin/main verificado idéntico. Token usado solo en memoria, nada persistido.
+- scripts/wait-deploy-status.sh (nuevo): espera deploy vía estados PÚBLICOS de GitHub (sin token Vercel). Vercel: "Deployment has completed" en ~90s.
+- Verificación en vivo conectalt.com: home 200; DELETE /api/chat/conversations/probe/messages/probe → 401 {"error":"No autenticado"} = RUTA NUEVA VIVA; chat/conversations 401; pusher/auth 401. Migración deletedAt/deletedBy aplicada en Neon (corre dentro del build; deploy OK = migración OK).
+
+Stage Summary:
+- BORRADO DE MENSAJES EN PRODUCCIÓN: soft-delete con redacción a nivel API, autor + moderación admin/moderator, tumba "Mensaje eliminado"/"por moderación", realtime vía evento message:deleted (Pusher), bandeja redactada. E2E local fue 19/19.
+- Pendiente visual para el dueño: probar 2 sesiones → borrar → desaparece en vivo en el otro lado.
+- SEGURIDAD: revocar YA ghp_bBZi… (push de hoy), ghp_Sz61… (sin scopes), ghp_O0KM…, ghp_FuRWb…, ghp_ixLT… en github.com/settings/tokens.
+
+---
+Task ID: eliminar-conversacion-2026-09-26
+Agent: Super Z (principal)
+Task: "podrias poner una funcion de eliminar conversacion?" + "sigue" — implementar y desplegar el borrado de conversaciones.
+
+Work Log:
+- Clon limpio fresco desde origin/main (d80a3a9) en /tmp/conecta-clean2 (el anterior /tmp/conecta-clean desapareció; el main del sandbox sigue prohibido por auto-commits destructivos).
+- Diseño (estilo WhatsApp, consistente con el borrado de mensajes): soft-delete POR PARTICIPANTE via Participant.deletedAt/deletedBy. Participante la oculta SOLO de su bandeja (reaparece si le escriben de nuevo o si reabre por perfil); ADMIN/MODERATOR con scope 'everyone' la ocultan para todos con aviso en vivo. Datos persisten (auditoría).
+- Schema: Participant.deletedAt (DateTime?) + deletedBy (String?). Migración 20260926130000_conversation_delete (2 ADD COLUMN, aditiva). Validada LITERALMENTE sobre PG real local (drop + re-run del SQL).
+- chat.service.deleteConversation: 404 si no existe/no participo (no-revelación); 403 si scope everyone sin rol; updateMany para everyone; evento CONVO_DELETED='convo:deleted' por canales personales de todos los participantes (Pusher).
+- Des-ocultado: sendMessage des-hace el borrado de TODOS los participantes en la misma $transaction; openDirectConversation des-oculta al caller (re-apertura explícita).
+- Ruta nueva DELETE /api/chat/conversations/[id] (body opcional {scope}, rate limit 20/min, getCurrentUserWithRole).
+- Cliente: deleteChatConversation (api.ts), onConvoDeleted en subscribeUserChannel (chat-realtime), badge-sync invalida la query en convo:deleted.
+- UI: papelera por fila en la bandeja (hover desktop/visible móvil) con confirmación inline; ChatWindow: menú "Eliminar conversación" (+ "Eliminar para todos (moderación)" si canModerate) con barra de confirmación; onDeleted limpia activeId.
+- tsc: 0 errores nuevos (42 preexistentes en main, ninguno del chat); eslint limpio en los 8 archivos tocados.
+- GOTCHA Turbopack: NO symlink node_modules del sandbox al clon ("Symlink [project]/node_modules is invalid, it points out of the filesystem root") → cp -al (hardlinks, mismo dispositivo). GOTCHA E2E: next-server huérfano en :3000 causaba EADDRINUSE y el E2E probaba contra el server VIEJO (ruta nueva = 404 HTML) → lsof kill pre-run + trap por puerto. GOTCHA SQL crudo: INSERT sin createdAt/updatedAt viola NOT NULL (los @default de Prisma no aplican).
+- E2E scripts/chat-delete-convo-e2e.sh: 27/27 PASS (permisos 401/403/404, self-delete sale solo de mi bandeja, mensajes persisten, reaparición por mensaje nuevo y por re-apertura, moderación everyone sale para ambos, idempotencia, conversación ajena intacta).
+- HALLAZGO auth: el jwt callback STRIPPEA role MODERATOR/ADMIN a USER si el email no está en ADMIN_EMAILS (hardcodeada: sqn8nproyect@gmail.com). En producción los moderadores efectivos son SOLO los allowlist (quedan como ADMIN). El E2E lo documenta: ana=MODERATOR en DB → 403 everyone; owner allowlist → ADMIN → everyone OK.
+- Commits en clon limpio rama feat/delete-conversation: abdbf15 feat(chat) + 031f188 chore(ops), padre d80a3a9 = origin/main exacto. Diff 11 archivos, +484/−9, 0 secretos, rutas upload intactas.
+- scripts/push-convo-delete.sh (nuevo): valida PAT+scopes, verifica que el padre siga siendo origin/main (rebase-check), push token solo en memoria, verifica SHA remoto.
+
+Stage Summary:
+- ELIMINAR CONVERSACIÓN COMPLETO Y PROBADO (E2E 27/27). Falta SOLO el push con PAT del dueño: bash scripts/push-convo-delete.sh ghp_... → deploy Vercel → migrate deploy añade las columnas en Neon → verificación en vivo (DELETE /api/chat/conversations/x → 401 sin sesión = ruta viva).
+- Semántica para el dueño: "Eliminar conversación" (bandeja y menú del chat) borra SOLO para mí; "Eliminar para todos (moderación)" solo la ve el ADMIN allowlist.
+
+---
+Task ID: push-eliminar-conversacion-2026-09-26
+Agent: Super Z (principal)
+Task: PAT recibido (mismo ghp_bBZi…, scope repo) → push y verificación en producción.
+
+Work Log:
+- Bug corregido en scripts/push-convo-delete.sh: el chequeo pre-push comparaba el PADRE inmediato de la rama (abdbf15) con origin/main → falso "avanzó"; ahora usa merge-base (origin/main debe ser ancestro de la rama → fast-forward).
+- Push OK: feat/delete-conversation (031f188 = abdbf15 feat + 031f188 chore) → origin/main verificado idéntico. Token usado solo en memoria (arg del script), nada persistido; stderr limpiado por si acaso.
+- wait-deploy-status.sh se quedó sin señal: la API de GitHub status devolvió state undefined ~40 llamadas seguidas → casi seguro rate-limit anónimo (60 req/hora/IP; el loop lo agota). GOTCHA para futuros waits: el loop consume el cupo; espaciar o usar token.
+- Verificación en vivo conectalt.com: DELETE /api/chat/conversations/probe → 401 {"error":"No autenticado"} = RUTA NUEVA VIVA (antes 404 HTML); home 200; GET conversations 401; DELETE mensajes (feature anterior) 401. Migración aplicada en Neon (corre dentro del build; deploy OK = migración OK).
+
+Stage Summary:
+- ELIMINAR CONVERSACIÓN EN PRODUCCIÓN: papelera en bandeja + menú del chat; self-delete (solo mi bandeja, reaparece si me escriben o reabro) y moderación 'para todos' (solo ADMIN allowlist) con desaparición en vivo vía convo:deleted (Pusher). E2E local fue 27/27.
+- Pendiente visual para el dueño: abrir la app → papelera en la lista o menú ⋮ → confirmar.
+- SEGURIDAD: ghp_bBZi… SEGUÍA ACTIVO y volvió a usarse hoy — revocar YA en github.com/settings/tokens junto con ghp_Sz61…, ghp_O0KM…, ghp_FuRWb…, ghp_ixLT…; opcional revocar vcp_1upa… (Vercel) y rotar Neon/R2/Pusher.
+
+---
+Task ID: eliminar-conversacion-v2-total-2026-09-26
+Agent: Super Z (principal)
+Task: Dueño: "conectalt.com no quiere nada que ver entre las conversaciones que existan dentro de la plataforma" → la eliminación debe ser TOTAL (no solo de mi bandeja).
+
+Work Log:
+- Clon limpio /tmp/conecta-clean2 seguía vivo; al moverlo con mv a /home/z/conecta-clean CAYÓ DENTRO de un clon VIEJO preexistente (copia del sandbox era d80a3a9, borrador hiddenAt) → rescatado a /home/z/conecta-clean y cadáver borrado. GOTCHA: verificar destino de mv, /home/z puede tener restos de sesiones previas.
+- Semántica v2 (deleteConversation en chat.service): transacción — message.deleteMany + participant.deleteMany + conversation.delete SOLO si chatReport.count==0 (con reportes queda cáscara sin participantes: invisible, inabrable, sin historial; evidencia de moderación conservada). Convo:deleted a canales personales de TODOS (Pusher). Ruta sin scope; ADMIN/MODERATOR conserva borrado de ajenas (404 no-revelación para otros). Participant.deletedAt/deletedBy quedan como LEGADO (sin migración nueva; sendMessage/openDirect siguen des-ocultando filas históricas).
+- UI: bandeja y ChatWindow con texto "Se borrará para los dos y los mensajes desaparecerán definitivamente"; eliminado el ítem duplicado "Eliminar para todos (moderación)" del menú (un solo comportamiento); api.ts deleteChatConversation sin scope.
+- GOTCHA E2E: helper dbcount con heredoc — $1 de bash vs $1 de SQL colisionan ("could not determine data type") → usar \$1::text con params. E2E reescrito: 37/37 PASS (permisos 401/404, sale para AMBOS bandejas, mensajes/participantes/fila = 0 en BD, re-delete 404, chat nuevo = conversación NUEVA vacía sin historial, moderación owner no-participante, cáscara con reporte conservado + inabrable, ajena intacta).
+- tsc 41 errores (todos preexistentes de main, 0 en chat); eslint limpio en los 5 archivos tocados. Diff 7 archivos +152/−140, sin secretos, rutas upload intactas. Commit 15d013c en feat/delete-conversation-total, padre 031f188 = origin/main (fast-forward OK).
+- scripts/push-convo-delete-v2.sh (nuevo): misma seguridad del v1 (PAT solo en memoria, valida login+scopes, merge-base check, verifica SHA remoto).
+- PURGA ÚNICA (petición del dueño: "sí borralas"): migración de datos 20260926140000_purge_conversations (DELETE Message + Participant; Conversation salvo las con ChatReport → cáscara de evidencia). Validada LITERALMENTE sobre PG real con scripts/validate-purge-sql.js (2 convos, 1 reportada → 0/0/1 cáscara/1 reporte, messageId→NULL). Commiteada como 72aff01; la rama queda 15d013c + 72aff01 sobre origin/main (fast-forward OK).
+
+Stage Summary:
+- ELIMINAR CONVERSACIÓN v2 (BORRADO TOTAL) COMPLETO Y PROBADO (37/37) + PURGA ÚNICA de todas las conversaciones existentes incluida. Falta SOLO push con PAT del dueño: bash scripts/push-convo-delete-v2.sh ghp_... → deploy Vercel (purga corre sola en Neon durante el build) → verificación (DELETE /api/chat/conversations/x → 401 sin sesión) → prueba visual.
+- Nueva conducta para el dueño: papelera en la bandeja o menú ⋮ del chat → "Eliminar conversación" → desaparece PARA LOS DOS, mensajes purgados para siempre, nada reaparece; si se escriben de nuevo, chat nuevo vacío. Tras el deploy la plataforma queda SIN conversaciones (limpia desde cero).
+
+---
+Task ID: push-eliminar-conversacion-v2-2026-09-26
+Agent: Super Z (principal)
+Task: PAT recibido (ghp_bBZi…, scope repo) → push de la v2 "eliminar conversación = borrado TOTAL" + purga única de conversaciones existentes → deploy → verificación en vivo.
+
+Work Log:
+- Continuación desde resumen: el clon /home/z/conecta-clean YA tenía los 2 commits (15d013c feat v2 + 72aff01 purga única) y working tree limpio; el resumen de sesión estaba desactualizado.
+- canModerate en ChatWindow.tsx: sigue usado (línea 566, borrado de mensaje individual con moderación) → sin unused-var.
+- tsc: 42 errores preexistentes de main en 10 archivos NO tocados (editorial, event-labels, data.ts, admin, etc.); 0 errores en archivos del chat. next.config ignora build errors (producción estable).
+- E2E scripts/chat-delete-convo-e2e.sh YA estaba en semántica v2 (37 checks): re-ejecutado en preview-run → 37 PASS / 0 FAIL (permisos 401/404, borrado total para ambos, purga BD de Message/Participant/Conversation, re-DELETE 404, chat nuevo vacío sin historial, moderación por owner, cáscara con reporte conservada, ajena intacta).
+- Chequeo anti-secretos del diff (506 líneas): 0 tokens, 0 URLs de BD. git config sin credenciales; remote HTTPS limpio.
+- scripts/push-convo-delete-v2.sh RECREADO (el de la sesión anterior vivió en /tmp y desapareció): valida token+scopes (repo), acceso al repo, merge-base (fast-forward), push con token SOLO en memoria, salida sanitizada, verifica SHA remoto.
+- PUSH OK: origin/main 031f188 → 72aff01 (feat/delete-conversation-total:main), token no persistido.
+- scripts/wait-deploy-v2.sh (nuevo): espera deploy vía commit status API CON token (evita rate-limit anónimo del wait anterior). Vercel: pending → success "Deployment has completed" en ~45s.
+- Verificación en vivo conectalt.com: home 200; DELETE /api/chat/conversations/probe → 401 {"error":"No autenticado"}; GET conversations 401; GET mensajes 401.
+- Confirmado vercel.json buildCommand = "prisma generate && prisma migrate deploy && next build" → la migración de purga 20260926140000_purge_conversations CORRIÓ en Neon durante el build (deploy success = migración OK): producción quedó SIN conversaciones (salvo cáscaras con reportes).
+
+Stage Summary:
+- EN PRODUCCIÓN (conectalt.com @ 72aff01): "Eliminar conversación" v2 = borrado TOTAL para ambos + purga de mensajes + sin reapariciones; bandeja de papelera también; plataforma purgada de todas las conversaciones previas (purga única). Participant.deletedAt/deletedBy eliminados por migración DDL (no solo legado: la migración conversation_delete los suelta).
+- Cáscara con reportes: Conversation sobrevive SOLO si tiene ChatReport (evidencia), sin participantes ni mensajes, inabrable.
+- Scripts nuevos en el clon: push-convo-delete-v2.sh, wait-deploy-v2.sh (NO commiteados, tooling ops).
+- PENDIENTE SEGURIDAD: dueño debe REVOCAR YA el token ghp_bBZi… en github.com/settings/tokens (se usó 2 sesiones) y rotar secrets si sospecha exposición.
+
+---
+Task ID: guardar-sesion-2026-09-26
+Agent: Super Z (principal)
+Task: "listo por hoy, activa el protocolo de guardado, revisa todo" → protocolo GUARDAR con revisión completa del estado.
+
+Work Log:
+- Revisión de realidad vs memoria: el resumen de sesión decía "falta commit/push" pero el DISCO mostró la v2 YA commiteada (15d013c), purga ÚNICA commiteada (72aff01), PUSHED a origin/main y deploy Vercel success. La memoria estaba desactualizada; el worklog y git son la verdad.
+- Evidencia fresca de HOY: git ls-remote → refs/heads/main = 72aff01; clon /home/z/conecta-clean en feat/delete-conversation-total @ 72aff01 (sincronizado, working tree limpio salvo 2 scripts ops sin commitear: push-convo-delete-v2.sh, wait-deploy-v2.sh).
+- Probes en vivo conectalt.com: home 200; DELETE /api/chat/conversations/probe → 401 {"error":"No autenticado"} (ruta v2 VIVA); GET conversations 401.
+- canModerate verificado en ChatWindow.tsx: sigue usado (línea 566) → sin unused-var. E2E v2 ya estaba reescrito y corrido 37/37 (verificado en commit 15d013c + worklog previo).
+- Creado /home/z/my-project/.session/ESTADO-PROYECTO.md (estado consolidado + gotchas + pendientes) y .session/checks.txt (3 URLs de producción). Primer snapshot.sh ejecutado (no halló estado previo: primera vez que se formaliza).
+- Sin cambios de código en esta sesión: solo guardado de estado.
+
+Stage Summary:
+- SESIÓN GUARDADA: feature "Eliminar conversación v2 (borrado TOTAL para ambos)" + purga única de conversaciones existentes EN PRODUCCIÓN (conectalt.com @ 72aff01). Nada pendiente de código ni deploy.
+- Pendientes para próxima sesión: P0 dueño revoca PAT ghp_bBZi… (github.com/settings/tokens) + rotar secrets si sospecha; P1 prueba visual del dueño (papelera/menú ⋮ → eliminar → desaparece para los dos, chat nuevo vacío).
+- Estado reconstruible desde: .session/ESTADO-PROYECTO.md, este worklog y el clon /home/z/conecta-clean.
+
+---
+Task ID: reanudar-2026-09-29
+Agent: Super Z (principal)
+Task: "reanudar" → protocolo REANUDAR completo (leer estado + snapshot + reporte).
+
+Work Log:
+- DISCREPANCIA detectada: .session/ESTADO-PROYECTO.md y checks.txt del 26/09 NO EXISTÍAN → el sandbox se RESETEÓ entre sesiones (HEAD local cambó b88aefe→bd405c2, .session/ vacío).
+- Verificado con ls: /home/z/conecta-clean TAMBIÉN fue borrado (solo quedan my-project, node_modules, pyproject.toml, uv.lock en /home/z). Scripts ops push/wait v2 perdidos igualmente.
+- La realidad ganó: recreado ESTADO-PROYECTO.md con la nueva realidad (GitHub main @ 72aff01 = única fuente de verdad del código; clon local inexistente) + checks.txt. GOTCHA nuevo registrado: sandbox efímero.
+- Evidencia fresca HOY: git ls-remote main=72aff01 · conectalt.com 200 · DELETE probe 401 JSON (ruta v2 VIVA) · GET conversations 401 · worklog.md sobrevivió intacto.
+- Sin cambios de código ni deploy en esta sesión.
+
+Stage Summary:
+- PRODUCCIÓN ESTABLE con v2 (borrado total de conversaciones + purga). Nada pendiente de código.
+- Costo del reset: solo trabajo local (clon, scripts ops) → siguiente sesión de código debe re-clonar desde GitHub y recrear scripts push/wait.
+- Pendientes vigentes: P0 dueño confirma revocación del PAT ghp_bBZi…; P1 prueba visual de la feature por el dueño.
+
+---
+Task ID: legal-chat-update-2026-09-29
+Agent: Super Z (principal)
+Task: "debemos de actualizar privacidad y terminos al agregar el servicio de chat" → actualización de páginas legales + push + deploy + verificación.
+
+Work Log:
+- Sandbox se había reseteado (clon y .session perdidos desde el 26/09) → re-clonado desde GitHub main @ 72aff01 a /home/z/conecta-clean; node_modules instalado.
+- Legales viven en src/components/conecta/LegalPage.tsx como SPA views ('privacy' | 'terms' vía state.view, sin rutas nuevas; usadas por src/app/page.tsx y enlazadas desde Footer.tsx). Fecha "última actualización" compartida en el header (17/09/2026 → 29/09/2026).
+- PRIVACIDAD: §1 añade "Mensajes del chat" (contenido, participantes, fecha/hora) y "Reportes de conversaciones" (motivo + referencia); §2 añade entrega de mensajes en tiempo real y gestión de reportes; §4 añade Pusher (conducto momentáneo, contenido persistente en Neon) y aclara Neon; NUEVA §9 "Mensajería interna entre usuarios (chat)" (visibilidad solo participantes, control de borrado, eliminación total y definitiva para ambos = semántica v2, excepción por reportes/cáscara, acceso de moderación limitado sin fines comerciales); §10 retención alineada (purga inmediata al eliminar conversación); renumeradas 9-12 → 10-13.
+- TÉRMINOS: §2 añade "Mensajería interna" a la descripción del servicio; §6 extiende responsabilidad/licencia a mensajes del chat; NUEVA §7 "Mensajería interna (chat)" (6 reglas: no acoso/spam/contenido ilegal/suplantación/estafas/datos de terceros; moderación y reportes; eliminación definitiva irreversible; intermediario tecnológico); §12 suspensión incluye abuso de la mensajería; renumeradas 7-15 → 8-16. Secuencia verificada con grep: Priv 1-13, Term 1-16.
+- Verificación: tsc 41 errores TODOS preexistentes de main (0 en LegalPage); eslint LegalPage limpio; diff +145/−22 sin secretos.
+- PAT NUEVO del dueño (ghp_ouaU…, scope repo) validado contra API (login sqn8nproyect-pixe) → scripts/push-legal-chat.sh (recreado, PAT solo en memoria, merge-base check) → PUSH OK: main 72aff01 → 9424c1c fast-forward verificado por ls-remote.
+- scripts/wait-deploy-legal.sh (nuevo): commit status API con token → pending x7 → SUCCESS "Deployment has completed" en ~40s.
+- Verificación en vivo: chunk 2f54r6ytm1urm.js contiene "Mensajería interna entre usuarios" (Priv §9), "Mensajería interna (chat)" (Term §7), "No acosar, hostigar, amenazar" (reglas) y "29 de septiembre de 2026" (fecha); conectalt.com 200.
+- worklog de scripts push/wait: reutilizar cambiando BRANCH; nunca commitearlos.
+
+Stage Summary:
+- EN PRODUCCIÓN (main @ 9424c1c): Privacidad y Términos actualizados para el chat — declaran qué datos trata la mensajería, terceros (Pusher), reglas de uso, moderación, y la eliminación total/definitiva coherente con la v2. Riesgo legal básico cubierto (uso aceptable + intermediario + evidencia de reportes).
+- Pendiente: prueba visual del dueño (footer → Privacidad/Términos, revisar móvil); dueño decide si revoca el PAT nuevo tras cerrar cambios.
+
+---
+Task ID: reanudar-2026-09-29b
+Agent: Super Z (principal)
+Task: "reanudar" → protocolo REANUDAR tras nuevo reset del sandbox.
+
+Work Log:
+- SEGUNDO reset confirmado del sandbox: .session/ y clon /home/z/conecta-clean borrados otra vez. worklog.md sobrevivió íntegro.
+- Evidencia fresca: git ls-remote main = 9424c1c (los 3 commits: v2 + purga + legales) · conectalt.com 200 · chunk 2f54r6ytm1urm.js sigue sirviendo "Mensajería interna" (legales del chat vivas).
+- Recreados .session/ESTADO-PROYECTO.md (con la realidad del entorno como sección principal: sandbox efímero, qué persiste y qué no) y .session/checks.txt.
+- Sin cambios de código ni deploy en esta sesión.
+
+Stage Summary:
+- PRODUCCIÓN ESTABLE Y COMPLETA: v2 borrado total + purga + legales del chat, todo en main @ 9424c1c y verificado vivo.
+- Nada pendiente de código. Pendiente del dueño: prueba visual de legales (Priv §9 / Term §7) y decisión sobre revocación del PAT ghp_ouaU…
+- Próximo trabajo de código = re-clonar desde GitHub + rama feature.
+
+---
+Task ID: google-analytics-2026-09-29
+Agent: Super Z (principal)
+Task: Dueño pega snippet gtag.js (captura de Google Analytics, ID G-F1VY2L3FN6) y dice "vamos hacer esto" → instalar GA4 en conectalt.com.
+
+Work Log:
+- Tercer reset del sandbox: .session/ y clon borrados de nuevo → re-clonado desde main @ 9424c1c.
+- Verificado que no había analytics previo (ni @next/third-parties ni otros proveedores).
+- src/app/layout.tsx: gtag.js con next/script (strategy afterInteractive = async sin bloquear), snippet oficial completo (dataLayer + gtag() + js + config), constante GA_MEASUREMENT_ID="G-F1VY2L3FN6" con comentario de que el ID es público (no secreto). Sin dependencias nuevas.
+- Coherencia legal: Privacidad actualizada — §1 "Datos técnicos y medición" declara cookie _ga; §4 Google LLC ampliado (Analytics: IP anonimizada GA4, sin datos identificativos); §5 describe _ga (13 meses, sin fines publicitarios, cómo desactivarla). Mantenido: NO cookies publicitarias.
+- Verificación: tsc 41 errores (todos preexistentes, 0 nuevos); eslint limpio en los 2 archivos; diff sin secretos (ID de medición es público por diseño).
+- Commit 5a50fb0 en feat/google-analytics.
+- Token ghp_ouaU… de ayer: HTTP 401 Bad credentials (revocado) → recreados scripts/push-main.sh (genérico: rama actual → main) y scripts/wait-deploy.sh; dueño proveyó PAT nuevo (ghp_lVD6…) validado (login sqn8nproyect-pixe, scope repo).
+- PUSH OK: main 9424c1c → 5a50fb0 (fast-forward verificado). Deploy Vercel success en ~30s.
+- Verificación en vivo: HTML de conectalt.com contiene googletagmanager.com/gtag/js?id=G-F1VY2L3FN6 + window.dataLayer init; gtag/js responde desde Google; site 200.
+
+Stage Summary:
+- GA4 (G-F1VY2L3FN6) ACTIVO EN TODAS LAS PÁGINAS de conectalt.com + disclosure legal publicado. El dueño puede pulsar "Probar instalación" en el panel de GA y ver tráfico en Tiempo real.
+- PAT vigente: ghp_lVD6… (usado 1 vez hoy). Recordar al dueño revocarlo al cerrar el ciclo.
+- Scripts ops disponibles en clon: push-main.sh, wait-deploy.sh (genéricos, no commiteados).
+
+---
+Task ID: gtm-container-2026-09-29
+Agent: Super Z (principal)
+Task: Dueño pega snippet de instalación de Google Tag Manager (captura de tagmanager.google.com, contenedor GTM-PRP5ZP49 para www.conectalt.com) → instalarlo.
+
+Work Log:
+- Contexto: contenedor GTM RECÉN CREADO ("Cambios del espacio: 0" → sin etiquetas internas aún). Conviene con el gtag.js de GA4 ya instalado: mientras GTM no tenga etiquetas, no duplica medición.
+- src/app/layout.tsx: constante GTM_CONTAINER_ID="GTM-PRP5ZP49" (con comentario-aviso de duplicación si se crea etiqueta GA4 dentro de GTM); script init gtm.js (snippet oficial IIFE, afterInteractive) + noscript iframe ns.html justo tras <body> (SSR, cubre sin-JS).
+- Privacidad §5: una oración — GTM como mecanismo de entrega de las etiquetas de medición descritas.
+- tsc 41 (todos preexistentes, 0 nuevos); eslint limpio; diff sin secretos. Commit ed2a403 en feat/gtm-container.
+- Push con PAT ghp_lVD6… (validado): main 5a50fb0 → ed2a403 fast-forward verificado. Deploy Vercel success (~50s).
+- Verificación en vivo: HTML contiene ns.html?id=GTM-PRP5ZP49 (noscript SSR) + GTM-PRP5ZP49 x3 (noscript HTML + RSC payload + script init con gtm.start embebido) + gtag GA4 intacto; Google sirve gtm.js?id=GTM-PRP5ZP49 (200); site 200.
+- GOTCHA verificación: el init GTM es inline y construye la URL en runtime ('gtm.js?id='+i+dl) → en HTML crudo NO aparece "gtm.js?id=GTM-PRP5ZP49" literal; buscar "gtm.start" o el ID.
+
+Stage Summary:
+- GTM-PRP5ZP49 ACTIVO en todas las páginas + noscript para sin-JS + GA4 gtag.js conviviendo (contenedor vacío). Privacidad menciona GTM.
+- AVISO CRÍTICO para el dueño: si crea dentro de GTM una etiqueta de GA4 (mismo ID G-F1VY2L3FN6), hay que pedirnos quitar el gtag.js directo o el tráfico se contará DOBLE.
+- Verificación sugerida: botón "Probar" del propio diálogo de GTM (paso 3) o "Vista previa" + Tag Assistant; y panel GTM → resumen mostrará actividad al recibir visitas.
+
+---
+Task ID: reanudar-2026-10-08
+Agent: Super Z (principal)
+Task: "reanudar" → protocolo REANUDAR tras nuevo reset del sandbox.
+
+Work Log:
+- CUARTO reset del sandbox: .session/ borrado (ESTADO-PROYECTO.md y checks.txt desaparecidos). worklog.md sobrevivió.
+- Repo local (/home/z/my-project) DIVERGIDO de origin/main: cadena de commits auto-checkpoint (mensajes UUID, solo worklog/SESSION_HANDOFF/scripts) sobre base 9b1eea7, mientras origin/main avanzó con el trabajo real (9424c1c → 5a50fb0 → ed2a403).
+- Inspección previa al sync: los commits solo-locales tocan únicamente worklog.md (+259 líneas vs remoto), SESSION_HANDOFF.md (idéntico en ambos lados) y 2 scripts ops. Sin código de app.
+- Sync: backup de worklog/scripts en .session/backup → git reset --hard origin/main (ed2a403) → restaurado worklog.md completo + push-convo-delete-v2.sh + validate-purge-sql.js (untracked). Local = producción.
+- Verificado post-sync: layout.tsx contiene constantes G-F1VY2L3FN6 y GTM-PRP5ZP49; git log limpio (ed2a403 + 5a50fb0).
+- Verificación en vivo: conectalt.com 200; HTML con G-F1VY2L3FN6 x2, GTM-PRP5ZP49 x3, gtm.start x1 → GA4 + GTM vivos en producción.
+- Recreados .session/ESTADO-PROYECTO.md y .session/checks.txt.
+
+Stage Summary:
+- PRODUCCIÓN VERDE Y COMPLETA: GA4 (G-F1VY2L3FN6) + GTM (GTM-PRP5ZP49) activos en conectalt.com, verificados hoy. origin/main = ed2a403.
+- Repo local re-sincronizado con producción (patrón de los resets anteriores aplicado).
+- Pendientes del dueño (sin bloqueo de código): decisión GTM (etiqueta GA4 dentro de GTM → avisar para quitar gtag.js directo), revocar PAT ghp_lVD6…, prueba visual de legales del chat.
+- Nota: scripts genéricos push-main.sh / wait-deploy.sh perdidos en el reset → recrearlos al siguiente push.
