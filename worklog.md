@@ -898,3 +898,99 @@ Stage Summary:
 - PRÓXIMA ITERACIÓN (único pendiente técnico): auditoría SEO de páginas clave (home, AgeGate, legales, detalle de locales) — meta tags, OG/Twitter, sitemap, robots, canonical, favicon, JSON-LD.
 - Dueño: revocar PAT ghp_LOJu… (última vez usado en ESTE cierre; el próximo push requerirá un PAT nuevo).
 - Notas menores registradas (sin agenda): PSI oficial post-P1 pendiente del dueño; decisión GTM vacío; micro-opt fetchpriority=high en hero (~300ms).
+
+---
+Task ID: reanudar-2026-10-08
+Agent: Super Z (main)
+Task: REANUDAR — protocolo completo (leer estado, snapshot, reportar). Reconstruir .session tras restore del sandbox.
+
+Work Log:
+- DISCREPANCIA 1 reparada: .session/ ESTABA BORRADA (restore del sandbox) → ESTADO-PROYECTO.md y checks.txt recreados desde worklog + evidencia fresca.
+- DISCREPANCIA 2 (la importante): el worklog LOCAL había perdido la entrada seo-audit-fixes-2026-10-08 (el restore lo revertió); la versión de origin/main la conserva. worklog.md local RE-SINCRONIZADO contra origin/main (git show origin/main:worklog.md) y re-appendeada esta entrada corregida. La primera versión de esta entrada decía "worklog local == origin/main" — ERA FALSO, corregido aquí.
+- VERIFICADO (curl): /local/tasca-el-patio → HTTP 308 → /local/africa-burguers — REDIRECT ACTIVO (último chequeo abierto del cierre confirmado; ISR revalidó, age ≈ 7.5h).
+- VERIFICADO (curl): / 200 · /local/africa-burguers 200 · q=africa (minúscula) encuentra Africa Burguers · robots.txt 200 · sitemap.xml 200 (incluye privacidad y terminos).
+- VERIFICADO (curl): /privacidad → 200, /terminos → 200, ruta inexistente → 404 — los FIXES SEO de la auditoría están VIVOS en producción (commit c8dca5c "seo: rutas legales..., 404 de marca noindex, AgeGate h1->h2, footer Link, sitemap", en la historia de main ANTES de 5f1e709).
+- VERIFICADO (git): origin/main = c991906 (= código c8dca5c→5f1e709 + worklog del cierre). Sin commits de terceros. Rama dev = dormida desde 2026-08-10 (etapas 0/1) — no-action. Rama local seo-fix sobrevivió al restore. Sandbox divergido (auto-commits UUID, 2 archivos D) — artefacto conocido.
+- CORRECCIÓN DE RUMBO: la entrada cierre-sesion-2026-10-08 decía "único pendiente técnico: auditoría SEO de páginas clave" — DESACTUALIZADO: la auditoría YA SE EJECUTÓ (seo-audit-fixes, con fixes deployados). Los pendientes REALES son los del informe PDF y el dueño.
+
+Stage Summary:
+- Sesión anterior confirmada cerrada y estable; producción 100% verde INCLUIDOS los fixes SEO.
+- Estado real de pendientes: (1) GSC setup (prioridad del informe PDF); (2) dueño: revocar PAT ghp_LOJu…, decisión GTM vacío, PSI oficial post-P1; (3) sin agenda: GBP por local, cadencia editorial, og:image WebP (P2), fetchpriority=high hero (~300ms), SSR nav home (P2).
+- Este append queda LOCAL hasta el próximo push con PAT nuevo (el actual debe ser revocado).
+
+---
+Task ID: gsc-data-analysis-2026-10-08
+Agent: Super Z (main)
+Task: Análisis objetivo de exports GSC del dueño (Coverage x2 + Performance) para definir próximos pasos en GSC.
+
+Work Log:
+- 3 ZIPs recibidos en upload/ y leídos (python zipfile, utf-8-sig): Performance-on-Search (7 CSVs) + Coverage "Todas las páginas conocidas" + Coverage "solo sitemap".
+- INDEXACIÓN: 5/40 páginas indexadas (plateau desde sep 4-13). 32 páginas "Descubierta: actualmente sin indexar" (TODAS las del sitemap; validación Iniciada). 3 "Página con redirección" SOLO fuera del filtro sitemap (fuera de sitemap; validación Iniciada; coherente con el 308 de tasca-el-patio ya activo). Problemas no críticos: 0.
+- RENDIMIENTO (3 meses, ago21-oct05): 8 clics / 119 impresiones / CTR 6.7%. Crecimiento real: 2/8 (ago21-sep03) → 2/51 (sep04-sep17) → 4/60 (sep18-oct05). Venezuela 105/119; móviles 93/119. Solo 2 consultas visibles: "copacabana los teques" (15 impr, 0 clics, pos 5.07) y "bodegon el toro" (3, 0, pos 7).
+- PÁGINAS: home 5 clics/32 impr CTR 15.6% pos 4.22; bodegon-el-toro 2/54 CTR 3.7%; new-copacabana 1/34; licoreria-chuky 1/10; licoreria-mis-amores 0/18 pos 2.83 ← oportunidad snippet CTR.
+- VERIFICADO (curl) causa raíz de la no-indexación: home SSR con CERO href="/local/..." (grep = 0) — las fichas solo se descubren vía sitemap, sin flujo de enlaces internos → causa clásica de "Descubierta sin indexar" a escala.
+- VERIFICADO (curl): http://conectalt.com/ → 308 https (la impresión http:// es ruido benigno). Canonical home correcto.
+- "Aparición en búsquedas" vacío = sin resultados enriquecidos detectados aún (no es error).
+
+Stage Summary:
+- Diagnóstico objetivo: bottleneck = INDEXACIÓN (32 descubiertas sin indexar), no discovery. Causa técnica principal verificada: cero enlaces internos crawlables hacia /local/ en SSR.
+- Plan entregado al dueño: (1) request-indexing por tandas de fichas prioritarias; (2) monitorear validación de redirecciones; (3) revisión semanal; (4) el apalancamiento real es el fix SSR de enlaces a fichas (pendiente luz verde del dueño, es un cambio de sitio no de GSC); (5) optimizar título/descr de licoreria-mis-amores (pos 2.83, 0 clics) cuando haya más datos.
+- Expectativa honesta: 32 fichas indexando gradualmente en semanas-meses; curva normal para directorio de ~7 semanas.
+
+---
+Task ID: reanudar-2026-10-09
+Agent: Super Z (main)
+Task: REANUDAR — protocolo completo (leer estado, snapshot, verificar producción, reportar). Recuperación tras 403 del gateway + restore del sandbox.
+
+Work Log:
+- CONTEXTO: la sesión previa a esta se cortó por errores 403 Forbidden del gateway del entorno (nivel plataforma, NO del proyecto). Hoy el gateway responde: todas las herramientas operativas (VERIFICADO: snapshot.sh, curl, git ejecutados sin error).
+- DISCREPANCIA 1 reparada: .session/ ESTABA BORRADA de nuevo (restore del sandbox, mismo patrón que reanudar-2026-10-08) → ESTADO-PROYECTO.md y checks.txt recreados desde worklog + evidencia fresca de hoy.
+- VERIFICADO (curl, 7/7 rutas): / 200 · /local/africa-burguers 200 · /local/tasca-el-patio 308 → /local/africa-burguers (redirect ACTIVO y apuntando bien) · /privacidad 200 · /terminos 200 · robots.txt 200 · sitemap.xml 200.
+- VERIFICADO (curl): /api/businesses?q=africa (minúscula) → encuentra Africa Burguers, slug africa-burguers — el fix de búsqueda insensitive sigue vivo en producción.
+- VERIFICADO (git): origin/main = c991906 (sin cambios desde el cierre). Sandbox divergido: 13 auto-commits UUID locales, 0 archivos sin commitear — artefacto conocido, origin es la fuente de verdad.
+- SYNC WORKLOG: origin/main:worklog.md = 900 líneas, NO contiene gsc-data-analysis-2026-10-08 → esa entrada + esta quedan LOCALES (2 entradas sin push) hasta que el dueño provea PAT nuevo (el anterior debía revocarse). Contenido local íntegro en worklog.md (938 + esta).
+- ESTADO-PROYECTO.md reconstruido con pendientes reales: P0 = fix SSR de enlaces internos a /local/ (espera luz verde del dueño); dueño = GSC request-indexing, revocar PAT, GTM vacío, PSI oficial post-P1.
+
+Stage Summary:
+- Sesión reanudada y CONFIRMADA estable: producción 7/7 verde, deploy 5f1e709 intacto, gateway recuperado.
+- Estado reconstruido en .session/ (ESTADO-PROYECTO.md + checks.txt) — verificable con snapshot.sh.
+- Sin trabajo técnico en curso: la bola está en la cancha del dueño (luz verde del fix SSR de enlaces internos, la palanca real de indexación según análisis GSC).
+
+---
+Task ID: p0-ssr-links-impl-2026-10-09
+Agent: Super Z (main)
+Task: P0 aprobado por el dueño — directorio SSR de enlaces internos a fichas /local/ en la home (palanca real de indexación GSC).
+
+Work Log:
+- CONTEXTO: gateway del entorno falló 2 veces más durante la sesión (403 broken session, intermitente); /tmp fue limpiado ENTRE TURNOS (el clon desapareció). Adaptación: mega-comandos atómicos + origin+patch como fuente de verdad + /tmp como scratch.
+- Colateral reparado: un bun install corrió en /home/z/my-project por un cd fallido → bun.lock restaurado (git checkout), sin daño.
+- Clon fresco c991906 en /tmp/conecta-clean; bun install OK; TSC baseline = 41 (no 43: esa cifra incluía el trabajo de slug-rename).
+- IMPLEMENTACIÓN (3 archivos, commit 8f3e08a en el clon):
+  1. src/components/conecta/LocalesDirectory.tsx (NUEVO, server): <section> con <Link> crawlables a /local/[slug] agrupados por categoría (runs consecutivos de la query ordenada), aria-labelledby, estilos del sitio (font-mono/text-white/60 hover:text-gold), prefetch={false} (33 links en viewport dispararían ~33 RSC prefetch en móvil), return null si la lista viene vacía.
+  2. src/components/conecta/HomeShell.tsx (NUEVO, cliente): el antiguo page.tsx 'use client' extraído SIN cambios de comportamiento (AgeGate cookie 30d, URL↔vista, vistas SPA); acepta prop `directory` y la renderiza {view === 'home' && directory} tras AnimatePresence (en SSR view='home' → viene en el HTML inicial).
+  3. src/app/page.tsx (REESCRITO, server): async, export const revalidate = 3600 (ISR mismo ciclo que fichas), db.business.findMany({where status ACTIVE, select slug/name/category.name, orderBy category.name→name}) con try/catch → [] si no hay DB (build nunca rompe; en Vercel la build SÍ tiene DATABASE_URL) → pasa <LocalesDirectory> como prop a <HomeShell>.
+- VALIDACIÓN: tsc 41→41 (0 nuevos; la query Prisma type-checkea) · bun run build EXIT=0 (prerender SSG) · next start standalone → / HTTP 200, title correcto, AgeGate EN SSR ("Eres mayor de" + span), hero "Explora los locales..." EN SSR, hero-rise presente (fix LCP P1 intacto) · href="/local/"=0 LOCALLY = CORRECTO (sin DB la sección es null por diseño; el conteo >0 se verifica en producción tras deploy).
+- GOTCHA grep: "¿Eres mayor de 18 años?" se parte en SSR por el <span className="text-gold">18 años</span> → grep 'mayor de 18' da 0 aunque el AgeGate esté presente.
+- RESPALDOS (persisten si /tmp muere): scripts/p0-ssr-links/0001-seo-directorio-SSR-de-enlaces-internos-a-fichas-loca.patch + scripts/p0-ssr-files/{page.tsx,HomeShell.tsx,LocalesDirectory.tsx}.
+
+Stage Summary:
+- P0 IMPLEMENTADO Y VALIDADO EN SANDBOX (commit 8f3e08a sobre c991906). Falta ÚNICAMENTE: push con PAT nuevo → deploy Vercel → verificación en producción (grep href="/local/" > 0 en el HTML SSR de /).
+- Procedimiento de push documentado: clon fresco + git am scripts/p0-ssr-links/*.patch + push atómico en UN comando con el token (el checkpointer interfiere entre comandos).
+- Esperado tras deploy: la home SSR enlaza las ~33 fichas ACTIVE → Google pasa de descubrimiento-por-sitemap a flujo real de enlaces internos → las 32 "Descubierta sin indexar" empiezan a indexar (semanas). CLS/LCP sin riesgo: la sección es HTML estático inicial, sin JS ni animaciones.
+
+---
+Task ID: p0-ssr-links-push-verify-2026-10-09
+Agent: Super Z (main)
+Task: Push del P0 con PAT nuevo del dueño + verificación del deploy en producción.
+
+Work Log:
+- PAT nuevo recibido (ghp_KBI0…). Push vía procedimiento documentado EN UN comando: clon fresco c991906 + git am scripts/p0-ssr-links/0001-*.patch (aplicó limpio → 74c69a1) + push por URL con token → c991906..74c69a1 HEAD→main fast-forward. REMOTE_MAIN=74c69a1 confirmado por ls-remote.
+- Token enmascarado en toda salida (sed ghp_***); nunca escrito a archivos.
+- Deploy Vercel AUTO en 90s: poll del HTML → links_a_fichas pasó de 0 (t=30s,60s) a >0 (t=90s).
+- VERIFICADO EN PRODUCCIÓN: home SSR con 33 href="/local/…" (grep -o | wc -l; muestra: club-centro-de-amigos, disco-el-emperador, discoteca-donato, kokko-frappe, medusa, evolution…) · locales-directory-title presente · hero-rise=2 (fix LCP P1 intacto) · AgeGate presente · links legales presentes · /local/africa-burguers 200 · tasca-el-patio 308.
+- GOTCHA de medición: grep -c cuenta LÍNEAS (HTML minificado → devolvía 1); para contar enlaces real: grep -o patrón | wc -l. Y el escaping '…/local/\' provoca "Trailing backslash" — citar bien.
+
+Stage Summary:
+- P0 EN PRODUCCIÓN Y VERIFICADO (74c69a1): la home SSR enlaza las 33 fichas ACTIVE — Google pasa de descubrimiento-por-sitemap a flujo real de enlaces internos. Causa raíz de las "32 Descubierta sin indexar" corregida.
+- Expectativa: indexación gradual de fichas en semanas (curva normal de directorio); medible en el reporte Coverage de GSC.
+- Dueño: REVOCAR el PAT ghp_KBI0… YA (su trabajo terminó). Pendientes vigentes: GSC request-indexing por tandas, decisión GTM vacío, PSI oficial post-P1.
